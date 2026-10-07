@@ -1,0 +1,3 @@
+[install]
+# Dependency lifecycle scripts stay blocked. No blanket trust.
+ignoreScripts = true

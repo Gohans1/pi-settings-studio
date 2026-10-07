@@ -1,0 +1,56 @@
+{
+  "name": "pi-settings-studio",
+  "version": "0.0.0-development",
+  "private": true,
+  "description": "A native-file settings workspace for Pi coding agent",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "bun@1.4.2",
+  "bin": {
+    "pi-settings-studio": "dist/server/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src tests e2e",
+    "build": "tsc -p tsconfig.server.json && vite build",
+    "test:e2e": "playwright test",
+    "start": "node dist/server/cli.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.3",
+    "hono": "4.13.13",
+    "zod": "4.6.5",
+    "proper-lockfile": "4.1.2"
+  },
+  "devDependencies": {
+    "@base-ui/react": "1.8.0",
+    "@playwright/test": "1.63.0",
+    "@axe-core/playwright": "4.13.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/proper-lockfile": "4.1.4",
+    "@vitejs/plugin-react": "6.1.2",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "tailwind-merge": "3.7.0",
+    "lucide-react": "1.52.0",
+    "oxlint": "1.87.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.3"
+  },
+  "trustedDependencies": []
+}
