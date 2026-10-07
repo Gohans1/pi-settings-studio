@@ -35,7 +35,9 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 
 ## Tabs
 
-General (every documented `settings.json` key, raw JSON), Models (providers, API keys, defaults), Skills, Sub-agents, Plugins, MCP (servers, Code mode) and System prompt. Changes apply to new T3Code threads, or after `/reload`.
+General (every documented `settings.json` key, raw JSON, keyboard shortcuts), Models (providers, keys, sign-in, defaults, `models.json`), Skills, Sub-agents, Plugins (switches, install/update/remove), MCP (servers, Code mode, test, sign-in), Instructions (`AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`) and System prompt. The project picker adds each project's `.pi` files and trust. Changes apply to new T3Code threads, or after `/reload`.
+
+Buttons that run something use the `pi` command on `PATH` (or `~/.local/bin/pi`) with `PI_CODING_AGENT_DIR` set to the app's agent directory.
 
 ## Test
 

@@ -4,14 +4,15 @@
 A personal, local GUI for **Pi core configuration**, used next to T3Code. Settings only: no chat, sessions UI, terminal or orchestration. The settings panel of [agegr/pi-web](https://github.com/agegr/pi-web) is the reference for features and feel; it is re-implemented here, not forked.
 
 ## Scope: Pi core only
-Tabs, in build order. Inside every tab, file-only operations come first; operations that run something (MCP connection test, OAuth sign-in, package install) come later and only on an explicit click.
+Tabs below. A project picker (folders Pi has sessions in) adds each tab's project scope and shows project trust. Operations that run something (MCP connection test, OAuth sign-in, package install) run only on an explicit click, through Pi's own CLI or runtime.
 
 | Tab | Contents |
 |---|---|
 | MCP | Global and project `mcp.json` servers: list, enable/disable, exposure, add, edit, remove (undo). Codemode controls: `defaultTools` `+codemode`, `codemode.mode`, `codemode.inlineBudget`, `autoEnableCodemode`. Later: connection test, OAuth sign-in. |
 | System prompt | Read-only. Pick project, then session (newest first); show the persisted system prompt sections and tool declarations exactly as Pi recorded them in the session file. Copy button. |
 | Skills | Discovered skills with source; enable/disable per skill and per group. |
-| General | App theme. A form field for every documented `settings.json` key that no other tab owns; terminal-only keys grouped and labelled "no effect in T3Code"; internal keys (`lastChangelogVersion`, `deviceId`, `trackingId`) never touched. Raw JSON editor for `settings.json`. Global file only for now. |
+| General | A form field for every documented `settings.json` key that no other tab owns; terminal-only keys grouped and labelled "no effect in T3Code"; internal keys (`lastChangelogVersion`, `deviceId`, `trackingId`) never touched. Raw JSON editor. Global or project file. Keyboard shortcuts (`keybindings.json`). |
+| Instructions | Context files (`AGENTS.md`…), `SYSTEM.md`, `APPEND_SYSTEM.md`, global and project. |
 | Models | Providers and API-key status, custom providers/models (`models.json`), default provider/model, enabled models, thinking levels. Later: OAuth login. |
 | Plugins | Packages and per-resource toggles. Later: install, update, remove. |
 | Sub-agents | Profiles in the format of Pi's official example subagent extension (`name`, `description`, `tools`, `model`, prompt body) in `~/.pi/agent/agents/` and `.pi/agents/`. Unknown frontmatter keys are kept. Later: T3Code subagent integration. |

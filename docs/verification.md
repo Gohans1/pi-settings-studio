@@ -1,18 +1,19 @@
-# Verification — rescoped app, 2026-10-07
+# Verification — full Pi core coverage, 2026-10-07
 
-Scope: General, Models, Skills, Sub-agents, Plugins, MCP and System prompt tabs (global scope).
+Scope: all tabs, global and project scope, jobs that run Pi.
 
 | Check | Result |
 |---|---|
-| `bun test` (unit and API, temporary directories) | 61 passed |
+| `bun test` (unit and API, temporary directories, the real `pi` CLI for jobs) | 92 passed |
 | `bun run typecheck` / `bun run lint` | Passed |
-| `bun run test:e2e` (Playwright on Bun, axe in light and dark mode) | 19 passed |
+| `bun run test:e2e` (Playwright on Bun, axe in light and dark mode) | 31 passed |
+| Jobs | `pi mcp list --json` against a tiny stdio MCP server, `pi install`/`pi remove` of a local package, Anthropic sign-in relayed up to its first question and cancelled; all offline |
 | Drift tests | Every Pi 1.0.3 `Settings` key has a home; SDK pin equals `pi --version`; built-in extension names match Pi's docs; the MCP port matches the SDK version |
 | Safety tests | Listing never runs extension code (marker file), never installs packages, never writes; env, header and API-key values never reach the browser |
 
 Manual browser checks used copies of real data in a temporary agent directory (skills, sub-agent profiles, one session file, deleted afterwards). The real `~/.pi` was never written.
 
-Known limits: project scope (project MCP servers, skills, plugins, profiles) waits for a project picker; environment variables are not checked for provider auth; a custom `sessionDir` is not followed; models.json custom providers have no form yet; MCP connection tests, OAuth sign-in and package installs are not implemented; the background service is not installed.
+Known limits: environment variables are not checked for provider auth; a custom `sessionDir` is not followed; OAuth sign-ins were only exercised up to Pi's first question (no real account); the background service is not installed. A secret-looking MCP argument (`--api-key <key>` in a user's context7 entry) was shown by an earlier version; it is now hidden, with a test.
 
 One e2e run failed a dark-mode contrast check and could not be reproduced in 65 reruns; transitions now settle before axe runs. The machine is often heavily loaded by other agents, so Playwright timeouts are generous.
 
