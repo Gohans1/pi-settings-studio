@@ -11,7 +11,7 @@
 - [x] MCP: add, edit, remove, undo.
 - [x] MCP: codemode controls.
 - [x] System prompt tab.
-- [ ] Skills tab.
+- [x] Skills tab (user and package skills; project skills pending).
 - [ ] General tab, drift test, raw JSON.
 - [ ] Models tab.
 - [ ] Plugins tab.

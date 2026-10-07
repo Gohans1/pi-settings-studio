@@ -122,8 +122,8 @@ export class ConfigStore {
   }
 
   /** Replace the document with `edit(current)`, under the lock and revision check. */
-  async transform(scope: Scope, revision: string, edit: (value: Record<string, unknown>) => Record<string, unknown>, file?: DocumentName): Promise<Document> {
-    return this.update(scope, revision, current => JSON.stringify(edit(current.value), null, current.indent) + "\n", file);
+  async transform(scope: Scope, revision: string, edit: (value: Record<string, unknown>) => Record<string, unknown> | Promise<Record<string, unknown>>, file?: DocumentName): Promise<Document> {
+    return this.update(scope, revision, async current => JSON.stringify(await edit(current.value), null, current.indent) + "\n", file);
   }
 
   async restore(scope: Scope, revision: string, file?: DocumentName): Promise<Document> {

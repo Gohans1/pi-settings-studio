@@ -1,0 +1,86 @@
+import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
+import type { ResourceView, SkillsView } from "../shared/resources";
+import { loadSkills, saveSkills } from "./api";
+import { Button } from "./components/ui/button";
+import { Switch } from "./components/ui/switch";
+
+function SkillDetail({ skill }: { skill: ResourceView }) {
+  return <section className="detail" aria-labelledby="skill-title">
+    <h2 id="skill-title">{skill.name}</h2>
+    {!skill.enabled && <p className="notice">Turned off, so Pi does not load it.</p>}
+    <dl className="detail-list">
+      <div><dt>Description</dt><dd>{skill.description ?? <span className="muted">None. Pi does not load skills without a description.</span>}</dd></div>
+      <div><dt>Invocation</dt><dd>{skill.disableModelInvocation
+        ? <>Only through <code>/skill:{skill.name}</code>. The model does not pick it on its own (disable-model-invocation).</>
+        : <>The model may load it when a task matches; <code>/skill:{skill.name}</code> forces it.</>}</dd></div>
+      <div><dt>Source</dt><dd>{skill.group}</dd></div>
+      <div><dt>File</dt><dd><code>{skill.path}</code></dd></div>
+    </dl>
+  </section>;
+}
+
+export function SkillsTab() {
+  const [view, setView] = useState<SkillsView>();
+  const [selected, setSelected] = useState<string>();
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function refresh() {
+    setError("");
+    try { setView(await loadSkills()); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the skills."); }
+  }
+  useEffect(() => { void refresh(); }, []);
+
+  async function toggle(skills: ResourceView[], enabled: boolean, label = skills[0]?.name) {
+    if (!view || !skills.length) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      setView(await saveSkills(view.revision, skills.map(skill => skill.path), enabled));
+      setMessage(`${label} turned ${enabled ? "on" : "off"}. Applies to new T3Code threads, or after /reload.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not change the skills.");
+      await refresh();
+    } finally { setBusy(false); }
+  }
+
+  const skills = view?.skills ?? [];
+  const needle = query.trim().toLowerCase();
+  const visible = skills.filter(skill => !needle || `${skill.name} ${skill.description ?? ""}`.toLowerCase().includes(needle))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  // Groups keep Pi's order; skills are sorted by name inside them.
+  const groups = [...new Set(skills.map(skill => skill.group))].filter(group => visible.some(skill => skill.group === group));
+  const current = skills.find(skill => skill.path === selected);
+  return <>
+    <div className="page-heading"><div><h1>Skills</h1><p>Skills Pi advertises to the model. Changes apply to new T3Code threads, or after /reload.</p></div>
+      <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search skills" placeholder="Search skills…" value={query} onChange={event => setQuery(event.target.value)} /></div></div>
+    <div role="status" className="feedback">{message}</div>
+    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Reload</Button></div>}
+    {!view ? !error && <div className="loading" aria-busy="true">Reading skills…</div> : <div className="master-detail">
+      <section className="master" aria-label="Skills list">
+        <p className="muted list-count">{skills.filter(skill => skill.enabled).length} of {skills.length} skills on</p>
+        {!visible.length && <p className="empty">{skills.length ? "No matching skills." : "No skills found. Add skill folders to ~/.pi/agent/skills."}</p>}
+        {groups.map(group => {
+          const members = visible.filter(skill => skill.group === group);
+          const allOn = members.every(skill => skill.enabled);
+          return <div key={group} className="item-group">
+            <div className="list-header"><h2>{group}</h2>
+              <Switch aria-label={`Enable every skill in ${group}`} checked={allOn} disabled={busy}
+                onCheckedChange={enabled => void toggle(members.filter(skill => skill.enabled !== enabled), enabled, `All skills in ${group}`)} /></div>
+            <ul className="item-list">{members.map(skill => <li key={skill.path}>
+              <button type="button" aria-pressed={skill.path === selected} onClick={() => setSelected(skill.path)}>
+                <span className="item-name">{skill.name}</span>
+                <span className="item-state">{!skill.enabled ? "off" : skill.disableModelInvocation ? "command only" : ""}</span>
+              </button>
+              <Switch aria-label={`Enable ${skill.name}`} checked={skill.enabled} disabled={busy} onCheckedChange={enabled => void toggle([skill], enabled)} />
+            </li>)}</ul>
+          </div>;
+        })}
+      </section>
+      {current ? <SkillDetail skill={current} /> : <section className="detail"><p className="empty">Select a skill to see its details.</p></section>}
+    </div>}
+  </>;
+}

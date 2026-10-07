@@ -9,7 +9,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.0.3 (installed). Ported Pi logi
 | MCP: list, enable/disable, exposure, add/edit/remove, codemode | components/McpConfig.tsx; app/api/mcp; app/api/tools/settings | Done for the global mcp.json; project group pending (needs the project picker) |
 | MCP: connection test, OAuth sign-in, paste import | components/McpConfig.tsx; lib/mcp-test.ts; lib/mcp-import-core.ts | Later |
 | System prompt (from T3Code session files, not pi-web's live chat) | components/SystemPromptPanel.tsx | Done; a custom `sessionDir` setting is not followed yet |
-| Skills: discovery, details, enable/disable | components/SkillsConfig.tsx; app/api/skills | Pending |
+| Skills: discovery, details, enable/disable | components/SkillsConfig.tsx; app/api/skills | Done for user and package skills; project skills pending (project picker) |
 | General: remaining `settings.json` keys, raw JSON, theme | components/SettingsPanel.tsx (chat options intentionally excluded) | Partial: 7 keys from the first slice |
 | Models: providers, keys, custom models, defaults, thinking | components/ModelsConfig.tsx; app/api/models-config | Pending |
 | Models: OAuth login | app/api/auth | Later |
