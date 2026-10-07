@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Bot, Boxes, Layers, Puzzle, ScrollText, Server, SlidersHorizontal } from "lucide-react";
+import { Bot, Boxes, FileText, Layers, Puzzle, ScrollText, Server, SlidersHorizontal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { ProjectPicker, TrustPanel, useProject } from "./ProjectBar";
 import { GeneralTab } from "./GeneralTab";
+import { InstructionsTab } from "./InstructionsTab";
 import { McpTab } from "./McpTab";
 import { ModelsTab } from "./ModelsTab";
 import { PluginsTab } from "./PluginsTab";
@@ -10,7 +11,7 @@ import { SubagentsTab } from "./SubagentsTab";
 import { SkillsTab } from "./SkillsTab";
 import { SystemPromptTab } from "./SystemPromptTab";
 
-type Panel = (props: { project?: string }) => React.ReactElement;
+type Panel = (props: { project?: string; loadsInProject?: boolean }) => React.ReactElement;
 // Only implemented tabs are listed (SPEC.md: no fake tabs).
 const tabs: { id: string; label: string; icon: typeof SlidersHorizontal; Panel: Panel }[] = [
   { id: "general", label: "General", icon: SlidersHorizontal, Panel: GeneralTab },
@@ -19,6 +20,7 @@ const tabs: { id: string; label: string; icon: typeof SlidersHorizontal; Panel: 
   { id: "subagents", label: "Sub-agents", icon: Bot, Panel: SubagentsTab },
   { id: "plugins", label: "Plugins", icon: Puzzle, Panel: PluginsTab },
   { id: "mcp", label: "MCP", icon: Server, Panel: McpTab },
+  { id: "instructions", label: "Instructions", icon: FileText, Panel: InstructionsTab },
   { id: "system-prompt", label: "System prompt", icon: ScrollText, Panel: SystemPromptTab },
 ];
 
@@ -51,7 +53,7 @@ export function App() {
     </header>
     <main id="main" tabIndex={-1}>
       {current && <TrustPanel project={current.path} trust={current.trust} onChange={trust => updateTrust(current.path, trust)} />}
-      {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id}><Panel project={project} /></TabsContent>)}
+      {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id}><Panel project={project} loadsInProject={current?.trust.loadsInT3Code} /></TabsContent>)}
     </main>
   </Tabs>;
 }

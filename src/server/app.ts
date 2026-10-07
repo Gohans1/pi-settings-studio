@@ -11,6 +11,7 @@ import { pluginRoutes, skillRoutes } from "./resources.ts";
 import { agentRoutes } from "./agents.ts";
 import { modelRoutes } from "./models.ts";
 import { projectRegistry, projectRoutes } from "./projects.ts";
+import { instructionRoutes } from "./instructions.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
@@ -42,7 +43,10 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
     }
     await next();
   });
-  app.use("/api/*", bodyLimit({ maxSize: 64 * 1024, onError: c => c.json({ error: "Request exceeds 64 KiB." }, 413) }));
+  // Instruction files are free text and can be long; every other request stays small.
+  const smallBodies = bodyLimit({ maxSize: 64 * 1024, onError: c => c.json({ error: "Request exceeds 64 KiB." }, 413) });
+  const textBodies = bodyLimit({ maxSize: 1024 * 1024 + 4096, onError: c => c.json({ error: "Request exceeds 1 MiB." }, 413) });
+  app.use("/api/*", (c, next) => (c.req.path.startsWith("/api/instructions/") ? textBodies : smallBodies)(c, next));
   /** Global settings use the app's store; project settings need a known project in ?project=. */
   async function storeFor(scope: Scope, project: string | undefined): Promise<ConfigStore> {
     return scope === "global" ? store : registry.storeFor(await registry.require(project));
@@ -113,6 +117,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/agents", agentRoutes(store, registry, agentDir));
   app.route("/api/models", modelRoutes(store, agentDir));
   app.route("/api/projects", projectRoutes(registry, store, agentDir));
+  app.route("/api/instructions", instructionRoutes(store, registry, agentDir));
   app.get("/api/status", c => c.json({ source: "persisted-files", liveSession: false, catalogue: "Pi 1.0.3", parityComplete: false }));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));

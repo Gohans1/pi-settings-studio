@@ -42,9 +42,9 @@ h2 { font-size: 21px; font-weight: 600; margin: 0 0 12px; }
 code { font-family: ui-monospace, monospace; font-size: 12px; overflow-wrap: anywhere; }
 svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.7; }
 .app { display: block; min-height: 100svh; }
-.app-header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 32px; padding: 0 40px; min-height: 60px; background: var(--sidebar); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.app-header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; column-gap: 24px; padding: 0 40px; min-height: 60px; background: var(--sidebar); border-bottom: 1px solid var(--border); }
 .identity { font-weight: 650; font-size: 17px; }
-.tab-bar { height: 60px !important; gap: 4px; }
+.tab-bar { height: 60px !important; gap: 4px; max-width: 100%; overflow-x: auto; justify-content: flex-start !important; }
 .tab-bar [data-slot=tabs-trigger] { height: 100%; padding-inline: 10px; font-size: 13px; }
 .tab-bar [data-slot=tabs-trigger]::after { bottom: 0; }
 .tab-bar [data-slot=tabs-trigger]:not([data-active]) { color: var(--muted-foreground); }
@@ -55,7 +55,7 @@ main { max-width: 1160px; padding: 40px; margin-inline: auto; }
 .page-heading { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 .page-heading p { color: var(--muted-foreground); }
 .scope-info { margin-top: 12px; color: var(--muted-foreground); font-size: 12px; overflow-wrap: anywhere; }
-.settings-group { margin-top: 36px; scroll-margin-top: 80px; }
+.settings-group { margin-top: 36px; scroll-margin-top: 128px; }
 .settings-group > .notice { margin-top: 12px; }
 .section-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
 .section-links a { font-size: 12px; color: var(--secondary-foreground); background: var(--secondary); padding: 4px 10px; border-radius: 999px; text-decoration: none; }
@@ -100,7 +100,7 @@ textarea { resize: vertical; }
 .item-state[data-state=refused] { color: var(--destructive); }
 .detail { min-width: 0; padding: 4px 0 0; }
 /* Long lists scroll; keep the selected item's details in view. */
-.master-detail > .detail { position: sticky; top: 80px; max-height: calc(100svh - 100px); overflow: auto; }
+.master-detail > .detail { position: sticky; top: 128px; max-height: calc(100svh - 148px); overflow: auto; }
 .detail h2 { font-size: 19px; overflow-wrap: anywhere; }
 .detail-list { margin: 16px 0 0; display: grid; }
 .detail-list > div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
@@ -164,7 +164,7 @@ textarea { resize: vertical; }
 .key-form input { font-weight: 400; }
 .key-form [data-slot=button] { min-height: 40px; padding-inline: 16px; }
 .key-form p { flex-basis: 100%; }
-.project-picker { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); white-space: nowrap; }
+.project-picker { margin-left: auto; padding: 8px 0; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); white-space: nowrap; }
 .project-picker select { min-height: 32px; padding: 4px 8px; width: 280px; max-width: 100%; font-size: 13px; }
 .trust { margin-bottom: 24px; padding: 12px 16px; border-radius: var(--radius); border: 1px solid var(--border); display: grid; gap: 10px; }
 .trust-ok { background: var(--secondary); color: var(--secondary-foreground); }
@@ -174,6 +174,10 @@ textarea { resize: vertical; }
 .scope-choice label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
 .in-project { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px 12px; margin: 14px 0 0; display: grid; gap: 10px; justify-items: start; }
 .in-project legend { padding: 0 4px; font-weight: 560; }
+.instruction { display: grid; gap: 12px; }
+.instruction h2 { margin: 0; }
+.instruction textarea { width: 100%; font: 12px/1.6 ui-monospace, monospace; tab-size: 2; }
+.plain-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {

@@ -6,6 +6,7 @@ import type { PluginsView, SkillsView } from "../shared/resources";
 import type { AgentInput, AgentsView } from "../shared/agents";
 import type { ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
+import type { InstructionsView } from "../shared/instructions";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -77,3 +78,10 @@ export const removeProviderKey = (id: string, revision: string) =>
   request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "DELETE", { revision });
 export const restoreAuth = (revision: string) => request<ProvidersView>("/api/models/auth/restore", "POST", { revision });
 export const loadModels = (provider: string) => request<ModelSummary[]>(`/api/models/providers/${encodeURIComponent(provider)}/models`);
+export const loadInstructions = (project?: string) => request<InstructionsView>(withProject("/api/instructions", project));
+export const saveInstruction = (id: string, revision: string, text: string, project?: string) =>
+  request<InstructionsView>(withProject(`/api/instructions/${id}`, project), "PUT", { revision, text });
+export const deleteInstruction = (id: string, revision: string, project?: string) =>
+  request<InstructionsView>(withProject(`/api/instructions/${id}`, project), "DELETE", { revision });
+export const restoreInstruction = (id: string, project?: string) =>
+  request<InstructionsView>(withProject(`/api/instructions/${id}/restore`, project), "POST", {});
