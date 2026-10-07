@@ -15,6 +15,6 @@
 - [x] General tab, drift test, raw JSON.
 - [ ] Models tab.
 - [x] Plugins tab (built-ins, user files, packages; install/update/remove later).
-- [ ] Sub-agents tab.
+- [x] Sub-agents tab (user profiles; project .pi/agents and T3Code integration later).
 - [ ] Background service on port 4369.
 - [ ] Execution features: MCP test/OAuth, model OAuth, package install.

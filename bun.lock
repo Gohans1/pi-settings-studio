@@ -10,6 +10,7 @@
         "@hono/bun": "1.0.0",
         "hono": "4.13.13",
         "proper-lockfile": "4.1.2",
+        "yaml": "2.9.0",
         "zod": "4.6.5",
       },
       "devDependencies": {

@@ -3,6 +3,7 @@ import type { McpFileView, McpServerInput } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PluginsView, SkillsView } from "../shared/resources";
+import type { AgentInput, AgentsView } from "../shared/agents";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -45,3 +46,8 @@ export const saveRawSettings = (revision: string, text: string) => request<RawSe
 export const loadPlugins = () => request<PluginsView>("/api/plugins");
 export const savePlugins = (revision: string, items: { type: string; path: string }[], enabled: boolean) =>
   request<PluginsView>("/api/plugins", "PATCH", { revision, items, enabled });
+export const loadAgents = () => request<AgentsView>("/api/agents");
+export const addAgent = (input: AgentInput) => request<AgentsView>("/api/agents", "POST", input);
+export const editAgent = (file: string, revision: string, input: AgentInput) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}`, "PUT", { revision, ...input });
+export const removeAgent = (file: string, revision: string) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}`, "DELETE", { revision });
+export const restoreAgent = (file: string) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}/restore`, "POST", {});

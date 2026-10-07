@@ -154,22 +154,61 @@ export class ConfigStore {
     }, file);
   }
 
-  /** `next` receives the current document lazily: whole-text writes do not need it to be valid. */
-  private async update(scope: Scope, revision: string, next: (current: () => Document) => string | Promise<string>, file?: DocumentName): Promise<Document> {
-    const path = this.path(scope, file);
+  // Text files beyond the fixed documents (agent profiles). Callers derive and validate the path.
+  async readPath(path: string): Promise<{ text?: string; revision: string }> {
+    const text = await readRaw(path);
+    return { text, revision: revisionOf(text) };
+  }
+
+  async writePath(path: string, revision: string, text: string): Promise<void> {
+    await this.updatePath(path, revision, () => text, false);
+  }
+
+  /** Delete with a private backup beside the file, so restorePath can undo it. */
+  async removePath(path: string, revision: string): Promise<void> {
+    await this.withLock(path, async raw => {
+      if (revisionOf(raw) !== revision) throw new ConfigError("The file changed in another session. Reload first.", 409);
+      if (raw === undefined) return;
+      await atomicWrite(path + ".pi-settings-backup", raw);
+      await rm(path);
+    });
+  }
+
+  async restorePath(path: string): Promise<void> {
+    await this.withLock(path, async raw => {
+      if (raw !== undefined) throw new ConfigError("The file exists again; nothing to restore.", 409);
+      const backup = await readRaw(path + ".pi-settings-backup");
+      if (backup === undefined) throw new ConfigError("No backup is available.");
+      await atomicWrite(path, backup);
+    });
+  }
+
+  private async withLock(path: string, run: (raw: string | undefined) => Promise<void>): Promise<void> {
     await assertSafe(path);
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
     const release = await lockfile.lock(path, { realpath: false, retries: { retries: 8, minTimeout: 15, maxTimeout: 100 } });
-    try {
-      const raw = await readRaw(path);
+    try { await run(await readRaw(path)); }
+    finally { await release(); }
+  }
+
+  /** `next` receives the current document lazily: whole-text writes do not need it to be valid. */
+  private async update(scope: Scope, revision: string, next: (current: () => Document) => string | Promise<string>, file?: DocumentName): Promise<Document> {
+    const text = await this.updatePath(this.path(scope, file), revision, next, true);
+    return decode(text);
+  }
+
+  private async updatePath(path: string, revision: string, next: (current: () => Document) => string | Promise<string>, json: boolean): Promise<string> {
+    let text = "";
+    await this.withLock(path, async raw => {
       if (revisionOf(raw) !== revision) throw new ConfigError("The file changed in another session. Reload and check your draft before saving.", 409);
-      const text = await next(() => decode(raw));
+      text = await next(() => decode(raw));
       if (Buffer.byteLength(text) > MAX_BYTES) throw new ConfigError("The file would exceed 1 MiB.");
+      if (json) decode(text);
       if (raw !== undefined) await atomicWrite(path + ".pi-settings-backup", raw);
       // Catch uncooperative editors too, up to this final pre-rename check.
       if (revisionOf(await readRaw(path)) !== revision) throw new ConfigError("The file changed while saving. Reload before trying again.", 409);
       await atomicWrite(path, text);
-      return decode(text);
-    } finally { await release(); }
+    });
+    return text;
   }
 }

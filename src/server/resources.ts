@@ -43,7 +43,7 @@ function packageManager(agentDir: string, settings: Record<string, unknown>) {
   return new DefaultPackageManager({ cwd: agentDir, agentDir, settingsManager, builtinExtensions: BUILTIN_EXTENSIONS });
 }
 
-async function resolveUserResources(agentDir: string, settings: Record<string, unknown>) {
+export async function resolveUserResources(agentDir: string, settings: Record<string, unknown>) {
   return packageManager(agentDir, settings).resolve(async () => "skip");
 }
 

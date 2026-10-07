@@ -8,6 +8,7 @@ import { mcpRoutes } from "./mcp-api.ts";
 import { codemodeRoutes } from "./codemode.ts";
 import { sessionRoutes } from "./sessions.ts";
 import { pluginRoutes, skillRoutes } from "./resources.ts";
+import { agentRoutes } from "./agents.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
@@ -90,6 +91,7 @@ export function createApp({ store, agentDir, origins, staticDir }: AppOptions) {
   app.route("/api/sessions", sessionRoutes(agentDir));
   app.route("/api/skills", skillRoutes(store, agentDir));
   app.route("/api/plugins", pluginRoutes(store, agentDir));
+  app.route("/api/agents", agentRoutes(store, agentDir));
   app.get("/api/status", c => c.json({ source: "persisted-files", liveSession: false, catalogue: "Pi 1.0.3", parityComplete: false }));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));

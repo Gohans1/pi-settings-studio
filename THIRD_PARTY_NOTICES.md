@@ -2,7 +2,7 @@
 
 ## Pi (`@earendil-works/pi-coding-agent` 1.0.3)
 
-`src/server/mcp-config.ts` ports `mcp.json` validation and edit rules from `dist/core/mcp-servers.js` and `dist/extensions/mcp/config.js`. `src/server/resources.ts` ports the resource toggles and group labels of `pi config` from `dist/modes/interactive/components/config-selector.js`. License: MIT (per the package's `package.json`), author Mario Zechner.
+`src/server/mcp-config.ts` ports `mcp.json` validation and edit rules from `dist/core/mcp-servers.js` and `dist/extensions/mcp/config.js`. `src/server/resources.ts` ports the resource toggles and group labels of `pi config` from `dist/modes/interactive/components/config-selector.js`. `src/server/agents.ts` reads profiles the way `examples/extensions/subagent/agents.ts` does. License: MIT (per the package's `package.json`), author Mario Zechner.
 
 ## pi-web
 

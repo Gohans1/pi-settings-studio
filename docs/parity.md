@@ -15,6 +15,6 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.0.3 (installed). Ported Pi logi
 | Models: OAuth login | app/api/auth | Later |
 | Plugins: packages and resource toggles | components/PluginsConfig.tsx; app/api/plugins | Done for user scope (built-ins, user files, package resources); project scope pending |
 | Plugins: install, update, remove | app/api/plugins | Later |
-| Sub-agents (Pi example format) | components/AgentsConfig.tsx; app/api/subagents | Pending |
+| Sub-agents (Pi example format) | components/AgentsConfig.tsx; app/api/subagents | Done for ~/.pi/agent/agents; project profiles and T3Code integration pending |
 
 Excluded on purpose: pi-web chat options (width, font size, quoting, Enter to send, thinking expansion), push notifications, language selection, web-account logout, PowerShell switch (Windows only).

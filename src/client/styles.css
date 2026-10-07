@@ -107,6 +107,7 @@ textarea { resize: vertical; }
 .detail-list dt { color: var(--muted-foreground); font-size: 12px; }
 .detail-list dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .chip { display: inline-block; margin: 0 6px 4px 0; padding: 1px 6px; border: 1px solid var(--border); border-radius: var(--radius); }
+.page-heading + .notice { margin-top: 16px; }
 .notice { padding: 10px 14px; background: var(--muted); border-radius: var(--radius); color: var(--muted-foreground); }
 .add-button { margin-top: 10px; }
 .detail-actions { margin-top: 20px; }
@@ -155,6 +156,9 @@ textarea { resize: vertical; }
 .packages h2 { font-size: 17px; margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 .package-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .package-list li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.prompt-preview { margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+.prompt-preview pre { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.6 ui-monospace, monospace; max-height: 360px; overflow: auto; }
+.master > [data-slot=button] { margin-bottom: 10px; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {
