@@ -12,7 +12,7 @@
 - [x] MCP: codemode controls.
 - [x] System prompt tab.
 - [x] Skills tab (user and package skills; project skills pending).
-- [ ] General tab, drift test, raw JSON.
+- [x] General tab, drift test, raw JSON.
 - [ ] Models tab.
 - [ ] Plugins tab.
 - [ ] Sub-agents tab.

@@ -4,6 +4,7 @@ import { fields, sections, type SettingsChange, type SettingsView } from "../sha
 import { loadSettings, restoreSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
+import { RawJsonEditor } from "./RawJsonEditor";
 
 // General edits the global settings file only (SPEC.md).
 const scope = "global";
@@ -17,6 +18,7 @@ export function GeneralTab() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [restore, setRestore] = useState(false);
+  const [raw, setRaw] = useState(false);
   const title = useRef<HTMLHeadingElement>(null);
   const changes = Object.values(draft).map(change => {
     if (!("value" in change)) return change;
@@ -89,6 +91,21 @@ export function GeneralTab() {
 
   const needle = query.trim().toLowerCase();
   const results = fields.filter(field => !needle || (field.label + " " + field.key + " " + field.help).toLowerCase().includes(needle));
+  async function closeRaw(saved: boolean) {
+    setRaw(false);
+    if (!saved) return;
+    setDraft({});
+    setError("");
+    setLoading(true);
+    try { setView(await loadSettings(scope)); setMessage("Saved settings.json. Applies to new T3Code threads, or after /reload."); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Reload failed."); }
+    finally { setLoading(false); }
+  }
+  const rawButton = <Button variant="outline" disabled={busy || !!changes.length} onClick={() => { setRaw(true); setMessage(""); }}>Edit raw JSON</Button>;
+  if (raw) return <>
+    <div className="page-heading"><div><h1>General</h1><p>Pi core settings shared by every project.</p></div></div>
+    <RawJsonEditor onClose={saved => void closeRaw(saved)} />
+  </>;
   return <>
     <div className="page-heading"><div><h1 ref={title} tabIndex={-1}>General</h1><p>Pi core settings shared by every project.</p></div>
       <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search settings" placeholder="Search settings or keys…" value={query} onChange={e => setQuery(e.target.value)} /></div></div>
@@ -96,7 +113,7 @@ export function GeneralTab() {
     {!needle && <nav className="section-links" aria-label="Setting groups">{sections.map(section => <a key={section.id} href={"#group-" + section.id}
       onClick={event => { event.preventDefault(); document.getElementById("group-" + section.id)?.scrollIntoView({ behavior: "smooth" }); }}>{section.title}</a>)}</nav>}
     <div role="status" className="feedback">{message}</div>
-    {error && <div role="alert" className="error"><strong>Could not complete the operation</strong><p>{error}</p><Button variant="outline" disabled={busy} onClick={() => void refresh()}>Reload settings</Button></div>}
+    {error && <div role="alert" className="error"><strong>Could not complete the operation</strong><p>{error}</p><div className="actions"><Button variant="outline" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>{rawButton}</div></div>}
     {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && <>
       {restore ? <section className="review"><h2>Restore previous file?</h2><p>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</p><div className="actions"><Button variant="outline" disabled={busy} onClick={() => setRestore(false)}>Cancel</Button><Button disabled={busy} onClick={() => void recover()}>Confirm restore</Button></div></section> : <>
         {sections.map(group => {
@@ -120,7 +137,7 @@ export function GeneralTab() {
           <Button disabled={!changes.length || !!invalidKeys.length || busy} onClick={() => void save()}>{busy ? "Saving…" : "Save"}</Button>
         </div></div>
       </>}
-      {!restore && <section className="file-tools" aria-label="File actions"><Button variant="ghost" disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</Button>
+      {!restore && <section className="file-tools" aria-label="File actions">{rawButton}<Button variant="ghost" disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</Button>
         {view.hasBackup && <Button variant="ghost" disabled={busy || !!changes.length} onClick={() => setRestore(true)}>Restore previous file</Button>}</section>}
     </>}
     <footer className="scope-footnote"><p>Saved values apply to new T3Code threads, or after /reload. Unknown keys in the file are kept as they are.</p></footer>

@@ -39,3 +39,6 @@ export const loadSessions = () => request<SessionSummary[]>("/api/sessions");
 export const loadSystemPrompt = (id: string) => request<SystemPromptView>(`/api/sessions/${encodeURIComponent(id)}/system-prompt`);
 export const loadSkills = () => request<SkillsView>("/api/skills");
 export const saveSkills = (revision: string, paths: string[], enabled: boolean) => request<SkillsView>("/api/skills", "PATCH", { revision, paths, enabled });
+export type RawSettings = { path: string; text: string; revision: string };
+export const loadRawSettings = () => request<RawSettings>("/api/settings/global/raw");
+export const saveRawSettings = (revision: string, text: string) => request<RawSettings>("/api/settings/global/raw", "PUT", { revision, text });

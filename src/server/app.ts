@@ -73,6 +73,12 @@ export function createApp({ store, agentDir, origins, staticDir }: AppOptions) {
     await store.patch(scope, input.revision, changes);
     return c.json(await view(scope));
   });
+  app.get("/api/settings/global/raw", async c => c.json({ path: store.path("global"), ...await store.readText("global") }));
+  app.put("/api/settings/global/raw", async c => {
+    const { revision, text } = z.object({ revision: z.string().min(1).max(100), text: z.string().max(60_000) }).strict().parse(await c.req.json());
+    await store.writeText("global", revision, text);
+    return c.json({ path: store.path("global"), ...await store.readText("global") });
+  });
   app.post("/api/settings/:scope/restore", async c => {
     const scope = SCOPE.parse(c.req.param("scope"));
     const input = z.object({ revision: z.string().min(1).max(100), confirm: z.literal(true) }).strict().parse(await c.req.json());

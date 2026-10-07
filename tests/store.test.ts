@@ -59,7 +59,9 @@ test("invalid JSON is not replaced with an empty file", async (t) => {
   const { store, file } = await fixture(t);
   await writeFile(file, "{ broken");
   await assert.rejects(store.read("global"), /valid JSON/i);
-  await assert.rejects(store.patch("global", "anything", [{ path: ["theme"], value: "light" }]), /valid JSON/i);
+  // Even with the file's current revision, a patch cannot replace broken JSON.
+  const { revision } = await store.readText("global");
+  await assert.rejects(store.patch("global", revision, [{ path: ["theme"], value: "light" }]), /valid JSON/i);
   assert.equal(await readFile(file, "utf8"), "{ broken");
 });
 

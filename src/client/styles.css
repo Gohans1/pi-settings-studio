@@ -147,6 +147,10 @@ textarea { resize: vertical; }
 .item-group .list-header { align-items: center; }
 .item-group .list-header h2 { font-size: 13px; overflow-wrap: anywhere; }
 .list-count { margin-bottom: 12px; }
+.raw-editor { display: grid; gap: 12px; margin-top: 24px; }
+.raw-editor h2 { margin: 0; }
+.raw-editor label { display: grid; gap: 6px; font-weight: 560; }
+.raw-editor textarea { font: 12px/1.6 ui-monospace, monospace; font-weight: 400; width: 100%; tab-size: 2; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {

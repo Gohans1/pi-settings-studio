@@ -24,6 +24,10 @@ function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function revisionOf(raw: string | undefined): string {
+  return raw === undefined ? "missing" : createHash("sha256").update(raw).digest("hex");
+}
+
 function decode(raw: string | undefined): Document {
   let value: unknown = {};
   if (raw !== undefined) {
@@ -34,7 +38,7 @@ function decode(raw: string | undefined): Document {
   return {
     value,
     exists: raw !== undefined,
-    revision: raw === undefined ? "missing" : createHash("sha256").update(raw).digest("hex"),
+    revision: revisionOf(raw),
     // Keep the file's indentation when rewriting it, as Pi does.
     indent: (raw && /^([ \t]+)\S/m.exec(raw)?.[1]) || "  ",
   };
@@ -123,7 +127,22 @@ export class ConfigStore {
 
   /** Replace the document with `edit(current)`, under the lock and revision check. */
   async transform(scope: Scope, revision: string, edit: (value: Record<string, unknown>) => Record<string, unknown> | Promise<Record<string, unknown>>, file?: DocumentName): Promise<Document> {
-    return this.update(scope, revision, async current => JSON.stringify(await edit(current.value), null, current.indent) + "\n", file);
+    return this.update(scope, revision, async current => {
+      const { value, indent } = current();
+      return JSON.stringify(await edit(value), null, indent) + "\n";
+    }, file);
+  }
+
+  async readText(scope: Scope, file?: DocumentName): Promise<{ text: string; revision: string }> {
+    const raw = await readRaw(this.path(scope, file));
+    // Raw text is returned even when it is not valid JSON, so it can be repaired.
+    return { text: raw ?? "{}\n", revision: revisionOf(raw) };
+  }
+
+  /** Write text exactly as given, after checking it holds a JSON object. */
+  async writeText(scope: Scope, revision: string, text: string, file?: DocumentName): Promise<Document> {
+    decode(text);
+    return this.update(scope, revision, () => text, file);
   }
 
   async restore(scope: Scope, revision: string, file?: DocumentName): Promise<Document> {
@@ -135,20 +154,20 @@ export class ConfigStore {
     }, file);
   }
 
-  private async update(scope: Scope, revision: string, next: (current: Document) => string | Promise<string>, file?: DocumentName): Promise<Document> {
+  /** `next` receives the current document lazily: whole-text writes do not need it to be valid. */
+  private async update(scope: Scope, revision: string, next: (current: () => Document) => string | Promise<string>, file?: DocumentName): Promise<Document> {
     const path = this.path(scope, file);
     await assertSafe(path);
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
     const release = await lockfile.lock(path, { realpath: false, retries: { retries: 8, minTimeout: 15, maxTimeout: 100 } });
     try {
       const raw = await readRaw(path);
-      const current = decode(raw);
-      if (current.revision !== revision) throw new ConfigError("The file changed in another session. Reload and check your draft before saving.", 409);
-      const text = await next(current);
+      if (revisionOf(raw) !== revision) throw new ConfigError("The file changed in another session. Reload and check your draft before saving.", 409);
+      const text = await next(() => decode(raw));
       if (Buffer.byteLength(text) > MAX_BYTES) throw new ConfigError("The file would exceed 1 MiB.");
       if (raw !== undefined) await atomicWrite(path + ".pi-settings-backup", raw);
       // Catch uncooperative editors too, up to this final pre-rename check.
-      if (decode(await readRaw(path)).revision !== revision) throw new ConfigError("The file changed while saving. Reload before trying again.", 409);
+      if (revisionOf(await readRaw(path)) !== revision) throw new ConfigError("The file changed while saving. Reload before trying again.", 409);
       await atomicWrite(path, text);
       return decode(text);
     } finally { await release(); }

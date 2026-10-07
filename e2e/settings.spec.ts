@@ -97,3 +97,22 @@ test("a switch and a typed choice save with their JSON types", async ({ page }) 
   const saved = JSON.parse(await readFile(file, "utf8"));
   expect([saved.compaction, saved.terminal]).toEqual([{ enabled: false }, { images: false }]);
 });
+
+test("the raw JSON editor saves exactly what was typed and repairs a broken file", async ({ page }) => {
+  await writeFile(file, '{ "defaultModel": "broken", }');
+  await page.reload();
+  await expect(page.getByRole("alert")).toContainText("valid JSON");
+  await page.getByRole("button", { name: "Edit raw JSON" }).click();
+  const editor = page.getByLabel("settings.json");
+  await expect(editor).toHaveValue('{ "defaultModel": "broken", }');
+  await editor.fill('{ "defaultModel": "repaired" }');
+  await page.getByRole("button", { name: "Save JSON" }).click();
+  await expect(page.getByRole("status")).toContainText("Saved");
+  expect(await readFile(file, "utf8")).toBe('{ "defaultModel": "repaired" }');
+  await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("repaired");
+  await page.getByRole("button", { name: "Edit raw JSON" }).click();
+  await page.getByLabel("settings.json").fill("[1]");
+  await page.getByRole("button", { name: "Save JSON" }).click();
+  await expect(page.getByRole("alert")).toContainText("JSON object");
+  expect(await readFile(file, "utf8")).toBe('{ "defaultModel": "repaired" }');
+});

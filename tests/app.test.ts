@@ -117,3 +117,35 @@ test("booleans, nested numbers and typed choices are saved with their JSON types
   assert.deepEqual([saved.compaction, saved.retry, saved.terminal, saved.quietStartup, saved.fullscreenWheelScrollLines],
     [{ enabled: false }, { provider: { maxRetries: 2 } }, { images: false }, "header", 6]);
 });
+
+test("raw JSON round-trips exactly; invalid or non-object JSON and stale revisions change nothing", async (t) => {
+  const { request, file } = await fixture(t);
+  const headers = { origin, "content-type": "application/json" };
+  const raw = await (await request("/api/settings/global/raw")).json();
+  assert.equal(raw.text, await readFile(file, "utf8"));
+  const put = (body: object) => request("/api/settings/global/raw", { method: "PUT", headers, body: JSON.stringify(body) });
+  const before = await readFile(file, "utf8");
+  for (const text of ["{ broken", "[1, 2]", "null"]) {
+    const response = await put({ revision: raw.revision, text });
+    assert.equal(response.status, 422);
+    assert.match((await response.json()).error, /JSON object|valid JSON/);
+  }
+  assert.equal((await put({ revision: "stale", text: "{}" })).status, 409);
+  assert.equal(await readFile(file, "utf8"), before);
+  const text = '{\n\t"modelThinkingLevels": { "anthropic/claude": "high" },\n\t"defaultModel": "x"\n}\n';
+  const saved = await put({ revision: raw.revision, text });
+  assert.equal(saved.status, 200);
+  assert.equal(await readFile(file, "utf8"), text);
+  assert.equal(await readFile(file + ".pi-settings-backup", "utf8"), before);
+});
+
+test("a settings file with broken JSON can be repaired through the raw editor", async (t) => {
+  const { request, file } = await fixture(t);
+  await writeFile(file, '{ "defaultModel": "x", }');
+  const raw = await (await request("/api/settings/global/raw")).json();
+  assert.equal(raw.text, '{ "defaultModel": "x", }');
+  const response = await request("/api/settings/global/raw", { method: "PUT", headers: { origin, "content-type": "application/json" },
+    body: JSON.stringify({ revision: raw.revision, text: '{ "defaultModel": "x" }\n' }) });
+  assert.equal(response.status, 200);
+  assert.equal(await readFile(file, "utf8"), '{ "defaultModel": "x" }\n');
+});
