@@ -14,7 +14,7 @@ export type ResourceView = {
   disableModelInvocation?: boolean;
 };
 
-export type SkillsView = { revision: string; skills: ResourceView[] };
+export type SkillsView = { revision: string; projectRevision?: string; skills: ResourceView[] };
 
 export type PackageView = { source: string; installed: boolean; filtered: boolean };
-export type PluginsView = { revision: string; resources: ResourceView[]; packages: PackageView[] };
+export type PluginsView = { revision: string; projectRevision?: string; resources: ResourceView[]; packages: PackageView[] };

@@ -49,14 +49,15 @@ export const saveMcpSettings = (revision: string, patch: { autoEnableCodemode: b
   request<McpFileView>(mcpUrl(GLOBAL, "/settings"), "PATCH", { revision, ...patch });
 export const loadSessions = () => request<SessionSummary[]>("/api/sessions");
 export const loadSystemPrompt = (id: string) => request<SystemPromptView>(`/api/sessions/${encodeURIComponent(id)}/system-prompt`);
-export const loadSkills = () => request<SkillsView>("/api/skills");
-export const saveSkills = (revision: string, paths: string[], enabled: boolean) => request<SkillsView>("/api/skills", "PATCH", { revision, paths, enabled });
+export const loadSkills = (project?: string) => request<SkillsView>(withProject("/api/skills", project));
+export const saveSkills = (scope: Scope, revision: string, paths: string[], enabled: boolean, project?: string) =>
+  request<SkillsView>(withProject("/api/skills", project), "PATCH", { scope, revision, paths, enabled });
 export type RawSettings = { path: string; text: string; revision: string };
 export const loadRawSettings = () => request<RawSettings>("/api/settings/global/raw");
 export const saveRawSettings = (revision: string, text: string) => request<RawSettings>("/api/settings/global/raw", "PUT", { revision, text });
-export const loadPlugins = () => request<PluginsView>("/api/plugins");
-export const savePlugins = (revision: string, items: { type: string; path: string }[], enabled: boolean) =>
-  request<PluginsView>("/api/plugins", "PATCH", { revision, items, enabled });
+export const loadPlugins = (project?: string) => request<PluginsView>(withProject("/api/plugins", project));
+export const savePlugins = (scope: Scope, revision: string, items: { type: string; path: string }[], enabled: boolean, project?: string) =>
+  request<PluginsView>(withProject("/api/plugins", project), "PATCH", { scope, revision, items, enabled });
 export const loadAgents = () => request<AgentsView>("/api/agents");
 export const addAgent = (input: AgentInput) => request<AgentsView>("/api/agents", "POST", input);
 export const editAgent = (file: string, revision: string, input: AgentInput) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}`, "PUT", { revision, ...input });

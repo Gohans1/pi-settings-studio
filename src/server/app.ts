@@ -102,8 +102,8 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/mcp", mcpRoutes(store, registry));
   app.route("/api/codemode", codemodeRoutes(store));
   app.route("/api/sessions", sessionRoutes(agentDir));
-  app.route("/api/skills", skillRoutes(store, agentDir));
-  app.route("/api/plugins", pluginRoutes(store, agentDir));
+  app.route("/api/skills", skillRoutes(store, registry, agentDir));
+  app.route("/api/plugins", pluginRoutes(store, registry, agentDir));
   app.route("/api/agents", agentRoutes(store, agentDir));
   app.route("/api/models", modelRoutes(store, agentDir));
   app.route("/api/projects", projectRoutes(registry, store, agentDir));

@@ -20,7 +20,7 @@ function SkillDetail({ skill }: { skill: ResourceView }) {
   </section>;
 }
 
-export function SkillsTab() {
+export function SkillsTab({ project }: { project?: string }) {
   const [view, setView] = useState<SkillsView>();
   const [selected, setSelected] = useState<string>();
   const [query, setQuery] = useState("");
@@ -30,16 +30,18 @@ export function SkillsTab() {
 
   async function refresh() {
     setError("");
-    try { setView(await loadSkills()); }
+    try { setView(await loadSkills(project)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the skills."); }
   }
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { setSelected(undefined); void refresh(); }, [project]);
 
   async function toggle(skills: ResourceView[], enabled: boolean, label = skills[0]?.name) {
     if (!view || !skills.length) return;
     setBusy(true); setError(""); setMessage("");
     try {
-      setView(await saveSkills(view.revision, skills.map(skill => skill.path), enabled));
+      // Project skills switch in the project's .pi/settings.json, the others in the global file.
+      const scope = skills[0]!.scope === "project" ? "project" : "global";
+      setView(await saveSkills(scope, scope === "project" ? view.projectRevision! : view.revision, skills.map(skill => skill.path), enabled, project));
       setMessage(`${label} turned ${enabled ? "on" : "off"}. Applies to new T3Code threads, or after /reload.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not change the skills.");

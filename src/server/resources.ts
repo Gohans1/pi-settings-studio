@@ -5,13 +5,14 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { Hono } from "hono";
 import { z } from "zod";
 import { DefaultPackageManager, parseFrontmatter, SettingsManager, type ResolvedResource } from "@earendil-works/pi-coding-agent";
 import type { PackageView, PluginsView, ResourceType, ResourceView, SkillsView } from "../shared/resources.ts";
 import { isRecord } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
+import type { ProjectRegistry } from "./projects.ts";
 
 /** Pi's built-in extensions, as named in docs/settings.md (a test keeps the two in step). */
 export const BUILTIN_EXTENSIONS = ["mcp", "llama.cpp", "codemode", "tool-search"];
@@ -33,33 +34,40 @@ function groupLabel(metadata: ResolvedResource["metadata"], agentDir: string): s
   return metadata.scope === "user" ? "User settings" : "Project settings";
 }
 
+type Settings = Record<string, unknown>;
+type Project = { dir: string; settings: Settings };
+
 /**
- * Resolve the user's resources with Pi's own resolver. Project resources are left out
- * (projectTrusted: false) until a project picker exists. Missing packages are skipped, never
- * installed: nothing runs to display configuration.
+ * Pi's own resolver over the given settings, read-only. With a project, its .pi settings and
+ * resources are included as if the project were trusted (the trust panel says whether T3Code
+ * loads them). Missing packages are skipped, never installed: nothing runs to display configuration.
  */
-function packageManager(agentDir: string, settings: Record<string, unknown>) {
-  const settingsManager = SettingsManager.inMemory(structuredClone(settings), { projectTrusted: false });
-  return new DefaultPackageManager({ cwd: agentDir, agentDir, settingsManager, builtinExtensions: BUILTIN_EXTENSIONS });
+function packageManager(agentDir: string, global: Settings, project?: Project) {
+  const texts = { global: JSON.stringify(global), project: project && JSON.stringify(project.settings) };
+  const storage: Parameters<typeof SettingsManager.fromStorage>[0] = { withLock: (scope, read) => { read(texts[scope]); } };
+  const settingsManager = SettingsManager.fromStorage(storage, { projectTrusted: !!project });
+  return new DefaultPackageManager({ cwd: project?.dir ?? agentDir, agentDir, settingsManager, builtinExtensions: BUILTIN_EXTENSIONS });
 }
 
-export async function resolveUserResources(agentDir: string, settings: Record<string, unknown>) {
-  return packageManager(agentDir, settings).resolve(async () => "skip");
+export async function resolveResources(agentDir: string, global: Settings, project?: Project) {
+  return packageManager(agentDir, global, project).resolve(async () => "skip");
 }
+export const resolveUserResources = (agentDir: string, settings: Settings) => resolveResources(agentDir, settings);
 
-function patternFor(item: ResolvedResource, agentDir: string): string {
+/** Patterns are relative to the base folder of the settings file that holds them, as in pi config. */
+function patternFor(item: ResolvedResource, base: string): string {
   if (item.metadata.origin === "package") return relative(item.metadata.baseDir ?? dirname(item.path), item.path);
   if (item.metadata.source === "builtin") return item.path;
-  return relative(item.metadata.baseDir ?? agentDir, item.path);
+  return relative(item.metadata.baseDir ?? base, item.path);
 }
 
 const withoutPattern = (entries: unknown, pattern: string) =>
   (Array.isArray(entries) ? entries.filter((entry): entry is string => typeof entry === "string") : [])
     .filter(entry => (/^[!+-]/.test(entry) ? entry.slice(1) : entry) !== pattern);
 
-/** `pi config`'s toggle for one user-scope resource, applied to a copy of the global settings. */
-export function toggleResource(settings: Record<string, unknown>, type: ResourceType, item: ResolvedResource, enabled: boolean, agentDir: string): Record<string, unknown> {
-  const pattern = patternFor(item, agentDir);
+/** `pi config`'s toggle for one resource, applied to the settings of the resource's own scope. */
+export function toggleResource(settings: Settings, type: ResourceType, item: ResolvedResource, enabled: boolean, base: string): Settings {
+  const pattern = patternFor(item, base);
   const entry = `${enabled ? "+" : "-"}${pattern}`;
   if (item.metadata.origin === "top-level") {
     settings[type] = [...withoutPattern(settings[type], pattern), entry];
@@ -102,64 +110,86 @@ async function describe(type: ResourceType, item: ResolvedResource, agentDir: st
     group: groupLabel(item.metadata, agentDir), ...(disableModelInvocation ? { disableModelInvocation } : {}) };
 }
 
-export function skillRoutes(store: ConfigStore, agentDir: string) {
-  async function view(): Promise<SkillsView> {
-    const { value, revision } = await store.read("global");
-    const { skills } = await resolveUserResources(agentDir, value);
-    return { revision, skills: await Promise.all(skills.map(item => describe("skills", item, agentDir))) };
+type ScopeName = "global" | "project";
+const scopeOf = (item: ResolvedResource): ScopeName => item.metadata.scope === "project" ? "project" : "global";
+
+/** Shared by Skills and Plugins: read both files, resolve, and toggle within one scope's file. */
+function resourceContext(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
+  async function load(project: string | undefined) {
+    const dir = project === undefined ? undefined : await registry.require(project);
+    const projectStore = dir ? registry.storeFor(dir) : undefined;
+    const global = await store.read("global");
+    const local = projectStore ? await projectStore.read("project") : undefined;
+    return { dir, projectStore, global, local };
+  }
+  async function resolve(project: string | undefined) {
+    const { dir, global, local } = await load(project);
+    const resolved = await resolveResources(agentDir, global.value, dir ? { dir, settings: local!.value } : undefined);
+    return { resolved, revision: global.revision, ...(local ? { projectRevision: local.revision } : {}), manager: packageManager(agentDir, global.value, dir ? { dir, settings: local!.value } : undefined) };
+  }
+  async function toggle(project: string | undefined, scope: ScopeName, revision: string, enabled: boolean, items: { type: ResourceType; path: string }[]) {
+    const { dir, projectStore, global } = await load(project);
+    if (scope === "project" && (!dir || !projectStore)) throw new ConfigError("Choose a project first.", 400);
+    const target = scope === "project" ? projectStore! : store;
+    await target.transform(scope, revision, async settings => {
+      // Resolve against the file being edited, so a concurrent change cannot slip in between.
+      const resolved = scope === "project"
+        ? await resolveResources(agentDir, global.value, { dir: dir!, settings })
+        : await resolveResources(agentDir, settings, dir ? { dir, settings: (await projectStore!.read("project")).value } : undefined);
+      for (const { type, path } of items) {
+        const item = resolved[type].find(entry => entry.path === path);
+        if (!item) throw new ConfigError("A resource is no longer discovered. Reload the list.");
+        if (scopeOf(item) !== scope) throw new ConfigError(`${basename(path)} belongs to the ${scopeOf(item)} settings, not the ${scope} ones.`);
+        toggleResource(settings, type, item, enabled, scope === "project" ? join(dir!, ".pi") : agentDir);
+      }
+      return settings;
+    });
+  }
+  return { resolve, toggle };
+}
+
+const toggleBody = { scope: z.enum(["global", "project"]).default("global"), revision: z.string().min(1).max(100), enabled: z.boolean() };
+
+export function skillRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
+  const context = resourceContext(store, registry, agentDir);
+  async function view(project: string | undefined): Promise<SkillsView> {
+    const { resolved, revision, projectRevision } = await context.resolve(project);
+    return { revision, ...(projectRevision ? { projectRevision } : {}), skills: await Promise.all(resolved.skills.map(item => describe("skills", item, agentDir))) };
   }
   return new Hono()
-    .get("/", async c => c.json(await view()))
+    .get("/", async c => c.json(await view(c.req.query("project"))))
     .patch("/", async c => {
-      const { revision, paths, enabled } = z.object({
-        revision: z.string().min(1).max(100), paths: z.array(z.string().max(4096)).min(1).max(1000), enabled: z.boolean(),
-      }).strict().parse(await c.req.json());
-      await store.transform("global", revision, async settings => {
-        const { skills } = await resolveUserResources(agentDir, settings);
-        for (const path of paths) {
-          const item = skills.find(entry => entry.path === path);
-          if (!item) throw new ConfigError("A skill is no longer discovered. Reload the list.");
-          toggleResource(settings, "skills", item, enabled, agentDir);
-        }
-        return settings;
-      });
-      return c.json(await view());
+      const project = c.req.query("project");
+      const { scope, revision, paths, enabled } = z.object({ ...toggleBody, paths: z.array(z.string().max(4096)).min(1).max(1000) }).strict().parse(await c.req.json());
+      await context.toggle(project, scope, revision, enabled, paths.map(path => ({ type: "skills" as const, path })));
+      return c.json(await view(project));
     });
 }
 
 const PLUGIN_TYPES = ["extensions", "prompts", "themes"] as const;
 
-export function pluginRoutes(store: ConfigStore, agentDir: string) {
-  async function view(): Promise<PluginsView> {
-    const { value, revision } = await store.read("global");
-    const manager = packageManager(agentDir, value);
-    const resolved = await manager.resolve(async () => "skip");
+export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
+  const context = resourceContext(store, registry, agentDir);
+  async function view(project: string | undefined): Promise<PluginsView> {
+    const { resolved, revision, projectRevision, manager } = await context.resolve(project);
     const resources = (await Promise.all(PLUGIN_TYPES.map(type => Promise.all(resolved[type].map(item => describe(type, item, agentDir)))))).flat();
+    const { value } = await store.read("global");
     const packages: PackageView[] = (Array.isArray(value.packages) ? value.packages : []).flatMap(pkg => {
       const source = typeof pkg === "string" ? pkg : isRecord(pkg) && typeof pkg.source === "string" ? pkg.source : undefined;
       if (!source) return [];
       const path = manager.getInstalledPath(source, "user");
       return [{ source, installed: !!path && existsSync(path), filtered: typeof pkg !== "string" }];
     });
-    return { revision, resources, packages };
+    return { revision, ...(projectRevision ? { projectRevision } : {}), resources, packages };
   }
   return new Hono()
-    .get("/", async c => c.json(await view()))
+    .get("/", async c => c.json(await view(c.req.query("project"))))
     .patch("/", async c => {
-      const { revision, items, enabled } = z.object({
-        revision: z.string().min(1).max(100),
-        items: z.array(z.object({ type: z.enum(PLUGIN_TYPES), path: z.string().max(4096) }).strict()).min(1).max(1000),
-        enabled: z.boolean(),
+      const project = c.req.query("project");
+      const { scope, revision, items, enabled } = z.object({
+        ...toggleBody, items: z.array(z.object({ type: z.enum(PLUGIN_TYPES), path: z.string().max(4096) }).strict()).min(1).max(1000),
       }).strict().parse(await c.req.json());
-      await store.transform("global", revision, async settings => {
-        const resolved = await resolveUserResources(agentDir, settings);
-        for (const { type, path } of items) {
-          const item = resolved[type].find(entry => entry.path === path);
-          if (!item) throw new ConfigError("A resource is no longer discovered. Reload the list.");
-          toggleResource(settings, type, item, enabled, agentDir);
-        }
-        return settings;
-      });
-      return c.json(await view());
+      await context.toggle(project, scope, revision, enabled, items);
+      return c.json(await view(project));
     });
 }

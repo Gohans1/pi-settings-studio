@@ -28,7 +28,7 @@ function PluginDetail({ item }: { item: ResourceView }) {
   </section>;
 }
 
-export function PluginsTab() {
+export function PluginsTab({ project }: { project?: string }) {
   const [view, setView] = useState<PluginsView>();
   const [selected, setSelected] = useState<string>();
   const [query, setQuery] = useState("");
@@ -38,16 +38,17 @@ export function PluginsTab() {
 
   async function refresh() {
     setError("");
-    try { setView(await loadPlugins()); }
+    try { setView(await loadPlugins(project)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the plugins."); }
   }
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { setSelected(undefined); void refresh(); }, [project]);
 
   async function toggle(items: ResourceView[], enabled: boolean, label = items[0]?.name) {
     if (!view || !items.length) return;
     setBusy(true); setError(""); setMessage("");
     try {
-      setView(await savePlugins(view.revision, items.map(item => ({ type: item.type, path: item.path })), enabled));
+      const scope = items[0]!.scope === "project" ? "project" : "global";
+      setView(await savePlugins(scope, scope === "project" ? view.projectRevision! : view.revision, items.map(item => ({ type: item.type, path: item.path })), enabled, project));
       setMessage(`${label} turned ${enabled ? "on" : "off"}. Applies to new T3Code threads, or after /reload.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not change the plugins.");
