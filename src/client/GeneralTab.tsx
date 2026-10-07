@@ -5,6 +5,7 @@ import { loadSettings, restoreSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
 import { RawJsonEditor } from "./RawJsonEditor";
+import { KeybindingsPanel } from "./KeybindingsPanel";
 
 export function GeneralTab({ project }: { project?: string }) {
   // The project's own .pi/settings.json overrides the global file key by key.
@@ -117,7 +118,8 @@ export function GeneralTab({ project }: { project?: string }) {
     </fieldset>}
     {view && <div className="scope-info"><code>{view.path}</code></div>}
     {!needle && <nav className="section-links" aria-label="Setting groups">{sections.map(section => <a key={section.id} href={"#group-" + section.id}
-      onClick={event => { event.preventDefault(); document.getElementById("group-" + section.id)?.scrollIntoView({ behavior: "smooth" }); }}>{section.title}</a>)}</nav>}
+      onClick={event => { event.preventDefault(); document.getElementById("group-" + section.id)?.scrollIntoView({ behavior: "smooth" }); }}>{section.title}</a>)}
+      {scope === "global" && <a href="#group-keybindings" onClick={event => { event.preventDefault(); document.getElementById("group-keybindings")?.scrollIntoView({ behavior: "smooth" }); }}>Keyboard shortcuts</a>}</nav>}
     <div role="status" className="feedback">{message}</div>
     {error && <div role="alert" className="error"><strong>Could not complete the operation</strong><p>{error}</p><div className="actions"><Button variant="outline" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>{rawButton}</div></div>}
     {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && <>
@@ -147,6 +149,7 @@ export function GeneralTab({ project }: { project?: string }) {
       {!restore && <section className="file-tools" aria-label="File actions">{rawButton}<Button variant="ghost" disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</Button>
         {view.hasBackup && <Button variant="ghost" disabled={busy || !!changes.length} onClick={() => setRestore(true)}>Restore previous file</Button>}</section>}
     </>}
+    {scope === "global" && !needle && <KeybindingsPanel />}
     <footer className="scope-footnote"><p>Saved values apply to new T3Code threads, or after /reload. Unknown keys in the file are kept as they are.</p></footer>
   </>;
 }

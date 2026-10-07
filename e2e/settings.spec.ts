@@ -22,7 +22,7 @@ test("save writes native files directly, preserves unknown values, and survives 
   await page.getByLabel("Shell command prefix", { exact: true }).fill("new-model");
   expect(JSON.parse(await readFile(file, "utf8")).shellCommandPrefix).toBe("fixture-prefix");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Saved to file");
+  await expect(page.getByRole("status").first()).toContainText("Saved to file");
   const saved = JSON.parse(await readFile(file, "utf8"));
   expect(saved.shellCommandPrefix).toBe("new-model");
   expect(saved.extensionSecret).toBe("fixture-not-real");
@@ -48,7 +48,7 @@ test("search narrows the settings by label or key", async ({ page }) => {
 test("backup restore is explicit and restores the original native document", async ({ page }) => {
   await page.getByLabel("Shell command prefix", { exact: true }).fill("changed");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Saved to file");
+  await expect(page.getByRole("status").first()).toContainText("Saved to file");
   await page.getByRole("button", { name: "Restore previous file" }).click();
   await expect(page.getByRole("heading", { name: "Restore previous file?" })).toBeVisible();
   await page.getByRole("button", { name: "Confirm restore" }).click();
@@ -64,7 +64,7 @@ test("list fields take one entry per line without losing Enter", async ({ page }
   await expect(list).toHaveValue("bun\n");
   await list.pressSequentially("x");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Saved to file");
+  await expect(page.getByRole("status").first()).toContainText("Saved to file");
   expect(JSON.parse(await readFile(file, "utf8")).npmCommand).toEqual(["bun", "x"]);
 });
 
@@ -93,7 +93,7 @@ test("a switch and a typed choice save with their JSON types", async ({ page }) 
   await page.getByRole("switch", { name: "Automatic compaction" }).click();
   await page.getByLabel("Image protocol").selectOption("false");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Saved");
+  await expect(page.getByRole("status").first()).toContainText("Saved");
   const saved = JSON.parse(await readFile(file, "utf8"));
   expect([saved.compaction, saved.terminal]).toEqual([{ enabled: false }, { images: false }]);
 });
@@ -107,7 +107,7 @@ test("the raw JSON editor saves exactly what was typed and repairs a broken file
   await expect(editor).toHaveValue('{ "shellCommandPrefix": "broken", }');
   await editor.fill('{ "shellCommandPrefix": "repaired" }');
   await page.getByRole("button", { name: "Save JSON" }).click();
-  await expect(page.getByRole("status")).toContainText("Saved");
+  await expect(page.getByRole("status").first()).toContainText("Saved");
   expect(await readFile(file, "utf8")).toBe('{ "shellCommandPrefix": "repaired" }');
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("repaired");
   await page.getByRole("button", { name: "Edit raw JSON" }).click();
@@ -115,4 +115,24 @@ test("the raw JSON editor saves exactly what was typed and repairs a broken file
   await page.getByRole("button", { name: "Save JSON" }).click();
   await expect(page.getByRole("alert")).toContainText("JSON object");
   expect(await readFile(file, "utf8")).toBe('{ "shellCommandPrefix": "repaired" }');
+});
+
+test("keyboard shortcuts are edited, disabled and reset in keybindings.json", async ({ page }) => {
+  const keys = join(root, "agent", "keybindings.json");
+  await writeFile(keys, JSON.stringify({ "app.model.select": "ctrl+k" }));
+  await page.reload();
+  const panel = page.getByRole("region", { name: "Keyboard shortcuts" });
+  await panel.getByRole("searchbox", { name: "Search shortcuts" }).fill("new session");
+  await panel.getByLabel("Keys for app.session.new").fill("ctrl+shift+n");
+  await panel.getByRole("searchbox", { name: "Search shortcuts" }).fill("model selector");
+  await panel.getByRole("button", { name: "Use default for app.model.select" }).click();
+  await panel.getByRole("searchbox", { name: "Search shortcuts" }).fill("altScreen.pageUp");
+  await panel.getByRole("button", { name: "Disable tui.altScreen.pageUp" }).click();
+  await panel.getByRole("button", { name: "Save shortcuts" }).click();
+  await expect(panel.getByRole("status")).toContainText("Saved keybindings.json");
+  expect(JSON.parse(await readFile(keys, "utf8"))).toEqual({ "app.session.new": "ctrl+shift+n", "tui.altScreen.pageUp": [] });
+  await panel.getByRole("searchbox", { name: "Search shortcuts" }).fill("session.tree");
+  await panel.getByLabel("Keys for app.session.tree").fill("ctrl+banana");
+  await expect(panel.getByText("not a key Pi understands")).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Save shortcuts" })).toBeDisabled();
 });

@@ -7,6 +7,7 @@ import type { AgentInput, AgentsView } from "../shared/agents";
 import type { CustomProviderInput, CustomProvidersView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
 import type { InstructionsView } from "../shared/instructions";
+import type { KeybindingsView } from "../shared/keybindings";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -93,3 +94,6 @@ export const editCustomProvider = (id: string, revision: string, provider: Custo
 export const removeCustomProvider = (id: string, revision: string) =>
   request<CustomProvidersView>(`/api/models/custom/${encodeURIComponent(id)}`, "DELETE", { revision });
 export const restoreCustomProviders = (revision: string) => request<CustomProvidersView>("/api/models/custom/restore", "POST", { revision });
+export const loadKeybindings = () => request<KeybindingsView>("/api/keybindings");
+export const saveKeybindings = (revision: string, changes: { id: string; keys: string[] | null }[]) =>
+  request<KeybindingsView>("/api/keybindings", "PATCH", { revision, changes });
