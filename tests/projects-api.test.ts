@@ -73,3 +73,13 @@ test("project settings are read and written only for known projects, with global
   assert.equal((await request("/api/settings/project")).status, 400);
   await assert.rejects(stat(join(outside, ".pi")), { code: "ENOENT" });
 });
+
+test("a project's settings.json can be edited as raw JSON", async (t) => {
+  const { alpha, request } = await fixture(t);
+  const url = `/api/settings/project/raw?project=${encodeURIComponent(alpha)}`;
+  const raw = await (await request(url)).json();
+  assert.equal(raw.text, "{}\n");
+  const text = '{ "packages": [{ "source": "npm:x", "skills": [] }] }\n';
+  assert.equal((await request(url, { method: "PUT", headers: json, body: JSON.stringify({ revision: raw.revision, text }) })).status, 200);
+  assert.equal(await readFile(join(alpha, ".pi", "settings.json"), "utf8"), text);
+});

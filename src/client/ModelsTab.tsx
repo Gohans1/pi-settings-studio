@@ -53,7 +53,7 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove }: {
   </section>;
 }
 
-export function ModelsTab() {
+export function ModelsTab({ project }: { project?: string }) {
   const [view, setView] = useState<ProvidersView>();
   const [selected, setSelected] = useState<string>();
   const [query, setQuery] = useState("");
@@ -113,7 +113,7 @@ export function ModelsTab() {
         </div>)}
         {!visible.length && <p className="empty">No matching providers.</p>}
       </section>
-      {selected === DEFAULTS ? <ModelDefaults providers={providers} onSaved={text => { setMessage(text); setUndo(false); }} />
+      {selected === DEFAULTS ? <ModelDefaults providers={providers} project={project} onSaved={text => { setMessage(text); setUndo(false); }} />
         : current ? <ProviderDetail key={current.id} provider={current} busy={busy}
         onSaveKey={key => run(revision => saveProviderKey(current.id, revision, key), `API key saved for ${current.name}.`)}
         onRemove={() => void run(revision => removeProviderKey(current.id, revision), `Removed the stored credential for ${current.name}.`, true)} />

@@ -103,10 +103,10 @@ export function GeneralTab({ project }: { project?: string }) {
     catch (cause) { setError(cause instanceof Error ? cause.message : "Reload failed."); }
     finally { setLoading(false); }
   }
-  const rawButton = scope === "global" && <Button variant="outline" disabled={busy || !!changes.length} onClick={() => { setRaw(true); setMessage(""); }}>Edit raw JSON</Button>;
+  const rawButton = <Button variant="outline" disabled={busy || !!changes.length} onClick={() => { setRaw(true); setMessage(""); }}>Edit raw JSON</Button>;
   if (raw) return <>
     <div className="page-heading"><div><h1>General</h1><p>Pi core settings shared by every project.</p></div></div>
-    <RawJsonEditor onClose={saved => void closeRaw(saved)} />
+    <RawJsonEditor scope={scope} project={target} onClose={saved => void closeRaw(saved)} />
   </>;
   return <>
     <div className="page-heading"><div><h1 ref={title} tabIndex={-1}>General</h1><p>{scope === "project" ? "Settings for this project only. They override the global ones while the project is trusted." : "Pi core settings shared by every project."}</p></div>

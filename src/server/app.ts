@@ -86,11 +86,17 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
     await store.patch(scope, input.revision, changes);
     return c.json(await view(scope, store));
   });
-  app.get("/api/settings/global/raw", async c => c.json({ path: store.path("global"), ...await store.readText("global") }));
-  app.put("/api/settings/global/raw", async c => {
+  app.get("/api/settings/:scope/raw", async c => {
+    const scope = SCOPE.parse(c.req.param("scope"));
+    const store = await storeFor(scope, c.req.query("project"));
+    return c.json({ path: store.path(scope), ...await store.readText(scope) });
+  });
+  app.put("/api/settings/:scope/raw", async c => {
+    const scope = SCOPE.parse(c.req.param("scope"));
+    const store = await storeFor(scope, c.req.query("project"));
     const { revision, text } = z.object({ revision: z.string().min(1).max(100), text: z.string().max(60_000) }).strict().parse(await c.req.json());
-    await store.writeText("global", revision, text);
-    return c.json({ path: store.path("global"), ...await store.readText("global") });
+    await store.writeText(scope, revision, text);
+    return c.json({ path: store.path(scope), ...await store.readText(scope) });
   });
   app.post("/api/settings/:scope/restore", async c => {
     const scope = SCOPE.parse(c.req.param("scope"));

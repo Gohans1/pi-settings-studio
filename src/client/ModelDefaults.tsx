@@ -7,7 +7,10 @@ import { Button } from "./components/ui/button";
 const LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
 
 /** Startup provider, model, thinking level and model cycling, chosen from Pi's catalog. */
-export function ModelDefaults({ providers, onSaved }: { providers: ProviderView[]; onSaved: (message: string) => void }) {
+export function ModelDefaults({ providers, project, onSaved }: { providers: ProviderView[]; project?: string; onSaved: (message: string) => void }) {
+  const [scopeChoice, setScopeChoice] = useState<"global" | "project">("global");
+  const scope = project ? scopeChoice : "global";
+  const target = scope === "project" ? project : undefined;
   const [view, setView] = useState<SettingsView>();
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
@@ -24,7 +27,7 @@ export function ModelDefaults({ providers, onSaved }: { providers: ProviderView[
     setThinking(String(next.values.defaultThinkingLevel ?? ""));
     setEnabled(Array.isArray(next.values.enabledModels) ? next.values.enabledModels.join("\n") : "");
   }
-  useEffect(() => { loadSettings("global").then(fill).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read settings.json.")); }, []);
+  useEffect(() => { setView(undefined); loadSettings(scope, target).then(fill).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read settings.json.")); }, [scope, target]);
   useEffect(() => {
     setModels([]);
     if (provider) loadModels(provider).then(setModels).catch(() => setModels([]));
@@ -42,7 +45,7 @@ export function ModelDefaults({ providers, onSaved }: { providers: ProviderView[
         : JSON.stringify(value) === JSON.stringify(view.values[key]) ? [] : [{ key, value }]);
     if (!changes.length) { onSaved("Defaults are unchanged."); return; }
     setBusy(true); setError("");
-    try { fill(await saveSettings("global", view.revision, changes)); onSaved("Defaults saved. Applies to new T3Code threads, or after /reload."); }
+    try { fill(await saveSettings(scope, view.revision, changes, target)); onSaved("Defaults saved. Applies to new T3Code threads, or after /reload."); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Not saved."); }
     finally { setBusy(false); }
   }
@@ -50,7 +53,11 @@ export function ModelDefaults({ providers, onSaved }: { providers: ProviderView[
   const known = models.some(entry => entry.id === model);
   return <section className="detail server-form" aria-labelledby="defaults-title">
     <h2 id="defaults-title">Defaults</h2>
-    <p className="muted">What new sessions start with. Stored in settings.json.</p>
+    <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p>
+    {project && <fieldset className="scope-choice"><legend>Edit</legend>
+      <label><input type="radio" name="defaults-scope" checked={scope === "global"} disabled={busy} onChange={() => setScopeChoice("global")} />Global defaults</label>
+      <label><input type="radio" name="defaults-scope" checked={scope === "project"} disabled={busy} onChange={() => setScopeChoice("project")} />This project</label>
+    </fieldset>}
     {error && <div role="alert" className="error"><strong>Not saved</strong><p>{error}</p></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
       <label>Default provider<select value={provider} onChange={event => { setProvider(event.target.value); setModel(""); }}>

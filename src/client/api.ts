@@ -53,8 +53,9 @@ export const loadSkills = (project?: string) => request<SkillsView>(withProject(
 export const saveSkills = (scope: Scope, revision: string, paths: string[], enabled: boolean, project?: string) =>
   request<SkillsView>(withProject("/api/skills", project), "PATCH", { scope, revision, paths, enabled });
 export type RawSettings = { path: string; text: string; revision: string };
-export const loadRawSettings = () => request<RawSettings>("/api/settings/global/raw");
-export const saveRawSettings = (revision: string, text: string) => request<RawSettings>("/api/settings/global/raw", "PUT", { revision, text });
+export const loadRawSettings = (scope: Scope = "global", project?: string) => request<RawSettings>(withProject(`/api/settings/${scope}/raw`, project));
+export const saveRawSettings = (revision: string, text: string, scope: Scope = "global", project?: string) =>
+  request<RawSettings>(withProject(`/api/settings/${scope}/raw`, project), "PUT", { revision, text });
 export const loadPlugins = (project?: string) => request<PluginsView>(withProject("/api/plugins", project));
 export const savePlugins = (scope: Scope, revision: string, items: { type: string; path: string }[], enabled: boolean, project?: string) =>
   request<PluginsView>(withProject("/api/plugins", project), "PATCH", { scope, revision, items, enabled });

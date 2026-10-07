@@ -44,3 +44,24 @@ test("a project is picked, trusted, and its own settings.json edited", async ({ 
   await expect(page.getByLabel("Project", { exact: true })).toHaveValue(project);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("project model defaults and raw JSON write the project's settings.json", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  await panel.getByRole("radio", { name: "This project" }).check();
+  await panel.getByLabel("Thinking level").selectOption("high");
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("status")).toContainText("Defaults saved");
+  expect(JSON.parse(await readFile(join(project, ".pi", "settings.json"), "utf8"))).toEqual({ defaultThinkingLevel: "high" });
+
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("radio", { name: "This project" }).check();
+  await page.getByRole("button", { name: "Edit raw JSON" }).click();
+  await page.getByLabel("settings.json").fill('{ "defaultThinkingLevel": "low" }');
+  await page.getByRole("button", { name: "Save JSON" }).click();
+  await expect(page.getByRole("status")).toContainText("Saved");
+  expect(await readFile(join(project, ".pi", "settings.json"), "utf8")).toBe('{ "defaultThinkingLevel": "low" }');
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8"))).toEqual({ retry: { maxRetries: 3 } });
+});
