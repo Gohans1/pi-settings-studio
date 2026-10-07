@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { McpFileView, McpServerView } from "../shared/mcp";
-import { loadMcp } from "./api";
+import { loadMcp, saveMcpServer } from "./api";
 import { Button } from "./components/ui/button";
+import { Switch } from "./components/ui/switch";
 
 const exposureLabels: Record<string, [string, string]> = {
   codemode: ["Code mode", "Callable from codemode scripts; not declared to the model."],
@@ -27,7 +28,7 @@ function Names({ names }: { names: string[] }) {
   return <>{names.map(name => <code key={name} className="chip">{name}</code>)}<span className="muted"> values hidden</span></>;
 }
 
-function ServerDetail({ server }: { server: McpServerView }) {
+function ServerDetail({ server, busy, onExposure }: { server: McpServerView; busy: boolean; onExposure: (exposure: string) => void }) {
   const rows: [string, React.ReactNode][] = [];
   if (server.description) rows.push(["Description", server.description]);
   if (server.transport) rows.push(["Transport", server.transport === "http" ? "Streamable HTTP" : "stdio"]);
@@ -38,8 +39,13 @@ function ServerDetail({ server }: { server: McpServerView }) {
   if (server.headers.length) rows.push(["Headers", <Names names={server.headers} />]);
   const auth = signIn(server);
   if (auth) rows.push(["Sign-in", auth]);
-  const [label, help] = exposureLabels[server.exposure] ?? [server.exposure, ""];
-  rows.push(["Tools", <>{label}<span className="muted"> — {help}</span>{server.toolExposureRules > 0 && <p className="muted">{server.toolExposureRules} toolExposure rule(s) keep their own exposure.</p>}</>]);
+  rows.push(["Tools", <>
+    <select aria-label={`Tool exposure for ${server.name}`} value={server.exposure} disabled={busy || !!server.error} onChange={event => onExposure(event.target.value)}>
+      {Object.entries(exposureLabels).map(([value, [label]]) => <option key={value} value={value}>{label}{value === "codemode" ? " (default)" : ""}</option>)}
+    </select>
+    <p className="muted">{exposureLabels[server.exposure]?.[1]}</p>
+    {server.toolExposureRules > 0 && <p className="muted">{server.toolExposureRules} toolExposure rule(s) keep their own exposure.</p>}
+  </>]);
   if (server.timeout) rows.push(["Timeout", `${server.timeout} s`]);
   return <section className="detail" aria-labelledby="server-title">
     <h2 id="server-title">{server.name}</h2>
@@ -53,6 +59,8 @@ export function McpTab() {
   const [view, setView] = useState<McpFileView>();
   const [selected, setSelected] = useState<string>();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function refresh() {
     setError("");
@@ -61,13 +69,26 @@ export function McpTab() {
   }
   useEffect(() => { void refresh(); }, []);
 
+  async function save(name: string, patch: { enabled?: boolean; exposure?: string }, done: string) {
+    if (!view) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      setView(await saveMcpServer(name, view.revision, patch));
+      setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not change the server.");
+      await refresh();
+    } finally { setBusy(false); }
+  }
+
   const servers = view?.servers ?? [];
   const on = servers.filter(server => server.enabled && !server.error).length;
   const current = servers.find(server => server.name === selected);
   return <>
     <div className="page-heading"><div><h1>MCP</h1><p>Servers Pi connects to. Changes apply to new T3Code threads, or after /reload.</p></div></div>
     {view && <div className="scope-info"><code>{view.path}</code></div>}
-    {error && <div role="alert" className="error"><strong>Could not read the MCP settings</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Try again</Button></div>}
+    <div role="status" className="feedback">{message}</div>
+    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Try again</Button></div>}
     {view?.error && <div role="alert" className="error"><strong>Pi loads none of these servers</strong><p>{view.error}</p></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
       <section className="master" aria-labelledby="global-servers">
@@ -76,9 +97,12 @@ export function McpTab() {
           <button type="button" aria-pressed={server.name === selected} onClick={() => setSelected(server.name)}>
             <span className="item-name">{server.name}</span><span className="item-state" data-state={shortState(server)}>{shortState(server)}</span>
           </button>
+          <Switch aria-label={`Enable ${server.name}`} checked={server.enabled} disabled={busy}
+            onCheckedChange={enabled => void save(server.name, { enabled }, `${server.name} turned ${enabled ? "on" : "off"}.`)} />
         </li>)}</ul> : !view.error && <p className="empty">No MCP servers yet.</p>}
       </section>
-      {current ? <ServerDetail server={current} /> : <section className="detail"><p className="empty">Select a server to see its details.</p></section>}
+      {current ? <ServerDetail server={current} busy={busy}
+        onExposure={exposure => void save(current.name, { exposure }, `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`)} /> : <section className="detail"><p className="empty">Select a server to see its details.</p></section>}
     </div>}
   </>;
 }

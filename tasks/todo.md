@@ -7,7 +7,7 @@
 - [x] Bun runtime, port 4369, no login, no review step.
 - [x] Tab bar shell.
 - [x] MCP: list and details (global).
-- [ ] MCP: enable/disable, exposure.
+- [x] MCP: enable/disable, exposure.
 - [ ] MCP: add, edit, remove, undo.
 - [ ] MCP: codemode controls.
 - [ ] System prompt tab.

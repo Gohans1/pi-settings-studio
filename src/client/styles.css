@@ -87,7 +87,8 @@ textarea { resize: vertical; }
 .list-header h2 { font-size: 15px; margin: 0; }
 .list-header span, .muted { color: var(--muted-foreground); font-size: 12px; }
 .item-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; }
-.item-list button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; padding: 8px 10px; border: 0; border-radius: var(--radius); background: transparent; text-align: left; }
+.item-list li { display: flex; align-items: center; gap: 10px; }
+.item-list button { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; padding: 8px 10px; border: 0; border-radius: var(--radius); background: transparent; text-align: left; }
 .item-list button:hover, .item-list button[aria-pressed=true] { background: var(--secondary); }
 .item-name { font-weight: 560; overflow-wrap: anywhere; }
 .item-state { font-size: 11px; color: var(--muted-foreground); white-space: nowrap; }

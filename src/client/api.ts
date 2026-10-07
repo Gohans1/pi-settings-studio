@@ -18,3 +18,5 @@ export const saveSettings = (scope: Scope, revision: string, changes: SettingsCh
 export const restoreSettings = (scope: Scope, revision: string) =>
   request<SettingsView>(`/api/settings/${scope}/restore`, "POST", { revision, confirm: true });
 export const loadMcp = () => request<McpFileView>("/api/mcp/global");
+export const saveMcpServer = (name: string, revision: string, patch: { enabled?: boolean; exposure?: string }) =>
+  request<McpFileView>(`/api/mcp/global/servers/${encodeURIComponent(name)}`, "PATCH", { revision, ...patch });

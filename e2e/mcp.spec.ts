@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { startServer, type RunningServer } from "../src/server/server.ts";
@@ -35,4 +35,18 @@ test("MCP tab lists servers and shows details without secret values", async ({ p
   await expect(page.getByRole("region", { name: "docs" })).toContainText("Product docs");
   expect(await page.content()).not.toMatch(/fixture-secret-value|fixture-token/);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("switches and the exposure choice save to mcp.json immediately", async ({ page }) => {
+  await page.goto(server.url + "#mcp");
+  const readServers = async () => JSON.parse(await readFile(file, "utf8")).mcpServers;
+  await page.getByRole("switch", { name: "Enable search" }).click();
+  await expect(page.getByRole("status")).toContainText("search turned on");
+  expect((await readServers()).search.enabled).toBeUndefined();
+  expect((await readServers()).search.env.SEARCH_API_KEY).toBe("fixture-secret-value");
+  await page.getByRole("button", { name: /^docs/ }).click();
+  await page.getByLabel("Tool exposure for docs").selectOption("direct");
+  await expect(page.getByRole("status")).toContainText("docs now uses Direct");
+  expect((await readServers()).docs.exposure).toBe("direct");
+  await expect(page.getByText("2 of 3 servers on")).toBeVisible();
 });

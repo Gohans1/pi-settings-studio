@@ -52,3 +52,29 @@ test("a missing mcp.json lists no servers and creates nothing", async (t) => {
   assert.deepEqual([view.exists, view.servers], [false, []]);
   await assert.rejects(stat(file), { code: "ENOENT" });
 });
+
+test("switching a server edits only its keys and keeps secrets and the file's indentation", async (t) => {
+  const original = JSON.stringify({ mcpServers: { search: { command: "uvx", env: { KEY: "fixture-secret-value" }, enabled: false } }, extra: true }, null, 4) + "\n";
+  const { request, file } = await fixture(t, original);
+  const headers = { origin, "content-type": "application/json" };
+  const before = await (await request("/api/mcp/global")).json();
+  const on = await request("/api/mcp/global/servers/search", { method: "PATCH", headers, body: JSON.stringify({ revision: before.revision, enabled: true, exposure: "direct" }) });
+  assert.equal(on.status, 200);
+  assert.equal((await on.json()).servers[0].enabled, true);
+  const saved = await readFile(file, "utf8");
+  assert.deepEqual(JSON.parse(saved), { mcpServers: { search: { command: "uvx", env: { KEY: "fixture-secret-value" }, exposure: "direct" } }, extra: true });
+  assert.match(saved, /^ {4}"mcpServers"/m);
+});
+
+test("invalid exposures, unknown servers and stale revisions change nothing", async (t) => {
+  const original = JSON.stringify({ mcpServers: { a: { command: "x" } } });
+  const { request, file } = await fixture(t, original);
+  const headers = { origin, "content-type": "application/json" };
+  const { revision } = await (await request("/api/mcp/global")).json();
+  const patch = (name: string, body: object) => request(`/api/mcp/global/servers/${name}`, { method: "PATCH", headers, body: JSON.stringify(body) });
+  assert.equal((await patch("a", { revision, exposure: "everything" })).status, 422);
+  assert.equal((await patch("a", { revision })).status, 422);
+  assert.equal((await patch("missing", { revision, enabled: false })).status, 422);
+  assert.equal((await patch("a", { revision: "stale", enabled: false })).status, 409);
+  assert.equal(await readFile(file, "utf8"), original);
+});

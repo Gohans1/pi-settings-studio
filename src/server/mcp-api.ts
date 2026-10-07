@@ -1,6 +1,7 @@
 import { Hono } from "hono";
+import { z } from "zod";
 import type { McpFileView, McpServerView } from "../shared/mcp.ts";
-import { isRecord, readMcpServers, type McpEntry } from "./mcp-config.ts";
+import { isRecord, MCP_EXPOSURES, readMcpServers, updateMcpServer, type McpEntry } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 
 function strings(value: unknown): string[] | undefined {
@@ -46,6 +47,22 @@ export async function mcpView(store: ConfigStore): Promise<McpFileView> {
   return { path, revision: document.revision, exists: document.exists, hasBackup, ...(error ? { error } : {}), autoEnableCodemode, servers: servers.map(toView) };
 }
 
+const serverPatch = z.object({
+  revision: z.string().min(1).max(100),
+  enabled: z.boolean().optional(),
+  exposure: z.enum(MCP_EXPOSURES as [string, ...string[]]).optional(),
+}).strict().refine(patch => patch.enabled !== undefined || patch.exposure !== undefined, "Nothing to change.");
+
 export function mcpRoutes(store: ConfigStore) {
-  return new Hono().get("/global", async c => c.json(await mcpView(store)));
+  return new Hono()
+    .get("/global", async c => c.json(await mcpView(store)))
+    .patch("/global/servers/:name", async c => {
+      const { revision, ...patch } = serverPatch.parse(await c.req.json());
+      const name = c.req.param("name");
+      await store.transform("global", revision, value => {
+        try { return updateMcpServer(value, name, patch as Parameters<typeof updateMcpServer>[2]); }
+        catch (error) { throw new ConfigError(error instanceof Error ? error.message : "Cannot change this server."); }
+      }, "mcp.json");
+      return c.json(await mcpView(store));
+    });
 }
