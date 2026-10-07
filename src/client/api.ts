@@ -106,3 +106,4 @@ export const answerJob = (id: string, promptId: string, value: string) => reques
 export const cancelJob = (id: string) => request<JobView>(`/api/jobs/${id}/cancel`, "POST", {});
 export const loadModelsRaw = () => request<RawSettings>("/api/models/custom/raw");
 export const saveModelsRaw = (revision: string, text: string) => request<RawSettings>("/api/models/custom/raw", "PUT", { revision, text });
+export const loadModelIds = () => request<string[]>("/api/models/ids");

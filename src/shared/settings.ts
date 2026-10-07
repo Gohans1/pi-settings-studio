@@ -22,7 +22,7 @@ export type Field = {
   key: string;
   label: string;
   section: SectionId;
-  kind: "text" | "select" | "number" | "lines" | "boolean";
+  kind: "text" | "select" | "number" | "lines" | "boolean" | "thinkingMap" | "compactionMap";
   help: string;
   options?: readonly Option[];
   /** Pi's default, shown when the file has no value. */
@@ -40,6 +40,10 @@ const select = (options: Option[]) => ({ kind: "select" as const, options, schem
 const bool = { kind: "boolean" as const, schema: z.boolean() };
 const number = (min?: number, max?: number) => ({ kind: "number" as const, schema: int(min, max) });
 const thinking = choices("off", "minimal", "low", "medium", "high", "xhigh", "max");
+const THINKING = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
+/** Keys of per-model settings are exact provider/modelId. */
+const modelKey = z.string().max(300).regex(/^[^/\s]+\/\S+$/, "Use provider/modelId.");
+const tokens = int().optional();
 
 export const fields: Field[] = [
   // Models & thinking
@@ -51,6 +55,8 @@ export const fields: Field[] = [
   { key: "thinkingBudgets.low", label: "Thinking budget: low", section: "models", help: "Token budget for the low thinking level.", ...number() },
   { key: "thinkingBudgets.medium", label: "Thinking budget: medium", section: "models", help: "Token budget for the medium thinking level.", ...number() },
   { key: "thinkingBudgets.high", label: "Thinking budget: high", section: "models", help: "Token budget for the high thinking level.", ...number() },
+  { key: "modelThinkingLevels", label: "Thinking level per model", section: "models", kind: "thinkingMap", help: "Startup thinking level for specific models, keyed by exact provider/modelId. Overrides the default thinking level.",
+    schema: z.record(modelKey, z.enum(THINKING)) },
   { key: "cacheWarming", globalOnly: true, label: "Prompt cache warming", section: "models", help: "Keep provider prompt caches warm during runs (streaming) or also between runs (idle). Only when it saves at least $0.05.", defaultValue: "streaming", ...select(choices("off", "streaming", "idle")) },
   { key: "showCacheMissNotices", label: "Cache notices", section: "models", help: "Show notices for significant cache misses, cache warming, compaction usage and provider recovery.", defaultValue: false, ...bool },
   // Messages & interaction
@@ -65,6 +71,8 @@ export const fields: Field[] = [
   { key: "compaction.enabled", label: "Automatic compaction", section: "context", help: "Summarize older context automatically when it fills up.", defaultValue: true, ...bool },
   { key: "compaction.reserveTokens", label: "Compaction: reserved tokens", section: "context", help: "Tokens reserved for the model response.", defaultValue: 16384, ...number() },
   { key: "compaction.keepRecentTokens", label: "Compaction: recent tokens kept", section: "context", help: "Recent tokens kept without summarizing.", defaultValue: 20000, ...number() },
+  { key: "compaction.modelOverrides", label: "Compaction per model", section: "context", kind: "compactionMap", help: "Reserved and recent tokens for specific models, keyed by exact provider/modelId. Empty values use the compaction settings above.",
+    schema: z.record(modelKey, z.object({ reserveTokens: tokens, keepRecentTokens: tokens }).passthrough()) },
   { key: "branchSummary.reserveTokens", label: "Branch summary: reserved tokens", section: "context", help: "Tokens reserved when summarizing branch history.", defaultValue: 16384, ...number() },
   { key: "branchSummary.skipPrompt", label: "Skip branch summary prompt", section: "context", help: "Skip the branch-summary prompt and default to no summary.", defaultValue: false, ...bool },
   // Network & retries
@@ -128,8 +136,6 @@ export const settingHomes: Record<string, string> = {
   extensions: "Plugins tab (filters and paths: raw JSON)",
   prompts: "Plugins tab (filters and paths: raw JSON)",
   themes: "Plugins tab (filters and paths: raw JSON)",
-  modelThinkingLevels: "Raw JSON (Models tab later)",
-  "compaction.modelOverrides": "Raw JSON",
   lastChangelogVersion: "Internal, written by Pi",
   trackingId: "Internal, written by Pi",
   deviceId: "Internal, written by Pi",

@@ -79,3 +79,11 @@ test("a provider's models come from Pi's catalog; unknown providers are 404", as
   assert.equal(typeof anthropic[0].name, "string");
   assert.equal((await request("/api/models/providers/nope/models")).status, 404);
 });
+
+test("model ids for suggestions list models of providers that are set up", async (t) => {
+  const { request } = await fixture(t);
+  const ids = await (await request("/api/models/ids")).json() as string[];
+  assert.ok(ids.includes("ollama/qwen"));
+  assert.ok(ids.some(id => id.startsWith("anthropic/")));
+  assert.equal(ids.some(id => id.startsWith("openai/")), false);
+});

@@ -1,6 +1,7 @@
 import type { Field } from "../shared/settings";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
+import { ModelMapField } from "./ModelMapField";
 
 export function SettingField({ field, value, overridden, invalid, scope = "global", disabled = false, onChange, onReset }: {
   field: Field; value: unknown; overridden: boolean; invalid: boolean; scope?: "global" | "project"; disabled?: boolean;
@@ -18,6 +19,8 @@ export function SettingField({ field, value, overridden, invalid, scope = "globa
       {value === undefined && <option value="" disabled>Select a value</option>}
       {field.options?.map(option => <option key={option.label} value={JSON.stringify(option.value)}>{option.label}</option>)}
     </select>;
+  } else if (field.kind === "thinkingMap" || field.kind === "compactionMap") {
+    control = <ModelMapField kind={field.kind} label={field.label} value={value} disabled={disabled} onChange={onChange} />;
   } else if (field.kind === "lines") {
     control = <textarea {...common} rows={3} value={Array.isArray(value) ? value.join("\n") : ""} spellCheck={false}
       placeholder={Array.isArray(field.defaultValue) ? field.defaultValue.join("\n") : "Empty"} onChange={e => onChange(e.target.value.split("\n"))} />;
@@ -31,7 +34,7 @@ export function SettingField({ field, value, overridden, invalid, scope = "globa
   }
   return <section className="setting-row">
     <div className="setting-label">
-      <label id={id + "-label"} htmlFor={field.kind === "boolean" ? undefined : id}>{field.label}</label>
+      <label id={id + "-label"} htmlFor={["boolean", "thinkingMap", "compactionMap"].includes(field.kind) ? undefined : id}>{field.label}</label>
       <p id={id + "-help"}>{field.help}</p>
       <details><summary>Setting key</summary><code>{field.key}</code>
         <p>Pi's default: {field.defaultValue === undefined ? "automatic" : JSON.stringify(field.defaultValue)}</p></details>

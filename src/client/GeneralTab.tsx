@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, RotateCcw } from "lucide-react";
 import { fields, sections, type SettingsChange, type SettingsView } from "../shared/settings";
-import { loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
+import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
 import { RawJsonEditor } from "./RawJsonEditor";
@@ -23,6 +23,8 @@ export function GeneralTab({ project }: { project?: string }) {
   const [loading, setLoading] = useState(true);
   const [restore, setRestore] = useState(false);
   const [raw, setRaw] = useState(false);
+  const [modelIds, setModelIds] = useState<string[]>([]);
+  useEffect(() => { loadModelIds().then(setModelIds).catch(() => setModelIds([])); }, []);
   const title = useRef<HTMLHeadingElement>(null);
   const changes = Object.values(draft).map(change => {
     if (!("value" in change)) return change;
@@ -151,6 +153,7 @@ export function GeneralTab({ project }: { project?: string }) {
       {!restore && <section className="file-tools" aria-label="File actions">{rawButton}<Button variant="ghost" disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</Button>
         {view.hasBackup && <Button variant="ghost" disabled={busy || !!changes.length} onClick={() => setRestore(true)}>Restore previous file</Button>}</section>}
     </>}
+    <datalist id="model-ids">{modelIds.map(id => <option key={id} value={id} />)}</datalist>
     {scope === "global" && !needle && <KeybindingsPanel />}
     <footer className="scope-footnote"><p>Saved values apply to new T3Code threads, or after /reload. Unknown keys in the file are kept as they are.</p></footer>
   </>;

@@ -84,6 +84,13 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
       }, "auth.json");
       return c.json(await view());
     })
+    .get("/ids", async c => {
+      // Suggestions for per-model settings: models of providers that are set up.
+      const auth = credentialsOf((await store.read("global", "auth.json")).value);
+      const runtime = await runtimeFor(agentDir, auth);
+      const ready = runtime.getProviders().filter(provider => auth[provider.id] || runtime.getProviderAuthStatus(provider.id).configured);
+      return c.json(ready.flatMap(provider => runtime.getModels(provider.id).map(model => `${provider.id}/${model.id}`)));
+    })
     .get("/providers/:id/models", async c => {
       const runtime = await runtimeFor(agentDir, credentialsOf((await store.read("global", "auth.json")).value));
       const id = c.req.param("id");

@@ -149,3 +149,25 @@ test("a settings file with broken JSON can be repaired through the raw editor", 
   assert.equal(response.status, 200);
   assert.equal(await readFile(file, "utf8"), '{ "defaultModel": "x" }\n');
 });
+
+test("per-model thinking levels and compaction overrides are validated and saved as objects", async (t) => {
+  const { request, file } = await fixture(t);
+  const headers = { origin, "content-type": "application/json" };
+  const patch = async (changes: object[]) => {
+    const { revision } = await (await request("/api/settings/global")).json();
+    return request("/api/settings/global", { method: "PATCH", headers, body: JSON.stringify({ revision, changes }) });
+  };
+  for (const changes of [
+    [{ key: "modelThinkingLevels", value: { "anthropic/claude": "loud" } }],
+    [{ key: "modelThinkingLevels", value: { "no-slash": "high" } }],
+    [{ key: "compaction.modelOverrides", value: { "a/b": { reserveTokens: -1 } } }],
+  ]) assert.equal((await patch(changes)).status, 422);
+  assert.equal((await patch([
+    { key: "modelThinkingLevels", value: { "anthropic/claude-sonnet": "high", "openai/gpt": "off" } },
+    { key: "compaction.modelOverrides", value: { "a/b": { reserveTokens: 1000, futureKey: true } } },
+  ])).status, 200);
+  const saved = JSON.parse(await readFile(file, "utf8"));
+  assert.deepEqual([saved.modelThinkingLevels, saved.compaction], [{ "anthropic/claude-sonnet": "high", "openai/gpt": "off" }, { modelOverrides: { "a/b": { reserveTokens: 1000, futureKey: true } } }]);
+  const view = await (await request("/api/settings/global")).json();
+  assert.deepEqual(view.values["compaction.modelOverrides"], { "a/b": { reserveTokens: 1000, futureKey: true } });
+});

@@ -136,3 +136,20 @@ test("keyboard shortcuts are edited, disabled and reset in keybindings.json", as
   await expect(panel.getByText("not a key Pi understands")).toBeVisible();
   await expect(panel.getByRole("button", { name: "Save shortcuts" })).toBeDisabled();
 });
+
+test("per-model thinking levels and compaction overrides are edited as rows", async ({ page }) => {
+  const thinking = page.getByRole("group", { name: "Thinking level per model" });
+  await thinking.getByRole("button", { name: "Add model" }).click();
+  await thinking.getByLabel("Model 1", { exact: true }).fill("anthropic/claude-sonnet");
+  await thinking.getByLabel("Thinking level for model 1").selectOption("high");
+  const compaction = page.getByRole("group", { name: "Compaction per model" });
+  await compaction.getByRole("button", { name: "Add model" }).click();
+  await compaction.getByLabel("Model 1", { exact: true }).fill("openai/gpt");
+  await compaction.getByLabel("Reserved tokens for model 1").fill("8000");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status").first()).toContainText("Saved");
+  const saved = JSON.parse(await readFile(file, "utf8"));
+  expect([saved.modelThinkingLevels, saved.compaction]).toEqual([{ "anthropic/claude-sonnet": "high" }, { modelOverrides: { "openai/gpt": { reserveTokens: 8000 } } }]);
+  await thinking.getByLabel("Model 1", { exact: true }).fill("no-slash");
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+});
