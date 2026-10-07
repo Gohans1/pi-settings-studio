@@ -10,7 +10,6 @@ import { changeSchema, fields, readSetting, type SettingsView } from "../shared/
 
 export type AppOptions = { store: ConfigStore; origin: string; token: string; staticDir?: string };
 const SCOPE = z.enum(["global", "project"]);
-const cookieName = "pi_settings_session";
 function equal(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
@@ -19,6 +18,8 @@ function equal(left: string, right: string): boolean {
 
 export function createApp({ store, origin, token, staticDir }: AppOptions) {
   const app = new Hono();
+  // Browser cookies are not port-scoped. Keep concurrent Pi sessions distinct.
+  const cookieName = `pi_settings_session_${new URL(origin).port}`;
   const session = randomBytes(32).toString("base64url");
   const startedAt = Date.now();
   let failures = 0;

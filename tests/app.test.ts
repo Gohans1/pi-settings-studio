@@ -36,6 +36,19 @@ test("authentication protects settings; launch exchange uses HttpOnly Strict coo
   assert.match(good.headers.get("set-cookie")!, /SameSite=Strict/);
 });
 
+test("two settings servers on different ports do not overwrite each other's browser session cookie", async (t) => {
+  const { request, cookie, roots } = await fixture(t);
+  const otherOrigin = "http://127.0.0.1:43124";
+  const other = createApp({ store: new ConfigStore(roots), origin: otherOrigin, token });
+  const login = await other.request(new Request(otherOrigin + "/api/session", {
+    method: "POST", headers: { host: new URL(otherOrigin).host, origin: otherOrigin, "content-type": "application/json" },
+    body: JSON.stringify({ token }),
+  }));
+  const otherCookie = login.headers.get("set-cookie")!.split(";")[0]!;
+  assert.notEqual(cookie.split("=")[0], otherCookie.split("=")[0]);
+  assert.equal((await request("/api/settings/global", { headers: { cookie: cookie + "; " + otherCookie } })).status, 200);
+});
+
 test("Host, Origin, Fetch Metadata and JSON checks prevent cross-site mutation", async (t) => {
   const { request, cookie } = await fixture(t);
   for (const headers of [
