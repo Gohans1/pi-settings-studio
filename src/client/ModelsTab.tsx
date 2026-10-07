@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import type { CustomProvidersView, ProvidersView, ProviderView } from "../shared/models";
 import { addCustomProvider, editCustomProvider, loadCustomProviders, loadProviders, removeCustomProvider, removeProviderKey, restoreAuth, restoreCustomProviders, saveProviderKey } from "./api";
 import { CustomProviderForm } from "./CustomProviderForm";
+import { JobPanel, useJob } from "./JobPanel";
 import { Button } from "./components/ui/button";
 import { ModelDefaults } from "./ModelDefaults";
 
@@ -26,10 +27,12 @@ function state(provider: ProviderView): string {
   return "";
 }
 
-function ProviderDetail({ provider, busy, onSaveKey, onRemove }: {
-  provider: ProviderView; busy: boolean; onSaveKey: (key: string) => Promise<boolean>; onRemove: () => void;
+function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
+  provider: ProviderView; busy: boolean; onSaveKey: (key: string) => Promise<boolean>; onRemove: () => void; onSignedIn: () => void;
 }) {
   const [key, setKey] = useState("");
+  // Pi's own sign-in flow; its questions and links are shown here and Pi writes auth.json.
+  const login = useJob(job => { if (job.status === "done") onSignedIn(); });
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (await onSaveKey(key)) setKey("");
@@ -42,9 +45,12 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove }: {
       <div><dt>Authentication</dt><dd>{provider.auth.configured
         ? <>{sources[provider.auth.source ?? ""] ?? provider.auth.source ?? "Configured"}{provider.stored === "oauth" && " (signed in)"}</>
         : <span className="muted">Not set up here. Environment variables are not checked by this app.</span>}</dd></div>
-      {provider.oauth && <div><dt>Sign-in</dt><dd>{provider.oauth.name}{provider.oauth.subscription ? " (subscription)" : ""}.
-        <span className="muted"> Run /login in Pi to sign in; signing in from here comes later.</span></dd></div>}
+      {provider.oauth && <div><dt>Sign-in</dt><dd>{provider.oauth.name}{provider.oauth.subscription ? " (subscription)" : ""}</dd></div>}
     </dl>
+    {provider.oauth && <div className="actions detail-actions">
+      <Button variant="outline" disabled={busy || login.running} onClick={() => void login.start({ action: "provider-login", provider: provider.id })} aria-label={`Sign in to ${provider.name}`}>Sign in</Button>
+    </div>}
+    <JobPanel job={login.job} error={login.error} onAnswer={value => void login.answer(value)} onCancel={() => void login.cancel()} onDismiss={login.dismiss} />
     {provider.apiKey && <form className="key-form" onSubmit={event => void submit(event)}>
       <label>API key<input type="password" value={key} autoComplete="new-password" spellCheck={false}
         placeholder={provider.stored === "api_key" ? "Stored. Enter a new key to replace it." : "Paste a key"} onChange={event => setKey(event.target.value)} /></label>
@@ -104,6 +110,7 @@ export function ModelsTab({ project }: { project?: string }) {
       try { setCustom(await loadCustomProviders()); } catch { /* the form error explains */ }
     } finally { setBusy(false); }
   }
+  const catalog = useJob(() => void refresh());
   const providers = view?.providers ?? [];
   const customId = selected?.startsWith(CUSTOM) ? selected.slice(CUSTOM.length) : undefined;
   const customEntry = custom?.providers.find(entry => entry.id === customId);
@@ -117,6 +124,8 @@ export function ModelsTab({ project }: { project?: string }) {
   return <>
     <div className="page-heading"><div><h1>Models</h1><p>Providers and their credentials, from auth.json and models.json. Keys are never shown.</p></div>
       <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search providers" placeholder="Search providers…" value={query} onChange={event => setQuery(event.target.value)} /></div></div>
+    <div className="actions"><Button variant="outline" size="sm" disabled={catalog.running} onClick={() => void catalog.start({ action: "models-refresh" })}>Refresh model catalogs</Button></div>
+    <JobPanel job={catalog.job} error={catalog.error} onAnswer={value => void catalog.answer(value)} onCancel={() => void catalog.cancel()} onDismiss={catalog.dismiss} />
     <div role="status" className="feedback">{message}{undo && view && <>{" "}<Button variant="outline" size="sm" disabled={busy}
       onClick={() => undo === "auth" ? void run(restoreAuth, "Restored the previous auth.json.") : void runCustom(restoreCustomProviders, "Restored the previous models.json.")}>Undo</Button></>}</div>
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p></div>}
@@ -152,7 +161,8 @@ export function ModelsTab({ project }: { project?: string }) {
       : selected === DEFAULTS ? <ModelDefaults providers={providers} project={project} onSaved={text => { setMessage(text); setUndo(undefined); }} />
         : current ? <ProviderDetail key={current.id} provider={current} busy={busy}
         onSaveKey={key => run(revision => saveProviderKey(current.id, revision, key), `API key saved for ${current.name}.`)}
-        onRemove={() => void run(revision => removeProviderKey(current.id, revision), `Removed the stored credential for ${current.name}.`, true)} />
+        onRemove={() => void run(revision => removeProviderKey(current.id, revision), `Removed the stored credential for ${current.name}.`, true)}
+        onSignedIn={() => void refresh()} />
         : <section className="detail"><p className="empty">Select a provider to manage its credential.</p></section>}
     </div>}
   </>;

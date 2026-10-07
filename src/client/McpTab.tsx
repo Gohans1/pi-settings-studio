@@ -4,6 +4,8 @@ import type { CodemodeView } from "../shared/codemode";
 import { addMcpServer, editMcpServer, loadCodemode, loadMcp, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget } from "./api";
 import { CodemodePanel } from "./CodemodePanel";
 import { McpServerForm } from "./McpServerForm";
+import { JobPanel, useJob } from "./JobPanel";
+import type { JobView } from "../shared/jobs";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 
@@ -65,6 +67,15 @@ function ServerDetail({ server, busy, onExposure, actions, children }: {
   </section>;
 }
 
+function TestResults({ job }: { job: JobView }) {
+  if (!job.result) return null;
+  return <ul className="job-results">{job.result.servers.map(server => <li key={server.name}>
+    <strong>{server.name}</strong>
+    <span>{server.state}{server.state === "connected" ? ` · ${server.tools.length} tool${server.tools.length === 1 ? "" : "s"}` : ""}</span>
+    {server.error && <span className="muted">{server.error}</span>}
+  </li>)}{job.result.errors.map(error => <li key={error} className="field-error">{error}</li>)}</ul>;
+}
+
 type Selection = { scope: "global" | "project"; name: string } | "codemode";
 
 export function McpTab({ project }: { project?: string }) {
@@ -78,6 +89,9 @@ export function McpTab({ project }: { project?: string }) {
   const [formError, setFormError] = useState("");
   const [undo, setUndo] = useState<McpTarget>();
   const target = (scope: "global" | "project"): McpTarget => ({ scope, project });
+  // Running servers is explicit: `pi mcp list` connects every enabled server.
+  const check = useJob();
+  const signIn = useJob();
 
   async function refresh() {
     setError("");
@@ -194,10 +208,16 @@ export function McpTab({ project }: { project?: string }) {
       : <ServerDetail server={current} busy={busy}
         onExposure={exposure => void run(scope, revision => saveMcpServer(target(scope), current.name, revision, { exposure }), `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`)}
         actions={<>
+          {current.transport === "http" && !current.authProvider && !current.headers.some(name => name.toLowerCase() === "authorization") && <>
+            <Button variant="outline" disabled={busy || signIn.running} onClick={() => void signIn.start({ action: "mcp-login", server: current.name, ...(scope === "project" ? { project } : {}) })}>Sign in</Button>
+            <Button variant="ghost" disabled={busy || signIn.running} onClick={() => void signIn.start({ action: "mcp-logout", server: current.name, ...(scope === "project" ? { project } : {}) })}>Sign out</Button>
+          </>}
           <Button variant="outline" disabled={busy} onClick={() => { setForm({ mode: "edit", scope }); setFormError(""); }} aria-label={`Edit ${current.name}`}>Edit</Button>
           <Button variant="destructive" disabled={busy} aria-label={`Remove ${current.name}`}
             onClick={() => void run(scope, revision => removeMcpServer(target(scope), current.name, revision), `Removed ${current.name} from ${label}.`, { undoable: true })}>Remove</Button>
-        </>}>{scope === "global" ? projectControls(current.name) : undefined}</ServerDetail>;
+        </>}>{scope === "global" ? projectControls(current.name) : undefined}
+          <JobPanel job={signIn.job} error={signIn.error} onAnswer={value => void signIn.answer(value)} onCancel={() => void signIn.cancel()} onDismiss={signIn.dismiss} />
+        </ServerDetail>;
   }
 
   const on = globalServers.filter(server => server.enabled && !server.error).length;
@@ -209,6 +229,9 @@ export function McpTab({ project }: { project?: string }) {
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Try again</Button></div>}
     {global?.error && <div role="alert" className="error"><strong>Pi loads none of the global servers</strong><p>{global.error}</p></div>}
     {local?.error && <div role="alert" className="error"><strong>Pi loads none of this project's servers</strong><p>{local.error}</p></div>}
+    <JobPanel job={check.job} error={check.error} onAnswer={value => void check.answer(value)} onCancel={() => void check.cancel()} onDismiss={check.dismiss}>
+      {check.job && <TestResults job={check.job} />}
+    </JobPanel>
     {!global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
       <div className="master">
         <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === "codemode"} onClick={() => choose("codemode")}>
@@ -216,7 +239,10 @@ export function McpTab({ project }: { project?: string }) {
         </button></li></ul>
         <section aria-labelledby="global-servers" className="item-group">
           <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span></div>
-          <Button variant="outline" size="sm" className="add-button" disabled={busy || !!global.error} onClick={() => { setForm({ mode: "add", scope: "global" }); setFormError(""); }}>Add server</Button>
+          <div className="actions add-button">
+            <Button variant="outline" size="sm" disabled={busy || !!global.error} onClick={() => { setForm({ mode: "add", scope: "global" }); setFormError(""); }}>Add server</Button>
+            <Button variant="outline" size="sm" disabled={check.running} onClick={() => void check.start({ action: "mcp-test", ...(project ? { project } : {}) })}>Test connections</Button>
+          </div>
           {globalServers.length ? serverList("global", globalServers) : !global.error && <p className="empty">No MCP servers yet.</p>}
         </section>
         {project && local && <section aria-label="This project's servers" className="item-group">

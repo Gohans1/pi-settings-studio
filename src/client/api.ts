@@ -8,6 +8,7 @@ import type { CustomProviderInput, CustomProvidersView, ModelSummary, ProvidersV
 import type { ProjectView, TrustView } from "../shared/projects";
 import type { InstructionsView } from "../shared/instructions";
 import type { KeybindingsView } from "../shared/keybindings";
+import type { JobView } from "../shared/jobs";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -97,3 +98,7 @@ export const restoreCustomProviders = (revision: string) => request<CustomProvid
 export const loadKeybindings = () => request<KeybindingsView>("/api/keybindings");
 export const saveKeybindings = (revision: string, changes: { id: string; keys: string[] | null }[]) =>
   request<KeybindingsView>("/api/keybindings", "PATCH", { revision, changes });
+export const startJob = (body: Record<string, unknown>) => request<JobView>("/api/jobs", "POST", body);
+export const loadJob = (id: string) => request<JobView>(`/api/jobs/${id}`);
+export const answerJob = (id: string, promptId: string, value: string) => request<JobView>(`/api/jobs/${id}/answer`, "POST", { promptId, value });
+export const cancelJob = (id: string) => request<JobView>(`/api/jobs/${id}/cancel`, "POST", {});

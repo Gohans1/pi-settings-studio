@@ -4,6 +4,7 @@ import type { PluginsView, ResourceView } from "../shared/resources";
 import { loadPlugins, savePlugins } from "./api";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
+import { JobPanel, useJob } from "./JobPanel";
 
 const typeLabels: Record<string, string> = { extensions: "extension", prompts: "prompt", themes: "theme" };
 const builtinNotes: Record<string, string> = {
@@ -35,6 +36,10 @@ export function PluginsTab({ project }: { project?: string }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [source, setSource] = useState("");
+  const [installScope, setInstallScope] = useState<"global" | "project">("global");
+  // pi install / remove / update run on click; the list reloads when they finish.
+  const job = useJob(() => void refresh());
 
   async function refresh() {
     setError("");
@@ -89,11 +94,23 @@ export function PluginsTab({ project }: { project?: string }) {
       </div>
       <section className="packages" aria-labelledby="packages-title">
         <h2 id="packages-title">Packages</h2>
+        <form className="install-form" onSubmit={event => { event.preventDefault(); void job.start({ action: "package-install", source: source.trim(), ...(installScope === "project" && project ? { project } : {}) }); }}>
+          <label>Package source<input value={source} placeholder="npm:@scope/name, git:github.com/user/repo or ./path" autoComplete="off" spellCheck={false} onChange={event => setSource(event.target.value)} /></label>
+          {project && <label>For<select aria-label="Install for" value={installScope} onChange={event => setInstallScope(event.target.value as "global" | "project")}>
+            <option value="global">Every project</option><option value="project">This project only</option></select></label>}
+          <Button type="submit" disabled={job.running || !source.trim()}>Install</Button>
+          <Button type="button" variant="outline" disabled={job.running || !view.packages.length} onClick={() => void job.start({ action: "packages-update" })}>Update all</Button>
+        </form>
+        <p className="muted">Runs pi install in this environment. Packages can run code: install only sources you trust.</p>
+        <JobPanel job={job.job} error={job.error} onAnswer={value => void job.answer(value)} onCancel={() => void job.cancel()} onDismiss={job.dismiss} />
         {view.packages.length ? <ul className="package-list">{view.packages.map(pkg => <li key={pkg.source}>
           <code>{pkg.source}</code>
-          <span className="muted">{pkg.installed ? "Installed" : "Not installed. Run pi install or pi update in a terminal."}{pkg.filtered ? " · has resource filters" : ""}</span>
+          <span className="muted">{pkg.installed ? "Installed" : "Not installed"}{pkg.filtered ? " · has resource filters" : ""}</span>
+          <span className="actions">
+            <Button variant="ghost" size="sm" disabled={job.running} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source })}>Update</Button>
+            <Button variant="ghost" size="sm" disabled={job.running} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source })}>Remove</Button>
+          </span>
         </li>)}</ul> : <p className="empty">No packages in settings.json.</p>}
-        <p className="muted">Installing, updating and removing packages from here comes later.</p>
       </section>
     </>}
   </>;

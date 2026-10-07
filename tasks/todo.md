@@ -18,4 +18,4 @@
 - [x] Plugins tab (built-ins, user files, packages; install/update/remove later).
 - [x] Sub-agents tab (user profiles; project .pi/agents and T3Code integration later).
 - [ ] Background service on port 4369 (unit file ready; install after WSL restarts with systemd).
-- [ ] Execution features: MCP test/OAuth, model OAuth, package install.
+- [x] Execution features: MCP test and sign-in, provider sign-in, package install/update/remove, model catalog refresh.

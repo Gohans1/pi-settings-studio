@@ -13,6 +13,7 @@ import { modelRoutes } from "./models.ts";
 import { projectRegistry, projectRoutes } from "./projects.ts";
 import { instructionRoutes } from "./instructions.ts";
 import { keybindingRoutes } from "./keybindings.ts";
+import { jobRoutes } from "./jobs.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
@@ -120,6 +121,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/projects", projectRoutes(registry, store, agentDir));
   app.route("/api/instructions", instructionRoutes(store, registry, agentDir));
   app.route("/api/keybindings", keybindingRoutes(store));
+  app.route("/api/jobs", jobRoutes(store, registry, agentDir));
   app.get("/api/status", c => c.json({ source: "persisted-files", liveSession: false, catalogue: "Pi 1.0.3", parityComplete: false }));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));
