@@ -30,7 +30,7 @@ function toInput(draft: Draft): McpServerInput {
   return { transport: "stdio", command: draft.command.trim(), args, ...(draft.cwd.trim() ? { cwd: draft.cwd.trim() } : {}), env: named(draft.env), ...common };
 }
 
-function NamedRows({ kind, rows, onChange }: { kind: "variable" | "header"; rows: Row[]; onChange: (rows: Row[]) => void }) {
+export function NamedRows({ kind, rows, onChange }: { kind: "variable" | "header"; rows: Row[]; onChange: (rows: Row[]) => void }) {
   const Kind = kind === "variable" ? "Variable" : "Header";
   const update = (index: number, patch: Partial<Row>) => onChange(rows.map((row, i) => i === index ? { ...row, ...patch } : row));
   return <div className="named-rows">

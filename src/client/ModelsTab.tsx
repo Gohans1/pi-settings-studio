@@ -1,11 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Search } from "lucide-react";
-import type { ProvidersView, ProviderView } from "../shared/models";
-import { loadProviders, removeProviderKey, restoreAuth, saveProviderKey } from "./api";
+import type { CustomProvidersView, ProvidersView, ProviderView } from "../shared/models";
+import { addCustomProvider, editCustomProvider, loadCustomProviders, loadProviders, removeCustomProvider, removeProviderKey, restoreAuth, restoreCustomProviders, saveProviderKey } from "./api";
+import { CustomProviderForm } from "./CustomProviderForm";
 import { Button } from "./components/ui/button";
 import { ModelDefaults } from "./ModelDefaults";
 
 const DEFAULTS = "#defaults";
+const CUSTOM = "#custom:";
+const NEW_CUSTOM = "#custom-new";
 
 const sources: Record<string, string> = {
   stored: "Stored in auth.json",
@@ -59,23 +62,25 @@ export function ModelsTab({ project }: { project?: string }) {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [undo, setUndo] = useState(false);
+  const [undo, setUndo] = useState<"auth" | "models">();
+  const [custom, setCustom] = useState<CustomProvidersView>();
+  const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
     setError("");
-    try { setView(await loadProviders()); }
+    try { const [providers, customs] = await Promise.all([loadProviders(), loadCustomProviders()]); setView(providers); setCustom(customs); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the providers."); }
   }
   useEffect(() => { void refresh(); }, []);
 
   async function run(change: (revision: string) => Promise<ProvidersView>, done: string, undoable = false): Promise<boolean> {
     if (!view) return false;
-    setBusy(true); setError(""); setMessage(""); setUndo(false);
+    setBusy(true); setError(""); setMessage(""); setUndo(undefined);
     try {
       setView(await change(view.revision));
       setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
-      setUndo(undoable);
+      if (undoable) setUndo("auth");
       return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save.");
@@ -84,7 +89,24 @@ export function ModelsTab({ project }: { project?: string }) {
     } finally { setBusy(false); }
   }
 
+  /** models.json changes: the provider list is reloaded, since custom providers join it. */
+  async function runCustom(change: (revision: string) => Promise<CustomProvidersView>, done: string, after?: () => void, undoable = false) {
+    if (!custom) return;
+    setBusy(true); setError(""); setFormError(""); setMessage(""); setUndo(undefined);
+    try {
+      setCustom(await change(custom.revision));
+      setView(await loadProviders());
+      setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
+      if (undoable) setUndo("models");
+      after?.();
+    } catch (cause) {
+      setFormError(cause instanceof Error ? cause.message : "Could not save models.json.");
+      try { setCustom(await loadCustomProviders()); } catch { /* the form error explains */ }
+    } finally { setBusy(false); }
+  }
   const providers = view?.providers ?? [];
+  const customId = selected?.startsWith(CUSTOM) ? selected.slice(CUSTOM.length) : undefined;
+  const customEntry = custom?.providers.find(entry => entry.id === customId);
   const needle = query.trim().toLowerCase();
   const visible = providers.filter(provider => !needle || `${provider.name} ${provider.id}`.toLowerCase().includes(needle));
   const groups: [string, ProviderView[]][] = [
@@ -96,13 +118,22 @@ export function ModelsTab({ project }: { project?: string }) {
     <div className="page-heading"><div><h1>Models</h1><p>Providers and their credentials, from auth.json and models.json. Keys are never shown.</p></div>
       <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search providers" placeholder="Search providers…" value={query} onChange={event => setQuery(event.target.value)} /></div></div>
     <div role="status" className="feedback">{message}{undo && view && <>{" "}<Button variant="outline" size="sm" disabled={busy}
-      onClick={() => void run(restoreAuth, "Restored the previous auth.json.")}>Undo</Button></>}</div>
+      onClick={() => undo === "auth" ? void run(restoreAuth, "Restored the previous auth.json.") : void runCustom(restoreCustomProviders, "Restored the previous models.json.")}>Undo</Button></>}</div>
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p></div>}
     {view?.error && <div role="alert" className="error"><strong>models.json has a problem</strong><p>{view.error}</p></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading providers…</div> : <div className="master-detail">
       <section className="master" aria-label="Providers">
         <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === DEFAULTS} onClick={() => setSelected(DEFAULTS)}>
           <span className="item-name">Defaults</span><span className="item-state">provider, model, thinking</span></button></li></ul>
+        <section className="item-group" aria-label="Custom providers">
+          <div className="list-header"><h2>models.json</h2><span>{custom?.providers.length ?? 0}</span></div>
+          <Button variant="outline" size="sm" className="add-button" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}>Add custom provider</Button>
+          {custom?.error && <p className="field-error">{custom.error}</p>}
+          <ul className="item-list">{(custom?.providers ?? []).map(entry => <li key={entry.id}>
+            <button type="button" aria-pressed={selected === CUSTOM + entry.id} onClick={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}>
+              <span className="item-name">{entry.name ?? entry.id}</span><span className="item-state">{entry.models.length ? `${entry.models.length} models` : entry.otherKeys.join(", ")}</span>
+            </button></li>)}</ul>
+        </section>
         {groups.map(([title, members]) => members.length > 0 && <div key={title} className="item-group">
           <div className="list-header"><h2>{title}</h2><span>{members.length}</span></div>
           <ul className="item-list">{members.map(provider => <li key={provider.id}>
@@ -113,7 +144,12 @@ export function ModelsTab({ project }: { project?: string }) {
         </div>)}
         {!visible.length && <p className="empty">No matching providers.</p>}
       </section>
-      {selected === DEFAULTS ? <ModelDefaults providers={providers} project={project} onSaved={text => { setMessage(text); setUndo(false); }} />
+      {selected === NEW_CUSTOM || customEntry ? <CustomProviderForm key={selected + (customEntry ? custom!.revision : "")} provider={customEntry} busy={busy} error={formError}
+          onCancel={() => setSelected(undefined)}
+          onSave={(id, input) => void runCustom(revision => customEntry ? editCustomProvider(customEntry.id, revision, input) : addCustomProvider(revision, id, input),
+            `${customEntry?.id ?? id} saved.`, () => setSelected(CUSTOM + (customEntry?.id ?? id)))}
+          onRemove={customEntry ? () => void runCustom(revision => removeCustomProvider(customEntry.id, revision), `Removed ${customEntry.id} from models.json.`, () => setSelected(undefined), true) : undefined} />
+      : selected === DEFAULTS ? <ModelDefaults providers={providers} project={project} onSaved={text => { setMessage(text); setUndo(undefined); }} />
         : current ? <ProviderDetail key={current.id} provider={current} busy={busy}
         onSaveKey={key => run(revision => saveProviderKey(current.id, revision, key), `API key saved for ${current.name}.`)}
         onRemove={() => void run(revision => removeProviderKey(current.id, revision), `Removed the stored credential for ${current.name}.`, true)} />

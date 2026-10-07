@@ -178,6 +178,9 @@ textarea { resize: vertical; }
 .instruction h2 { margin: 0; }
 .instruction textarea { width: 100%; font: 12px/1.6 ui-monospace, monospace; tab-size: 2; }
 .plain-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.model-rows { display: grid; gap: 8px; }
+.model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 90px 90px auto auto auto; gap: 8px; align-items: center; }
+.checkbox { display: flex !important; flex-direction: row; gap: 8px; align-items: center; font-weight: 400 !important; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {
@@ -192,6 +195,7 @@ textarea { resize: vertical; }
   .project-picker select { max-width: 160px; }
   .search { width: 100%; }
   .master-detail { grid-template-columns: minmax(0, 1fr); }
+  .model-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .master-detail > .detail { position: static; max-height: none; }
   .prompt-pickers { grid-template-columns: minmax(0, 1fr); }
   .detail-list > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }

@@ -6,6 +6,7 @@ import type { Credential, CredentialInfo, CredentialStore } from "@earendil-work
 import type { ProvidersView, ProviderView } from "../shared/models.ts";
 import { isRecord } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
+import { customProviderRoutes } from "./models-json.ts";
 
 /** auth.json as read under our lock, handed to Pi's runtime so it can never write credentials itself. */
 class ReadOnlyCredentials implements CredentialStore {
@@ -70,6 +71,7 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
   }
 
   return new Hono()
+    .route("/custom", customProviderRoutes(store))
     .get("/providers", async c => c.json(await view()))
     .put("/providers/:id/key", async c => {
       const { revision, key } = z.object({ revision: z.string().min(1).max(100), key: z.string().min(1).max(10_000) }).strict().parse(await c.req.json());

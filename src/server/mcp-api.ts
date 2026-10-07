@@ -87,7 +87,7 @@ function servers(file: Record<string, unknown>): Record<string, unknown> {
 }
 
 /** Secret values never reach the browser; an entry without a value keeps the stored one. */
-function withValues(list: NamedValue[] | undefined, stored: unknown): Record<string, string> | undefined {
+export function withValues(list: NamedValue[] | undefined, stored: unknown): Record<string, string> | undefined {
   if (!list?.length) return undefined;
   const result: Record<string, string> = {};
   for (const { name, value } of list) {
