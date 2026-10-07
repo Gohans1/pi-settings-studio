@@ -128,3 +128,36 @@ test("removing a server can be undone from the backup", async (t) => {
   assert.equal(undo.status, 200);
   assert.equal(await readFile(file, "utf8"), original);
 });
+
+test("secret-looking args and URL parts are hidden, and editing keeps them unless replaced", async (t) => {
+  const { request, file } = await fixture(t, JSON.stringify({ mcpServers: {
+    ctx: { command: "npx", args: ["-y", "ctx-mcp", "--api-key", "fixture-arg-secret", "--token=fixture-inline-secret", "fixture-env-copy", "--verbose"],
+      env: { KEY: "fixture-env-copy" } },
+    web: { url: "https://user:fixture-url-password@example.com/mcp?api_key=fixture-query-secret&region=eu" },
+  } }));
+  const body = await (await request("/api/mcp/global")).text();
+  assert.doesNotMatch(body, /fixture-(arg|inline|env|url|query)/);
+  const view = JSON.parse(body);
+  const [ctx, web] = view.servers;
+  assert.deepEqual(ctx.args, ["-y", "ctx-mcp", "--api-key", "‹hidden 1›", "--token=‹hidden 2›", "‹hidden 3›", "--verbose"]);
+  assert.equal(web.url, "https://user:‹hidden›@example.com/mcp?api_key=‹hidden›&region=eu");
+
+  const edit = (name: string, server: object, revision: string) =>
+    request(`/api/mcp/global/servers/${name}`, { method: "PUT", headers: json, body: JSON.stringify({ revision, server }) });
+  let revision = view.revision;
+  const kept = await edit("ctx", { transport: "stdio", command: "npx", args: [...ctx.args, "--extra"], env: [{ name: "KEY" }] }, revision);
+  assert.equal(kept.status, 200);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")).mcpServers.ctx.args,
+    ["-y", "ctx-mcp", "--api-key", "fixture-arg-secret", "--token=fixture-inline-secret", "fixture-env-copy", "--verbose", "--extra"]);
+  revision = (await kept.json()).revision;
+  const replaced = await edit("ctx", { transport: "stdio", command: "npx", args: ["--api-key", "fixture-new-secret"], env: [{ name: "KEY" }] }, revision);
+  assert.equal(replaced.status, 200);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")).mcpServers.ctx.args, ["--api-key", "fixture-new-secret"]);
+  revision = (await replaced.json()).revision;
+  const sameUrl = await edit("web", { transport: "http", url: web.url, description: "Docs" }, revision);
+  assert.equal(sameUrl.status, 200);
+  assert.equal(JSON.parse(await readFile(file, "utf8")).mcpServers.web.url, "https://user:fixture-url-password@example.com/mcp?api_key=fixture-query-secret&region=eu");
+  const garbled = await edit("web", { transport: "http", url: "https://example.com/mcp?api_key=‹hidden›x" }, (await sameUrl.json()).revision);
+  assert.equal(garbled.status, 422);
+  assert.match((await garbled.json()).error, /hidden/);
+});

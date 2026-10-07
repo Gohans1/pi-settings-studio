@@ -69,7 +69,7 @@ export function McpServerForm({ server, busy, error, onSave, onCancel }: {
     {draft.transport === "stdio" ? <>
       <label>Command<input value={draft.command} required placeholder="npx" autoComplete="off" spellCheck={false} onChange={event => set({ command: event.target.value })} /></label>
       <label>Arguments<textarea rows={3} value={draft.args} placeholder={"-y\n@modelcontextprotocol/server-filesystem"} spellCheck={false} onChange={event => set({ args: event.target.value })} />
-        <span className="muted">One argument per line. Not a shell command.</span></label>
+        <span className="muted">One argument per line. Not a shell command. ‹hidden N› stands for a stored secret: keep it to keep the value.</span></label>
       <label>Working directory<input value={draft.cwd} placeholder="Session directory" autoComplete="off" spellCheck={false} onChange={event => set({ cwd: event.target.value })} /></label>
       <fieldset><legend>Environment</legend><NamedRows kind="variable" rows={draft.env} onChange={env => set({ env })} /></fieldset>
     </> : <>

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { McpFileView, McpServerInput, McpServerView, NamedValue } from "../shared/mcp.ts";
 import { isRecord, MCP_EXPOSURES, readMcpServers, updateMcpServer, type McpEntry } from "./mcp-config.ts";
+import { maskArgs, maskUrl, unmaskArgs, unmaskUrl } from "./mcp-secrets.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 
 function strings(value: unknown): string[] | undefined {
@@ -12,8 +13,15 @@ function text(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+/** Env and header values: an arg that repeats one is hidden too. */
+function secretValues(entry: Record<string, unknown>): string[] {
+  return [entry.env, entry.headers].flatMap(group => isRecord(group) ? Object.values(group).filter((value): value is string => typeof value === "string") : []);
+}
+
 function toView({ name, raw, config, error }: McpEntry): McpServerView {
   const entry = isRecord(raw) ? raw : {};
+  const args = strings(entry.args);
+  const url = text(entry.url);
   const exposure = (config ?? entry).exposure;
   return {
     name,
@@ -23,9 +31,9 @@ function toView({ name, raw, config, error }: McpEntry): McpServerView {
     ...(typeof entry.url === "string" ? { transport: "http" as const } : typeof entry.command === "string" ? { transport: "stdio" as const } : {}),
     description: text(entry.description),
     command: text(entry.command),
-    args: strings(entry.args),
+    args: args && maskArgs(args, secretValues(entry)).masked,
     cwd: text(entry.cwd),
-    url: text(entry.url),
+    url: url && maskUrl(url),
     timeout: typeof entry.timeout === "number" ? entry.timeout : undefined,
     env: isRecord(entry.env) ? Object.keys(entry.env) : [],
     headers: isRecord(entry.headers) ? Object.keys(entry.headers) : [],
@@ -91,12 +99,13 @@ function buildEntry(input: McpServerInput, previous: Record<string, unknown> = {
   const entry: Record<string, unknown> = {};
   if (input.transport === "stdio") {
     entry.command = input.command ?? "";
-    if (input.args?.length) entry.args = input.args;
+    const args = input.args?.length ? unmaskArgs(input.args, strings(previous.args) ?? [], secretValues(previous)) : [];
+    if (args.length) entry.args = args;
     if (input.cwd) entry.cwd = input.cwd;
     const env = withValues(input.env, previous.env);
     if (env) entry.env = env;
   } else {
-    entry.url = input.url ?? "";
+    entry.url = unmaskUrl(input.url ?? "", text(previous.url));
     const headers = withValues(input.headers, previous.headers);
     if (headers) entry.headers = headers;
   }

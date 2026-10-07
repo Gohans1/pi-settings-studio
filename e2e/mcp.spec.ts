@@ -12,7 +12,7 @@ test.beforeEach(async () => {
   await mkdir(agentDir);
   file = join(agentDir, "mcp.json");
   await writeFile(file, JSON.stringify({ mcpServers: {
-    search: { command: "uvx", args: ["search-mcp"], env: { SEARCH_API_KEY: "fixture-secret-value" }, enabled: false },
+    search: { command: "uvx", args: ["search-mcp", "--api-key", "fixture-arg-secret"], env: { SEARCH_API_KEY: "fixture-secret-value" }, enabled: false },
     docs: { url: "https://example.com/mcp", headers: { Authorization: "Bearer fixture-token" }, exposure: "deferred", description: "Product docs" },
     broken: { url: "ftp://nope" },
   } }, null, 2));
@@ -33,7 +33,10 @@ test("MCP tab lists servers and shows details without secret values", async ({ p
   await expect(page.getByRole("region", { name: "broken" })).toContainText('url must be an http or https URL');
   await page.getByRole("button", { name: /^docs/ }).click();
   await expect(page.getByRole("region", { name: "docs" })).toContainText("Product docs");
-  expect(await page.content()).not.toMatch(/fixture-secret-value|fixture-token/);
+  await expect(page.getByRole("region", { name: "docs" })).toBeVisible();
+  await page.getByRole("button", { name: /^search/ }).click();
+  await expect(page.getByRole("region", { name: "search" })).toContainText("--api-key ‹hidden 1›");
+  expect(await page.content()).not.toMatch(/fixture-secret-value|fixture-token|fixture-arg-secret/);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.emulateMedia({ colorScheme: "dark" });
   // Colour transitions must settle, or axe may measure a half-faded colour.
