@@ -1,3 +1,23 @@
+# Verification — rescoped app, 2026-10-07
+
+Scope: General, Models, Skills, Sub-agents, Plugins, MCP and System prompt tabs (global scope).
+
+| Check | Result |
+|---|---|
+| `bun test` (unit and API, temporary directories) | 61 passed |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run test:e2e` (Playwright on Bun, axe in light and dark mode) | 19 passed |
+| Drift tests | Every Pi 1.0.3 `Settings` key has a home; SDK pin equals `pi --version`; built-in extension names match Pi's docs; the MCP port matches the SDK version |
+| Safety tests | Listing never runs extension code (marker file), never installs packages, never writes; env, header and API-key values never reach the browser |
+
+Manual browser checks used copies of real data in a temporary agent directory (skills, sub-agent profiles, one session file, deleted afterwards). The real `~/.pi` was never written.
+
+Known limits: project scope (project MCP servers, skills, plugins, profiles) waits for a project picker; environment variables are not checked for provider auth; a custom `sessionDir` is not followed; models.json custom providers have no form yet; MCP connection tests, OAuth sign-in and package installs are not implemented; the background service is not installed.
+
+One e2e run failed a dark-mode contrast check and could not be reproduced in 65 reruns; transitions now settle before axe runs. The machine is often heavily loaded by other agents, so Playwright timeouts are generous.
+
+---
+
 # Verification — initial vertical slice, 2026-10-07
 
 ## Scope
