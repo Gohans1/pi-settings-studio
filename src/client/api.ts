@@ -58,11 +58,17 @@ export const saveRawSettings = (revision: string, text: string) => request<RawSe
 export const loadPlugins = (project?: string) => request<PluginsView>(withProject("/api/plugins", project));
 export const savePlugins = (scope: Scope, revision: string, items: { type: string; path: string }[], enabled: boolean, project?: string) =>
   request<PluginsView>(withProject("/api/plugins", project), "PATCH", { scope, revision, items, enabled });
-export const loadAgents = () => request<AgentsView>("/api/agents");
-export const addAgent = (input: AgentInput) => request<AgentsView>("/api/agents", "POST", input);
-export const editAgent = (file: string, revision: string, input: AgentInput) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}`, "PUT", { revision, ...input });
-export const removeAgent = (file: string, revision: string) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}`, "DELETE", { revision });
-export const restoreAgent = (file: string) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}/restore`, "POST", {});
+export type AgentScope = "user" | "project";
+const agentUrl = (scope: AgentScope, project: string | undefined, path = "") =>
+  withProject(`/api/agents${path}?scope=${scope}`, project);
+export const loadAgents = (project?: string) => request<AgentsView>(withProject("/api/agents", project));
+export const addAgent = (scope: AgentScope, input: AgentInput, project?: string) => request<AgentsView>(agentUrl(scope, project), "POST", input);
+export const editAgent = (scope: AgentScope, file: string, revision: string, input: AgentInput, project?: string) =>
+  request<AgentsView>(agentUrl(scope, project, `/${encodeURIComponent(file)}`), "PUT", { revision, ...input });
+export const removeAgent = (scope: AgentScope, file: string, revision: string, project?: string) =>
+  request<AgentsView>(agentUrl(scope, project, `/${encodeURIComponent(file)}`), "DELETE", { revision });
+export const restoreAgent = (scope: AgentScope, file: string, project?: string) =>
+  request<AgentsView>(agentUrl(scope, project, `/${encodeURIComponent(file)}/restore`), "POST", {});
 export const loadProviders = () => request<ProvidersView>("/api/models/providers");
 export const saveProviderKey = (id: string, revision: string, key: string) =>
   request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "PUT", { revision, key });

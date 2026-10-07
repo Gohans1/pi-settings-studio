@@ -1,17 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AgentInput, AgentView, AgentsView } from "../shared/agents";
-import { addAgent, editAgent, loadAgents, removeAgent, restoreAgent } from "./api";
+import { addAgent, editAgent, loadAgents, removeAgent, restoreAgent, type AgentScope } from "./api";
 import { Button } from "./components/ui/button";
 
-function AgentForm({ agent, busy, error, onSave, onCancel }: {
-  agent?: AgentView; busy: boolean; error: string; onSave: (input: AgentInput) => void; onCancel: () => void;
+function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
+  agent?: AgentView; busy: boolean; error: string; title?: string; onSave: (input: AgentInput) => void; onCancel: () => void;
 }) {
   const [name, setName] = useState(agent?.name ?? "");
   const [description, setDescription] = useState(agent?.description ?? "");
   const [tools, setTools] = useState((agent?.tools ?? []).join(", "));
   const [model, setModel] = useState(agent?.model ?? "");
   const [prompt, setPrompt] = useState(agent?.prompt ?? "");
-  const title = agent ? `Edit ${agent.name ?? agent.file}` : "Add profile";
+  const title = heading ?? (agent ? `Edit ${agent.name ?? agent.file}` : "Add profile");
   function submit(event: FormEvent) {
     event.preventDefault();
     onSave({ name: name.trim(), description: description.trim(), tools: tools.split(",").map(tool => tool.trim()).filter(Boolean),
@@ -38,12 +38,13 @@ function AgentDetail({ agent, busy, onEdit, onRemove }: { agent: AgentView; busy
   return <section className="detail" aria-labelledby="agent-title">
     <h2 id="agent-title">{title}</h2>
     {agent.error && <div className="error"><strong>Not loaded</strong><p>{agent.error}</p></div>}
+    {agent.shadowed && <p className="notice">This project has its own "{agent.name}" profile, which replaces this one there.</p>}
     <dl className="detail-list">
       {agent.description && <div><dt>Description</dt><dd>{agent.description}</dd></div>}
       <div><dt>Tools</dt><dd>{agent.tools?.join(", ") ?? <span className="muted">Extension default</span>}</dd></div>
       <div><dt>Model</dt><dd>{agent.model ?? <span className="muted">Default model</span>}</dd></div>
       {agent.extraKeys.length > 0 && <div><dt>Other keys</dt><dd>{agent.extraKeys.map(key => <code key={key} className="chip">{key}</code>)}<span className="muted"> kept as they are</span></dd></div>}
-      <div><dt>File</dt><dd><code>{agent.file}</code></dd></div>
+      <div><dt>File</dt><dd><code>{agent.file}</code><span className="muted"> · {agent.scope === "project" ? "this project's .pi/agents" : "global"}</span></dd></div>
     </dl>
     <details className="prompt-preview"><summary>System prompt</summary><pre>{agent.prompt || "(empty)"}</pre></details>
     <div className="actions detail-actions">
@@ -53,22 +54,23 @@ function AgentDetail({ agent, busy, onEdit, onRemove }: { agent: AgentView; busy
   </section>;
 }
 
-export function SubagentsTab() {
+export function SubagentsTab({ project }: { project?: string }) {
   const [view, setView] = useState<AgentsView>();
-  const [selected, setSelected] = useState<string>();
+  const [selected, setSelected] = useState<{ scope: AgentScope; file: string }>();
   const [mode, setMode] = useState<"view" | "add" | "edit">("view");
+  const [addScope, setAddScope] = useState<AgentScope>("user");
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
   const [message, setMessage] = useState("");
-  const [undo, setUndo] = useState<string>();
+  const [undo, setUndo] = useState<{ scope: AgentScope; file: string }>();
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
     setError("");
-    try { setView(await loadAgents()); }
+    try { setView(await loadAgents(project)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the profiles."); }
   }
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { setSelected(undefined); setMode("view"); void refresh(); }, [project]);
 
   async function run(change: () => Promise<AgentsView>, done: string, after?: () => void) {
     setBusy(true); setError(""); setFormError(""); setMessage(""); setUndo(undefined);
@@ -80,30 +82,41 @@ export function SubagentsTab() {
   }
 
   const agents = view?.agents ?? [];
-  const current = agents.find(agent => agent.file === selected);
+  const current = agents.find(agent => agent.scope === selected?.scope && agent.file === selected.file);
+  const add = (scope: AgentScope) => { setAddScope(scope); setMode("add"); setFormError(""); };
+  const list = (scope: AgentScope) => <ul className="item-list">{agents.filter(agent => agent.scope === scope).map(agent => <li key={agent.file}>
+    <button type="button" aria-pressed={selected?.scope === scope && agent.file === selected.file} onClick={() => { setSelected({ scope, file: agent.file }); setMode("view"); }}>
+      <span className="item-name">{agent.name ?? agent.file}</span>
+      <span className="item-state" data-state={agent.error ? "refused" : undefined}>{agent.error ? "skipped" : agent.shadowed ? "replaced here" : agent.model ?? ""}</span>
+    </button>
+  </li>)}</ul>;
   return <>
     <div className="page-heading"><div><h1>Sub-agents</h1><p>Profiles in the format of Pi's example subagent extension, in <code>{view?.dir ?? "~/.pi/agent/agents"}</code>.</p></div></div>
     {view && !view.readerInstalled && <p className="notice">No installed extension reads these profiles yet. Pi has no built-in sub-agents: install Pi's example subagent extension (or another that reads this folder) for them to take effect. T3Code's own sub-agents are separate.</p>}
     <div role="status" className="feedback">{message}{undo && <>{" "}<Button variant="outline" size="sm" disabled={busy}
-      onClick={() => { const file = undo; void run(() => restoreAgent(file), `Restored ${file}.`, () => setSelected(file)); }}>Undo</Button></>}</div>
+      onClick={() => { const target = undo; void run(() => restoreAgent(target.scope, target.file, project), `Restored ${target.file}.`, () => setSelected(target)); }}>Undo</Button></>}</div>
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading profiles…</div> : <div className="master-detail">
-      <section className="master" aria-label="Profiles">
-        <Button variant="outline" size="sm" disabled={busy} onClick={() => { setMode("add"); setFormError(""); }}>Add profile</Button>
-        {agents.length ? <ul className="item-list">{agents.map(agent => <li key={agent.file}>
-          <button type="button" aria-pressed={agent.file === selected} onClick={() => { setSelected(agent.file); setMode("view"); }}>
-            <span className="item-name">{agent.name ?? agent.file}</span>
-            <span className="item-state" data-state={agent.error ? "refused" : undefined}>{agent.error ? "skipped" : agent.model ?? ""}</span>
-          </button>
-        </li>)}</ul> : <p className="empty">No profiles yet.</p>}
-      </section>
-      {mode !== "view" ? <AgentForm key={mode + (selected ?? "")} agent={mode === "edit" ? current : undefined} busy={busy} error={formError}
+      <div className="master">
+        <section className="item-group" aria-label="Global profiles">
+          <div className="list-header"><h2>Global</h2><span>{agents.filter(agent => agent.scope === "user").length}</span></div>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => add("user")}>Add profile</Button>
+          {agents.some(agent => agent.scope === "user") ? list("user") : <p className="empty">No profiles yet.</p>}
+        </section>
+        {project && <section className="item-group" aria-label="This project's profiles">
+          <div className="list-header"><h2>This project</h2><span>{agents.filter(agent => agent.scope === "project").length} in .pi/agents</span></div>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => add("project")}>Add profile to project</Button>
+          {agents.some(agent => agent.scope === "project") ? list("project") : <p className="empty">No profiles in this project yet.</p>}
+        </section>}
+      </div>
+      {mode !== "view" ? <AgentForm key={mode + addScope + (selected?.file ?? "")} agent={mode === "edit" ? current : undefined} busy={busy} error={formError}
+        title={mode === "add" && addScope === "project" ? "Add profile to this project" : undefined}
         onCancel={() => setMode("view")}
-        onSave={input => void run(() => mode === "add" ? addAgent(input) : editAgent(current!.file, current!.revision, input),
+        onSave={input => void run(() => mode === "add" ? addAgent(addScope, input, project) : editAgent(current!.scope, current!.file, current!.revision, input, project),
           `${input.name} saved. Applies to new T3Code threads, or after /reload.`,
-          () => { setSelected(mode === "add" ? `${input.name}.md` : current!.file); setMode("view"); })} />
+          () => { setSelected(mode === "add" ? { scope: addScope, file: `${input.name}.md` } : { scope: current!.scope, file: current!.file }); setMode("view"); })} />
       : current ? <AgentDetail agent={current} busy={busy} onEdit={() => { setMode("edit"); setFormError(""); }}
-          onRemove={() => { const file = current.file; void run(() => removeAgent(file, current.revision), `Removed ${file}.`, () => setUndo(file)); }} />
+          onRemove={() => { const target = { scope: current.scope, file: current.file }; void run(() => removeAgent(target.scope, target.file, current.revision, project), `Removed ${target.file}.`, () => setUndo(target)); }} />
       : <section className="detail"><p className="empty">Select a profile to see it.</p></section>}
     </div>}
   </>;

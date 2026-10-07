@@ -55,3 +55,20 @@ test("sub-agent profiles can be read, added, edited, removed and restored", asyn
   expect(await readFile(join(dir, "reviewer.md"), "utf8")).toContain("Reviews diffs");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("a project profile is added in the project's .pi/agents and replaces a global one of the same name there", async ({ page }) => {
+  const project = join(root, "webapp");
+  await mkdir(project);
+  await server.close();
+  server = await startServer({ agentDir: join(root, "agent"), projectDir: project, port: 0, staticDir: resolve("dist/client") });
+  await page.goto(server.url + "#subagents");
+  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("button", { name: "Add profile to project" }).click();
+  const form = page.getByRole("form", { name: "Add profile to this project" });
+  await form.getByLabel("Name").fill("scout");
+  await form.getByLabel("Description").fill("Project recon");
+  await form.getByRole("button", { name: "Save profile" }).click();
+  await expect(page.getByRole("status")).toContainText("scout saved");
+  expect(await readFile(join(project, ".pi", "agents", "scout.md"), "utf8")).toContain("description: Project recon");
+  await expect(page.getByRole("region", { name: "Global profiles" }).getByRole("button", { name: /^scout/ })).toContainText("replaced here");
+});

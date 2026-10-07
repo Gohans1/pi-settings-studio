@@ -10,6 +10,7 @@ import { parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import type { AgentInput, AgentView } from "../shared/agents.ts";
 import { resolveUserResources } from "./resources.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
+import type { ProjectRegistry } from "./projects.ts";
 
 const MANAGED = ["name", "description", "tools", "model"];
 // File names come from this pattern, never from a path the browser sends.
@@ -23,7 +24,7 @@ function toolList(value: unknown): string[] | undefined {
   return tools.length ? tools : undefined;
 }
 
-function toView(file: string, text: string, revision: string): AgentView {
+function toView(file: string, text: string, revision: string): Omit<AgentView, "scope"> {
   const { frontmatter, body } = parseFrontmatter<Record<string, unknown>>(text);
   const name = typeof frontmatter.name === "string" ? frontmatter.name : undefined;
   const description = typeof frontmatter.description === "string" ? frontmatter.description : undefined;
@@ -51,19 +52,26 @@ const agentInput = z.object({
   prompt: z.string().max(200_000),
 }).strict();
 
-export function agentRoutes(store: ConfigStore, agentDir: string) {
-  const dir = join(agentDir, "agents");
-  const pathOf = (file: string) => {
+export function agentRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
+  const userDir = join(agentDir, "agents");
+  type Scope = "user" | "project";
+  /** The profile folder of a scope: ~/.pi/agent/agents, or the project's .pi/agents. */
+  async function dirOf(scope: Scope, project: string | undefined): Promise<string> {
+    return scope === "user" ? userDir : join(await registry.require(project), ".pi", "agents");
+  }
+  async function pathOf(c: { req: { param: (name: "file") => string; query: (name: string) => string | undefined } }): Promise<string> {
+    const file = c.req.param("file");
     if (!FILE.test(file)) throw new ConfigError("Unknown profile file.", 400);
-    return join(dir, file);
-  };
-  async function list(): Promise<AgentView[]> {
+    return join(await dirOf(scopeParam(c.req.query("scope")), c.req.query("project")), file);
+  }
+  const scopeParam = (value: string | undefined): Scope => value === "project" ? "project" : "user";
+  async function listDir(dir: string, scope: Scope): Promise<AgentView[]> {
     let files: string[] = [];
     try { files = (await readdir(dir, { withFileTypes: true })).filter(entry => entry.isFile() && FILE.test(entry.name)).map(entry => entry.name).sort(); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
     return Promise.all(files.map(async file => {
-      const { text = "", revision } = await store.readPath(pathOf(file));
-      return toView(file, text, revision);
+      const { text = "", revision } = await store.readPath(join(dir, file));
+      return { ...toView(file, text, revision), scope };
     }));
   }
   /** Pi itself has no subagents: an extension (such as Pi's example) must read these profiles. */
@@ -73,32 +81,40 @@ export function agentRoutes(store: ConfigStore, agentDir: string) {
       return extensions.some(extension => extension.enabled && /subagent/i.test(extension.path));
     } catch (error) { if (error instanceof ConfigError) return false; throw error; }
   }
-  const json = async () => ({ dir, readerInstalled: await readerInstalled(), agents: await list() });
+  async function json(project: string | undefined) {
+    const projectDir = project === undefined ? undefined : await dirOf("project", project);
+    const user = await listDir(userDir, "user");
+    const local = projectDir ? await listDir(projectDir, "project") : [];
+    // The example extension lets a project profile replace a user profile of the same name.
+    const projectNames = new Set(local.map(agent => agent.name));
+    const agents = [...user.map(agent => projectNames.has(agent.name) ? { ...agent, shadowed: true } : agent), ...local];
+    return { dir: userDir, ...(projectDir ? { projectDir } : {}), readerInstalled: await readerInstalled(), agents };
+  }
   return new Hono()
-    .get("/", async c => c.json(await json()))
+    .get("/", async c => c.json(await json(c.req.query("project"))))
     .post("/", async c => {
       const input = agentInput.parse(await c.req.json());
-      const path = pathOf(`${input.name}.md`);
+      const path = join(await dirOf(scopeParam(c.req.query("scope")), c.req.query("project")), `${input.name}.md`);
       const current = await store.readPath(path);
-      if (current.text !== undefined) throw new ConfigError(`A profile file named ${input.name}.md already exists.`);
+      if (current.text !== undefined) throw new ConfigError(`A profile file named ${input.name}.md already exists here.`);
       await store.writePath(path, current.revision, serialize({}, input));
-      return c.json(await json());
+      return c.json(await json(c.req.query("project")));
     })
     .put("/:file", async c => {
       const { revision, ...input } = agentInput.extend({ revision: z.string().min(1).max(100) }).parse(await c.req.json());
-      const path = pathOf(c.req.param("file"));
+      const path = await pathOf(c);
       const current = await store.readPath(path);
       if (current.text === undefined) throw new ConfigError("This profile no longer exists.");
       await store.writePath(path, revision, serialize(parseFrontmatter<Record<string, unknown>>(current.text).frontmatter, input));
-      return c.json(await json());
+      return c.json(await json(c.req.query("project")));
     })
     .delete("/:file", async c => {
       const { revision } = z.object({ revision: z.string().min(1).max(100) }).strict().parse(await c.req.json());
-      await store.removePath(pathOf(c.req.param("file")), revision);
-      return c.json(await json());
+      await store.removePath(await pathOf(c), revision);
+      return c.json(await json(c.req.query("project")));
     })
     .post("/:file/restore", async c => {
-      await store.restorePath(pathOf(c.req.param("file")));
-      return c.json(await json());
+      await store.restorePath(await pathOf(c));
+      return c.json(await json(c.req.query("project")));
     });
 }

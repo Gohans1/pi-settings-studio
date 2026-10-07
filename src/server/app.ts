@@ -104,7 +104,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/sessions", sessionRoutes(agentDir));
   app.route("/api/skills", skillRoutes(store, registry, agentDir));
   app.route("/api/plugins", pluginRoutes(store, registry, agentDir));
-  app.route("/api/agents", agentRoutes(store, agentDir));
+  app.route("/api/agents", agentRoutes(store, registry, agentDir));
   app.route("/api/models", modelRoutes(store, agentDir));
   app.route("/api/projects", projectRoutes(registry, store, agentDir));
   app.get("/api/status", c => c.json({ source: "persisted-files", liveSession: false, catalogue: "Pi 1.0.3", parityComplete: false }));
