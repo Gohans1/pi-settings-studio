@@ -17,15 +17,11 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
-test("review and save writes native files, preserves unknown values, and survives reload", async ({ page }) => {
+test("save writes native files directly, preserves unknown values, and survives reload", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Models & thinking" })).toBeVisible();
-  expect(new URL(page.url()).hash).toBe("");
   await page.getByLabel("Default model", { exact: true }).fill("new-model");
-  await expect(page.getByRole("button", { name: "Review changes" })).toBeEnabled();
   expect(JSON.parse(await readFile(file, "utf8")).defaultModel).toBe("fixture-model");
-  await page.getByRole("button", { name: "Review changes" }).click();
-  await expect(page.getByRole("heading", { name: "Review changes" })).toBeVisible();
-  await page.getByRole("button", { name: "Save to file" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Saved to file");
   const saved = JSON.parse(await readFile(file, "utf8"));
   expect(saved.defaultModel).toBe("new-model");
@@ -37,11 +33,9 @@ test("review and save writes native files, preserves unknown values, and survive
 test("stale saves retain the draft and never overwrite a concurrent update", async ({ page }) => {
   await page.getByLabel("Default model", { exact: true }).fill("my-draft");
   await writeFile(file, '{"defaultModel":"other-session","unknown":42}');
-  await page.getByRole("button", { name: "Review changes" }).click();
-  await page.getByRole("button", { name: "Save to file" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("changed in another session");
   expect(JSON.parse(await readFile(file, "utf8")).defaultModel).toBe("other-session");
-  await page.getByRole("button", { name: "Back to editing" }).click();
   await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("my-draft");
 });
 
@@ -49,12 +43,10 @@ test("project scope inherits values and reset removes only the local override", 
   await page.getByLabel("Settings scope").selectOption("project");
   await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("fixture-model");
   await page.getByLabel("Default model", { exact: true }).fill("project-model");
-  await page.getByRole("button", { name: "Review changes" }).click();
-  await page.getByRole("button", { name: "Save to file" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Saved to file");
   await page.getByRole("button", { name: "Use inherited Default model" }).click();
-  await page.getByRole("button", { name: "Review changes" }).click();
-  await page.getByRole("button", { name: "Save to file" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Saved to file");
   expect(JSON.parse(await readFile(join(root, "project", ".pi", "settings.json"), "utf8")).defaultModel).toBeUndefined();
   expect(JSON.parse(await readFile(file, "utf8")).defaultModel).toBe("fixture-model");
@@ -64,13 +56,12 @@ test("search finds codemode settings; invalid budget is never saved", async ({ p
   await page.getByRole("searchbox", { name: "Search settings" }).fill("inlineBudget");
   await page.getByLabel("Inline tool budget", { exact: true }).fill("-1");
   await expect(page.getByText("Enter a valid value.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Review changes" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
 });
 
 test("backup restore is explicit and restores the original native document", async ({ page }) => {
   await page.getByLabel("Default model", { exact: true }).fill("changed");
-  await page.getByRole("button", { name: "Review changes" }).click();
-  await page.getByRole("button", { name: "Save to file" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Saved to file");
   await page.getByRole("button", { name: "Restore previous file" }).click();
   await expect(page.getByRole("heading", { name: "Restore previous file?" })).toBeVisible();
@@ -86,8 +77,7 @@ test("model patterns can be entered as separate lines without losing Enter", asy
   await list.press("Enter");
   await expect(list).toHaveValue("provider/first\n");
   await list.pressSequentially("provider/second");
-  await page.getByRole("button", { name: "Review changes" }).click();
-  await page.getByRole("button", { name: "Save to file" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Saved to file");
   expect(JSON.parse(await readFile(file, "utf8")).enabledModels).toEqual(["provider/first", "provider/second"]);
 });

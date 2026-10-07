@@ -3,7 +3,6 @@ import { Braces, Search, SlidersHorizontal, Wrench, RotateCcw, ShieldCheck } fro
 import { fields, type SettingsChange, type SettingsView } from "../shared/settings";
 import { loadSettings, restoreSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
-import { ChangeReview } from "./ChangeReview";
 import { Button } from "./components/ui/button";
 
 export function App() {
@@ -16,7 +15,6 @@ export function App() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [review, setReview] = useState(false);
   const [restore, setRestore] = useState(false);
   const title = useRef<HTMLHeadingElement>(null);
   const changes = Object.values(draft).map(change => {
@@ -65,7 +63,7 @@ export function App() {
     setBusy(true); setError(""); setMessage("");
     try {
       setView(await saveSettings(scope, view.revision, changes));
-      setDraft({}); setReview(false); setMessage("Saved to file. Reload Pi or start a new session to apply supported settings.");
+      setDraft({}); setMessage("Saved to file. Reload Pi or start a new session to apply supported settings.");
       title.current?.focus();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Save failed. Your draft is unchanged."); }
     finally { setBusy(false); }
@@ -83,7 +81,7 @@ export function App() {
     setBusy(true); setError(""); setMessage("");
     try {
       setView(await loadSettings(scope));
-      setMessage(changes.length ? "File reloaded. Your draft is still here; review it against the new values." : "Settings reloaded from disk.");
+      setMessage(changes.length ? "File reloaded. Your draft is still here; check it against the new values." : "Settings reloaded from disk.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Reload failed."); }
     finally { setBusy(false); }
   }
@@ -105,7 +103,7 @@ export function App() {
     <div className="main-column">
       <header className="toolbar">
         <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search settings" placeholder="Search settings or keys…" value={query} onChange={e => setQuery(e.target.value)} /></div>
-        <label className="scope-label">Editing<select aria-label="Settings scope" value={scope} disabled={!!changes.length || busy || restore} onChange={e => { setScope(e.target.value as SettingsView["scope"]); setReview(false); }}>
+        <label className="scope-label">Editing<select aria-label="Settings scope" value={scope} disabled={!!changes.length || busy || restore} onChange={e => setScope(e.target.value as SettingsView["scope"])}>
           <option value="global">Global settings</option><option value="project">Project settings</option>
         </select></label>
       </header>
@@ -115,7 +113,7 @@ export function App() {
         <div role="status" className="feedback">{message}</div>
         {error && <div role="alert" className="error"><strong>Could not complete the operation</strong><p>{error}</p><Button variant="outline" disabled={busy} onClick={() => void refresh()}>Reload settings</Button></div>}
         {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && <>
-          {review ? <ChangeReview changes={changes} view={view} busy={busy} onSave={() => void save()} onBack={() => setReview(false)} /> : restore ? <section className="review"><h2>Restore previous file?</h2><p>This replaces the whole selected file with its latest backup, including settings this editor does not display. The current file becomes the next backup.</p><div className="actions"><Button variant="outline" disabled={busy} onClick={() => setRestore(false)}>Cancel</Button><Button disabled={busy} onClick={() => void recover()}>Confirm restore</Button></div></section> : <>
+          {restore ? <section className="review"><h2>Restore previous file?</h2><p>This replaces the whole selected file with its latest backup, including settings this editor does not display. The current file becomes the next backup.</p><div className="actions"><Button variant="outline" disabled={busy} onClick={() => setRestore(false)}>Cancel</Button><Button disabled={busy} onClick={() => void recover()}>Confirm restore</Button></div></section> : <>
             <div className="settings-list">{results.map(field => {
               const edit = draft[field.key];
               const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
@@ -126,10 +124,10 @@ export function App() {
             })}{!results.length && <p className="empty">No matching settings. Try a label such as “model” or “budget”.</p>}</div>
             <div className="save-bar"><p>{changes.length ? `${changes.length} unsaved ${changes.length === 1 ? "change" : "changes"}` : "No unsaved changes"}</p><div className="actions">
               {changes.length > 0 && <Button variant="outline" onClick={() => { setDraft({}); setError(""); setMessage("Draft discarded. No file was changed."); }}>Discard draft</Button>}
-              <Button disabled={!changes.length || !!invalidKeys.length || busy} onClick={() => setReview(true)}>Review changes</Button>
+              <Button disabled={!changes.length || !!invalidKeys.length || busy} onClick={() => void save()}>{busy ? "Saving…" : "Save"}</Button>
             </div></div>
           </>}
-          {!review && !restore && <section className="file-tools" aria-label="File actions"><Button variant="ghost" disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</Button>
+          {!restore && <section className="file-tools" aria-label="File actions"><Button variant="ghost" disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</Button>
             {view.hasBackup && <Button variant="ghost" disabled={busy || !!changes.length} onClick={() => setRestore(true)}>Restore previous file</Button>}</section>}
         </>}
         <footer className="scope-footnote"><p>Showing saved configuration, not live T3Code session state. Runtime overrides may differ.</p>
