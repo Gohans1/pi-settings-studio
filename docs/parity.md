@@ -5,10 +5,10 @@ Baseline: [agegr/pi-web](https://github.com/agegr/pi-web/tree/7aaeff97f8ee33c9b2
 | Capability | Source | Status |
 |---|---|---|
 | Provider catalogue, API-key status/add/remove, OAuth login/logout | components/ModelsConfig.tsx; app/api/models-config | Pending |
-| Custom provider endpoints/models, defaults, enabled models, thinking | components/ModelsConfig.tsx | Pending |
+| Custom provider endpoints/models, defaults, enabled models, thinking | components/ModelsConfig.tsx | Partial: defaults/thinking/model patterns implemented; custom provider/model CRUD and provider catalogue still pending |
 | MCP global/project add/edit/toggle; command/URL, env, headers | components/McpConfig.tsx; app/api/mcp | Pending |
 | MCP connect/test, OAuth, tool exposure/search/codemode, remove/undo | components/McpConfig.tsx; app/api/mcp | Pending |
-| Codemode mode and inline tool-list budget | docs/adr/0006-mcp-and-code-mode.md | Pending |
+| Codemode mode and inline tool-list budget | docs/adr/0006-mcp-and-code-mode.md | Implemented persisted-file forms; API/browser verification. Live host exposure/reload remains integration work |
 | Skills discovery, details, install/update/check, per-item/group toggles | components/SkillsConfig.tsx; app/api/skills/route.ts | Pending |
 | Packages install/update/check/remove; scoped/group/individual resource toggles | components/PluginsConfig.tsx; app/api/plugins/route.ts | Pending |
 | Subagent profiles create/edit/duplicate/delete, tool/model/thinking fields, enable/concurrency | components/AgentsConfig.tsx; app/api/subagents | Pending |
