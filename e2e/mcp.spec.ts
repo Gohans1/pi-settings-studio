@@ -36,6 +36,8 @@ test("MCP tab lists servers and shows details without secret values", async ({ p
   expect(await page.content()).not.toMatch(/fixture-secret-value|fixture-token/);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.emulateMedia({ colorScheme: "dark" });
+  // Colour transitions must settle, or axe may measure a half-faded colour.
+  await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"));
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 

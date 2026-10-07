@@ -79,6 +79,8 @@ test("desktop and narrow layouts are accessible, keyboard usable and error-free"
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
   await page.emulateMedia({ colorScheme: "dark" });
+  // Colour transitions must settle, or axe may measure a half-faded colour.
+  await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"));
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.emulateMedia({ colorScheme: "light" });
   await page.getByLabel("Default model", { exact: true }).focus();
