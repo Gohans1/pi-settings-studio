@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { Server, SlidersHorizontal } from "lucide-react";
+import { ScrollText, Server, SlidersHorizontal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { GeneralTab } from "./GeneralTab";
 import { McpTab } from "./McpTab";
+import { SystemPromptTab } from "./SystemPromptTab";
 
 // Only implemented tabs are listed (SPEC.md: no fake tabs).
 const tabs = [
   { id: "general", label: "General", icon: SlidersHorizontal, Panel: GeneralTab },
   { id: "mcp", label: "MCP", icon: Server, Panel: McpTab },
+  { id: "system-prompt", label: "System prompt", icon: ScrollText, Panel: SystemPromptTab },
 ];
 
 function tabFromHash(): string {

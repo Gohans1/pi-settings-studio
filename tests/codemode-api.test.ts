@@ -15,7 +15,7 @@ async function fixture(t: import("node:test").TestContext, settings: object, mcp
   await mkdir(agent, { recursive: true });
   await writeFile(join(agent, "settings.json"), JSON.stringify(settings));
   if (mcp) await writeFile(join(agent, "mcp.json"), JSON.stringify(mcp));
-  const app = createApp({ store: new ConfigStore({ global: agent, project: join(root, "project", ".pi") }), origins: [origin] });
+  const app = createApp({ store: new ConfigStore({ global: agent, project: join(root, "project", ".pi") }), agentDir: agent, origins: [origin] });
   const request = (path: string, init: RequestInit = {}) =>
     app.request(new Request(origin + path, { ...init, headers: { host: new URL(origin).host, ...init.headers } }));
   const settings_ = async () => JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));

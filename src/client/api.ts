@@ -1,6 +1,7 @@
 import type { SettingsView, SettingsChange } from "../shared/settings";
 import type { McpFileView, McpServerInput } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
+import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -33,3 +34,5 @@ export const saveCodemode = (revision: string, patch: { preference?: string; mod
   request<CodemodeView>("/api/codemode", "PATCH", { revision, ...patch });
 export const saveMcpSettings = (revision: string, patch: { autoEnableCodemode: boolean }) =>
   request<McpFileView>("/api/mcp/global/settings", "PATCH", { revision, ...patch });
+export const loadSessions = () => request<SessionSummary[]>("/api/sessions");
+export const loadSystemPrompt = (id: string) => request<SystemPromptView>(`/api/sessions/${encodeURIComponent(id)}/system-prompt`);

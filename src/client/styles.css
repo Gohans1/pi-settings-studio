@@ -126,6 +126,17 @@ textarea { resize: vertical; }
 .budget p { flex-basis: 100%; }
 .budget [data-slot=button] { min-height: 40px; padding-inline: 16px; }
 .switch-row { display: flex; gap: 12px; align-items: center; }
+.prompt-pickers { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; margin-top: 24px; }
+.prompt-pickers label { display: grid; gap: 6px; font-weight: 560; min-width: 0; }
+.prompt-pickers select { font-weight: 400; min-width: 0; }
+.prompt { margin-top: 24px; display: grid; gap: 8px; }
+.prompt-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted-foreground); font-size: 12px; padding-bottom: 8px; }
+.prompt details { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+.prompt summary { font-weight: 560; }
+.prompt summary .muted { font-weight: 400; }
+.prompt pre { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.6 ui-monospace, monospace; max-height: 480px; overflow: auto; }
+.tool-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.tool-list li { display: grid; gap: 2px; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {
@@ -139,6 +150,7 @@ textarea { resize: vertical; }
   .identity { display: none; }
   .search { width: 100%; }
   .master-detail { grid-template-columns: minmax(0, 1fr); }
+  .prompt-pickers { grid-template-columns: minmax(0, 1fr); }
   .detail-list > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   main { padding: 28px 16px; }
   h1 { font-size: 26px; }

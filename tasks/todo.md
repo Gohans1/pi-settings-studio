@@ -10,7 +10,7 @@
 - [x] MCP: enable/disable, exposure.
 - [x] MCP: add, edit, remove, undo.
 - [x] MCP: codemode controls.
-- [ ] System prompt tab.
+- [x] System prompt tab.
 - [ ] Skills tab.
 - [ ] General tab, drift test, raw JSON.
 - [ ] Models tab.

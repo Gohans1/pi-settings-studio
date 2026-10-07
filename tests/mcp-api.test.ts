@@ -14,7 +14,7 @@ async function fixture(t: import("node:test").TestContext, mcp?: string) {
   await mkdir(roots.global, { recursive: true });
   const file = join(roots.global, "mcp.json");
   if (mcp !== undefined) await writeFile(file, mcp);
-  const app = createApp({ store: new ConfigStore(roots), origins: [origin] });
+  const app = createApp({ store: new ConfigStore(roots), agentDir: roots.global, origins: [origin] });
   const request = (path: string, init: RequestInit = {}) =>
     app.request(new Request(origin + path, { ...init, headers: { host: new URL(origin).host, ...init.headers } }));
   return { request, file };

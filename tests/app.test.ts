@@ -16,7 +16,7 @@ async function fixture(t: import("node:test").TestContext) {
   await mkdir(roots.project, { recursive: true });
   const file = join(roots.global, "settings.json");
   await writeFile(file, JSON.stringify({ defaultModel: "global-model", defaultThinkingLevel: "high", privateExtension: { apiKey: "fixture-secret" } }));
-  const app = createApp({ store: new ConfigStore(roots), origins: [origin, localhostOrigin] });
+  const app = createApp({ store: new ConfigStore(roots), agentDir: roots.global, origins: [origin, localhostOrigin] });
   async function request(path: string, options: RequestInit = {}, base = origin) {
     return app.request(new Request(base + path, { ...options, headers: { host: new URL(base).host, ...options.headers } }));
   }

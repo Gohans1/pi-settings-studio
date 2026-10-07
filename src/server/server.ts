@@ -17,6 +17,6 @@ export async function startServer(options: {
   });
   // The bookmark uses localhost; WSL forwards it from the Windows browser.
   const origins = [`http://127.0.0.1:${server.port}`, `http://localhost:${server.port}`];
-  app = createApp({ store, origins, staticDir: options.staticDir ?? join(import.meta.dir, "../../dist/client") });
+  app = createApp({ store, agentDir: options.agentDir, origins, staticDir: options.staticDir ?? join(import.meta.dir, "../../dist/client") });
   return { url: `${origins[0]}/`, close: () => server.stop(true) };
 }
