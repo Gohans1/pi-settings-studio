@@ -69,3 +69,13 @@ test("removing a stored credential is limited to known providers with a stored c
   assert.equal((await auth()).anthropic, undefined);
   assert.equal(((await stat(join(agent, "auth.json"))).mode & 0o777), 0o600);
 });
+
+test("a provider's models come from Pi's catalog; unknown providers are 404", async (t) => {
+  const { request } = await fixture(t);
+  const models = await (await request("/api/models/providers/ollama/models")).json();
+  assert.deepEqual(models.map((model: { id: string }) => model.id), ["qwen"]);
+  const anthropic = await (await request("/api/models/providers/anthropic/models")).json();
+  assert.ok(anthropic.length > 3);
+  assert.equal(typeof anthropic[0].name, "string");
+  assert.equal((await request("/api/models/providers/nope/models")).status, 404);
+});

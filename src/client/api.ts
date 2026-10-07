@@ -4,7 +4,7 @@ import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PluginsView, SkillsView } from "../shared/resources";
 import type { AgentInput, AgentsView } from "../shared/agents";
-import type { ProvidersView } from "../shared/models";
+import type { ModelSummary, ProvidersView } from "../shared/models";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -58,3 +58,4 @@ export const saveProviderKey = (id: string, revision: string, key: string) =>
 export const removeProviderKey = (id: string, revision: string) =>
   request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "DELETE", { revision });
 export const restoreAuth = (revision: string) => request<ProvidersView>("/api/models/auth/restore", "POST", { revision });
+export const loadModels = (provider: string) => request<ModelSummary[]>(`/api/models/providers/${encodeURIComponent(provider)}/models`);

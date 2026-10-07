@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   const agentDir = join(root, "agent");
   await mkdir(agentDir);
   file = join(agentDir, "settings.json");
-  await writeFile(file, JSON.stringify({ defaultProvider: "test-provider", defaultModel: "fixture-model", extensionSecret: "fixture-not-real" }));
+  await writeFile(file, JSON.stringify({ defaultProvider: "test-provider", shellCommandPrefix: "fixture-prefix", extensionSecret: "fixture-not-real" }));
   server = await startServer({ agentDir, projectDir: join(root, "project"), staticDir: resolve("dist/client") });
   await page.goto(server.url);
 });
@@ -19,53 +19,53 @@ test.afterEach(async () => { await server?.close(); await rm(root, { recursive: 
 
 test("save writes native files directly, preserves unknown values, and survives reload", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Models & thinking" })).toBeVisible();
-  await page.getByLabel("Default model", { exact: true }).fill("new-model");
-  expect(JSON.parse(await readFile(file, "utf8")).defaultModel).toBe("fixture-model");
+  await page.getByLabel("Shell command prefix", { exact: true }).fill("new-model");
+  expect(JSON.parse(await readFile(file, "utf8")).shellCommandPrefix).toBe("fixture-prefix");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Saved to file");
   const saved = JSON.parse(await readFile(file, "utf8"));
-  expect(saved.defaultModel).toBe("new-model");
+  expect(saved.shellCommandPrefix).toBe("new-model");
   expect(saved.extensionSecret).toBe("fixture-not-real");
   await page.reload();
-  await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("new-model");
+  await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("new-model");
 });
 
 test("stale saves retain the draft and never overwrite a concurrent update", async ({ page }) => {
-  await page.getByLabel("Default model", { exact: true }).fill("my-draft");
-  await writeFile(file, '{"defaultModel":"other-session","unknown":42}');
+  await page.getByLabel("Shell command prefix", { exact: true }).fill("my-draft");
+  await writeFile(file, '{"shellCommandPrefix":"other-session","unknown":42}');
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("changed in another session");
-  expect(JSON.parse(await readFile(file, "utf8")).defaultModel).toBe("other-session");
-  await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("my-draft");
+  expect(JSON.parse(await readFile(file, "utf8")).shellCommandPrefix).toBe("other-session");
+  await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("my-draft");
 });
 
 test("search narrows the settings by label or key", async ({ page }) => {
-  await page.getByRole("searchbox", { name: "Search settings" }).fill("enabledModels");
-  await expect(page.getByLabel("Enabled models", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Default model", { exact: true })).toBeHidden();
+  await page.getByRole("searchbox", { name: "Search settings" }).fill("npmCommand");
+  await expect(page.getByLabel("npm command", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Shell command prefix", { exact: true })).toBeHidden();
 });
 
 test("backup restore is explicit and restores the original native document", async ({ page }) => {
-  await page.getByLabel("Default model", { exact: true }).fill("changed");
+  await page.getByLabel("Shell command prefix", { exact: true }).fill("changed");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Saved to file");
   await page.getByRole("button", { name: "Restore previous file" }).click();
   await expect(page.getByRole("heading", { name: "Restore previous file?" })).toBeVisible();
   await page.getByRole("button", { name: "Confirm restore" }).click();
-  await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("fixture-model");
-  expect(JSON.parse(await readFile(file, "utf8")).defaultModel).toBe("fixture-model");
+  await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("fixture-prefix");
+  expect(JSON.parse(await readFile(file, "utf8")).shellCommandPrefix).toBe("fixture-prefix");
 });
 
-test("model patterns can be entered as separate lines without losing Enter", async ({ page }) => {
-  const list = page.getByLabel("Enabled models", { exact: true });
-  await list.fill("provider/first");
+test("list fields take one entry per line without losing Enter", async ({ page }) => {
+  const list = page.getByLabel("npm command", { exact: true });
+  await list.fill("bun");
   await list.press("End");
   await list.press("Enter");
-  await expect(list).toHaveValue("provider/first\n");
-  await list.pressSequentially("provider/second");
+  await expect(list).toHaveValue("bun\n");
+  await list.pressSequentially("x");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Saved to file");
-  expect(JSON.parse(await readFile(file, "utf8")).enabledModels).toEqual(["provider/first", "provider/second"]);
+  expect(JSON.parse(await readFile(file, "utf8")).npmCommand).toEqual(["bun", "x"]);
 });
 
 test("desktop and narrow layouts are accessible, keyboard usable and error-free", async ({ page }) => {
@@ -83,9 +83,9 @@ test("desktop and narrow layouts are accessible, keyboard usable and error-free"
   await page.waitForFunction(() => document.getAnimations().every(animation => animation.playState !== "running"));
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.emulateMedia({ colorScheme: "light" });
-  await page.getByLabel("Default model", { exact: true }).focus();
+  await page.getByLabel("Shell command prefix", { exact: true }).focus();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Reset Default model to Pi's default" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Reset Shell command prefix to Pi's default" })).toBeFocused();
   expect(errors).toEqual([]);
 });
 
@@ -99,20 +99,20 @@ test("a switch and a typed choice save with their JSON types", async ({ page }) 
 });
 
 test("the raw JSON editor saves exactly what was typed and repairs a broken file", async ({ page }) => {
-  await writeFile(file, '{ "defaultModel": "broken", }');
+  await writeFile(file, '{ "shellCommandPrefix": "broken", }');
   await page.reload();
   await expect(page.getByRole("alert")).toContainText("valid JSON");
   await page.getByRole("button", { name: "Edit raw JSON" }).click();
   const editor = page.getByLabel("settings.json");
-  await expect(editor).toHaveValue('{ "defaultModel": "broken", }');
-  await editor.fill('{ "defaultModel": "repaired" }');
+  await expect(editor).toHaveValue('{ "shellCommandPrefix": "broken", }');
+  await editor.fill('{ "shellCommandPrefix": "repaired" }');
   await page.getByRole("button", { name: "Save JSON" }).click();
   await expect(page.getByRole("status")).toContainText("Saved");
-  expect(await readFile(file, "utf8")).toBe('{ "defaultModel": "repaired" }');
-  await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("repaired");
+  expect(await readFile(file, "utf8")).toBe('{ "shellCommandPrefix": "repaired" }');
+  await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("repaired");
   await page.getByRole("button", { name: "Edit raw JSON" }).click();
   await page.getByLabel("settings.json").fill("[1]");
   await page.getByRole("button", { name: "Save JSON" }).click();
   await expect(page.getByRole("alert")).toContainText("JSON object");
-  expect(await readFile(file, "utf8")).toBe('{ "defaultModel": "repaired" }');
+  expect(await readFile(file, "utf8")).toBe('{ "shellCommandPrefix": "repaired" }');
 });

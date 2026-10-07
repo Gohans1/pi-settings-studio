@@ -82,6 +82,12 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
       }, "auth.json");
       return c.json(await view());
     })
+    .get("/providers/:id/models", async c => {
+      const runtime = await runtimeFor(agentDir, credentialsOf((await store.read("global", "auth.json")).value));
+      const id = c.req.param("id");
+      if (!runtime.getProvider(id)) return c.json({ error: `Pi has no provider named "${id}".` }, 404);
+      return c.json(runtime.getModels(id).map(model => ({ id: model.id, name: model.name, reasoning: !!model.reasoning })));
+    })
     .post("/auth/restore", async c => {
       const { revision } = z.object({ revision: z.string().min(1).max(100) }).strict().parse(await c.req.json());
       await store.restore("global", revision, "auth.json");

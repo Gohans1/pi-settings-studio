@@ -15,3 +15,5 @@ export type ProviderView = {
 };
 
 export type ProvidersView = { revision: string; providers: ProviderView[]; error?: string };
+
+export type ModelSummary = { id: string; name: string; reasoning: boolean };

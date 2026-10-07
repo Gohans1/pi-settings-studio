@@ -14,7 +14,8 @@ export const sections = [
   { id: "updates", title: "Updates, telemetry & warnings" },
   { id: "terminal", title: "Terminal UI", note: "Only affects Pi in a terminal. No effect in T3Code." },
 ] as const;
-export type SectionId = typeof sections[number]["id"];
+// "modelDefaults" fields are edited in the Models tab; General does not list that section.
+export type SectionId = typeof sections[number]["id"] | "modelDefaults";
 
 export type Option = { label: string; value: string | number | boolean };
 export type Field = {
@@ -40,10 +41,10 @@ const thinking = choices("off", "minimal", "low", "medium", "high", "xhigh", "ma
 
 export const fields: Field[] = [
   // Models & thinking
-  { key: "defaultProvider", label: "Default provider", section: "models", kind: "text", help: "Provider ID Pi starts with. Empty means automatic.", schema: text },
-  { key: "defaultModel", label: "Default model", section: "models", kind: "text", help: "Exact model ID, not its display name. Pi checks availability and credentials at startup.", schema: text },
-  { key: "defaultThinkingLevel", label: "Thinking level", section: "models", help: "Startup reasoning effort. Support depends on the model.", defaultValue: "medium", ...select(thinking) },
-  { key: "enabledModels", label: "Enabled models", section: "models", kind: "lines", help: "One model pattern per line, in Pi's --models format. Used for startup selection and model cycling. Empty means all available models.", schema: lines },
+  { key: "defaultProvider", label: "Default provider", section: "modelDefaults", kind: "text", help: "Provider ID Pi starts with. Empty means automatic.", schema: text },
+  { key: "defaultModel", label: "Default model", section: "modelDefaults", kind: "text", help: "Exact model ID, not its display name. Pi checks availability and credentials at startup.", schema: text },
+  { key: "defaultThinkingLevel", label: "Thinking level", section: "modelDefaults", help: "Startup reasoning effort. Support depends on the model.", defaultValue: "medium", ...select(thinking) },
+  { key: "enabledModels", label: "Enabled models", section: "modelDefaults", kind: "lines", help: "One model pattern per line, in Pi's --models format. Used for startup selection and model cycling. Empty means all available models.", schema: lines },
   { key: "thinkingBudgets.minimal", label: "Thinking budget: minimal", section: "models", help: "Token budget for the minimal thinking level. Empty means Pi's built-in budget.", ...number() },
   { key: "thinkingBudgets.low", label: "Thinking budget: low", section: "models", help: "Token budget for the low thinking level.", ...number() },
   { key: "thinkingBudgets.medium", label: "Thinking budget: medium", section: "models", help: "Token budget for the medium thinking level.", ...number() },

@@ -38,3 +38,21 @@ test("API keys are stored, removed and restored without ever being shown", async
   expect((await auth()).anthropic.key).toBe("fixture-secret-anthropic");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("defaults are chosen from Pi's catalog and saved to settings.json", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  await panel.getByLabel("Default provider").selectOption("anthropic");
+  const model = panel.getByLabel("Default model");
+  await expect(model.locator("option")).not.toHaveCount(1);
+  const chosen = await model.locator("option").nth(1).getAttribute("value");
+  await model.selectOption(chosen!);
+  await panel.getByLabel("Thinking level").selectOption("high");
+  await panel.getByLabel("Enabled models").fill("anthropic/*");
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("status")).toContainText("Defaults saved");
+  const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  expect(settings).toEqual({ defaultProvider: "anthropic", defaultModel: chosen, defaultThinkingLevel: "high", enabledModels: ["anthropic/*"] });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

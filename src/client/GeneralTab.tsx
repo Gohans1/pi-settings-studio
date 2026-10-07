@@ -90,7 +90,7 @@ export function GeneralTab() {
   }
 
   const needle = query.trim().toLowerCase();
-  const results = fields.filter(field => !needle || (field.label + " " + field.key + " " + field.help).toLowerCase().includes(needle));
+  const results = fields.filter(field => field.section !== "modelDefaults" && (!needle || (field.label + " " + field.key + " " + field.help).toLowerCase().includes(needle)));
   async function closeRaw(saved: boolean) {
     setRaw(false);
     if (!saved) return;

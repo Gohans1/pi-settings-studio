@@ -3,6 +3,9 @@ import { Search } from "lucide-react";
 import type { ProvidersView, ProviderView } from "../shared/models";
 import { loadProviders, removeProviderKey, restoreAuth, saveProviderKey } from "./api";
 import { Button } from "./components/ui/button";
+import { ModelDefaults } from "./ModelDefaults";
+
+const DEFAULTS = "#defaults";
 
 const sources: Record<string, string> = {
   stored: "Stored in auth.json",
@@ -98,6 +101,8 @@ export function ModelsTab() {
     {view?.error && <div role="alert" className="error"><strong>models.json has a problem</strong><p>{view.error}</p></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading providers…</div> : <div className="master-detail">
       <section className="master" aria-label="Providers">
+        <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === DEFAULTS} onClick={() => setSelected(DEFAULTS)}>
+          <span className="item-name">Defaults</span><span className="item-state">provider, model, thinking</span></button></li></ul>
         {groups.map(([title, members]) => members.length > 0 && <div key={title} className="item-group">
           <div className="list-header"><h2>{title}</h2><span>{members.length}</span></div>
           <ul className="item-list">{members.map(provider => <li key={provider.id}>
@@ -108,7 +113,8 @@ export function ModelsTab() {
         </div>)}
         {!visible.length && <p className="empty">No matching providers.</p>}
       </section>
-      {current ? <ProviderDetail key={current.id} provider={current} busy={busy}
+      {selected === DEFAULTS ? <ModelDefaults providers={providers} onSaved={text => { setMessage(text); setUndo(false); }} />
+        : current ? <ProviderDetail key={current.id} provider={current} busy={busy}
         onSaveKey={key => run(revision => saveProviderKey(current.id, revision, key), `API key saved for ${current.name}.`)}
         onRemove={() => void run(revision => removeProviderKey(current.id, revision), `Removed the stored credential for ${current.name}.`, true)} />
         : <section className="detail"><p className="empty">Select a provider to manage its credential.</p></section>}
