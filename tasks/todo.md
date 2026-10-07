@@ -3,7 +3,7 @@
 - [x] Safe config store (locks, revisions, backups, symlink refusal).
 - [x] Local HTTP API with Host/Origin checks.
 - [x] First form slice (7 model/codemode keys).
-- [ ] Rescope documents.
+- [x] Rescope documents.
 - [ ] Bun runtime, port 4369, no login, no review step.
 - [ ] Tab bar shell.
 - [ ] MCP: list and details.

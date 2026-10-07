@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Braces, Search, SlidersHorizontal, Wrench, RotateCcw, ShieldCheck } from "lucide-react";
 import { fields, type SettingsChange, type SettingsView } from "../shared/settings";
-import { connect, loadSettings, restoreSettings, saveSettings } from "./api";
+import { loadSettings, restoreSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { ChangeReview } from "./ChangeReview";
 import { Button } from "./components/ui/button";
@@ -30,7 +30,7 @@ export function App() {
   useEffect(() => {
     let active = true;
     setLoading(true); setError(""); setMessage(""); setView(undefined);
-    void connect().then(() => loadSettings(scope)).then(data => {
+    void loadSettings(scope).then(data => {
       if (active) setView(data);
     }).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };

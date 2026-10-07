@@ -5,18 +5,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startServer } from "../src/server/server.ts";
 
-test("server binds an ephemeral loopback port, writes nothing on launch, and closes cleanly", async (t) => {
+test("server binds loopback, serves the API without a login, writes nothing on launch, and closes", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "pi-settings-lifecycle-"));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const running = await startServer({ agentDir: join(root, "agent"), projectDir: join(root, "workspace") });
+  const running = await startServer({ agentDir: join(root, "agent"), projectDir: join(root, "workspace"), port: 0 });
   t.after(() => running.close());
   const url = new URL(running.url);
   assert.equal(url.hostname, "127.0.0.1");
   assert.notEqual(url.port, "0");
-  assert.equal(url.search, "");
-  assert.ok(url.hash.startsWith("#token="));
-  const response = await fetch(url.origin + "/api/settings/global");
-  assert.equal(response.status, 401);
+  assert.equal(url.hash, "");
+  assert.equal((await fetch(url.origin + "/api/settings/global")).status, 200);
   await assert.rejects(stat(join(root, "agent")), { code: "ENOENT" });
   await running.close();
   await assert.rejects(fetch(url.origin + "/api/settings/global"));

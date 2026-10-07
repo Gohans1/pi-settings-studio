@@ -1,29 +1,19 @@
-import { randomBytes, timingSafeEqual } from "node:crypto";
 import { lstat } from "node:fs/promises";
 import { Hono } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
 import { bodyLimit } from "hono/body-limit";
-import { serveStatic } from "@hono/node-server/serve-static";
+import { serveStatic } from "@hono/bun";
 import { z } from "zod";
-import { ConfigError, type ConfigStore, type Scope } from "./store.js";
-import { changeSchema, fields, readSetting, type SettingsView } from "../shared/settings.js";
+import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
+import { changeSchema, fields, readSetting, type SettingsView } from "../shared/settings.ts";
 
-export type AppOptions = { store: ConfigStore; origin: string; token: string; staticDir?: string };
+// No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
+// DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
+export type AppOptions = { store: ConfigStore; origins: string[]; staticDir?: string };
 const SCOPE = z.enum(["global", "project"]);
-function equal(left: string, right: string): boolean {
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
-export function createApp({ store, origin, token, staticDir }: AppOptions) {
+export function createApp({ store, origins, staticDir }: AppOptions) {
   const app = new Hono();
-  // Browser cookies are not port-scoped. Keep concurrent Pi sessions distinct.
-  const cookieName = `pi_settings_session_${new URL(origin).port}`;
-  const session = randomBytes(32).toString("base64url");
-  const startedAt = Date.now();
-  let failures = 0;
-  let windowStart = startedAt;
+  const hosts = origins.map(origin => new URL(origin).host);
 
   app.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store");
@@ -33,38 +23,19 @@ export function createApp({ store, origin, token, staticDir }: AppOptions) {
     c.header("Referrer-Policy", "no-referrer");
     c.header("Cross-Origin-Resource-Policy", "same-origin");
     c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-    if (c.req.header("host") !== new URL(origin).host ||
-      (c.req.header("origin") && c.req.header("origin") !== origin) ||
+    const origin = c.req.header("origin");
+    if (!hosts.includes(c.req.header("host") ?? "") ||
+      (origin && !origins.includes(origin)) ||
       c.req.header("sec-fetch-site") === "cross-site") {
       return c.json({ error: "This request must come from the local settings window." }, 403);
     }
     if (!["GET", "HEAD"].includes(c.req.method)) {
-      if (c.req.header("origin") !== origin) return c.json({ error: "A same-origin request is required." }, 403);
+      if (!origin) return c.json({ error: "A same-origin request is required." }, 403);
       if (c.req.header("content-type")?.split(";")[0]?.trim() !== "application/json") return c.json({ error: "Expected application/json." }, 415);
     }
     await next();
   });
   app.use("/api/*", bodyLimit({ maxSize: 64 * 1024, onError: c => c.json({ error: "Request exceeds 64 KiB." }, 413) }));
-  app.post("/api/session", async c => {
-    if (Date.now() - windowStart > 60_000) { failures = 0; windowStart = Date.now(); }
-    if (failures >= 10) return c.json({ error: "Too many attempts. Try again in one minute." }, 429);
-    const input = z.object({ token: z.string().max(200) }).strict().parse(await c.req.json());
-    if (Date.now() - startedAt > 10 * 60_000 || !equal(input.token, token)) {
-      failures++;
-      return c.json({ error: "Invalid or expired launch link. Open Settings again from Pi." }, 401);
-    }
-    setCookie(c, cookieName, session, { httpOnly: true, sameSite: "Strict", path: "/api", maxAge: 8 * 60 * 60 });
-    // Secure cookies are not portable over 127.0.0.1 HTTP. This service is strictly
-    // loopback-only; authenticated requests must also pass exact origin checks.
-    return c.body(null, 204);
-  });
-  app.use("/api/*", async (c, next) => {
-    if (Date.now() - startedAt > 8 * 60 * 60_000 || !equal(getCookie(c, cookieName) ?? "", session)) {
-      return c.json({ error: "Open the launch link to connect to this settings session." }, 401);
-    }
-    await next();
-  });
-
   async function view(scope: Scope): Promise<SettingsView> {
     const current = await store.read(scope);
     const parent = scope === "project" ? await store.read("global") : undefined;
