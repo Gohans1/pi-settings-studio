@@ -1,38 +1,58 @@
 # Specification
 
 ## Objective
-Public-ready GUI for Pi configuration; all pi-web settings-management capabilities are the first completion gate, not a stretch goal. See docs/parity.md for exact baseline and uncompleted work. No chat, database, remote admin service, or bundled Pi engine.
+A personal, local GUI for **Pi core configuration**, used next to T3Code. Settings only: no chat, sessions UI, terminal or orchestration. The settings panel of [agegr/pi-web](https://github.com/agegr/pi-web) is the reference for features and feel; it is re-implemented here, not forked.
+
+## Scope: Pi core only
+Tabs, in build order. Inside every tab, file-only operations come first; operations that run something (MCP connection test, OAuth sign-in, package install) come later and only on an explicit click.
+
+| Tab | Contents |
+|---|---|
+| MCP | Global and project `mcp.json` servers: list, enable/disable, exposure, add, edit, remove (undo). Codemode controls: `defaultTools` `+codemode`, `codemode.mode`, `codemode.inlineBudget`, `autoEnableCodemode`. Later: connection test, OAuth sign-in. |
+| System prompt | Read-only. Pick project, then session (newest first); show the persisted system prompt sections and tool declarations exactly as Pi recorded them in the session file. Copy button. |
+| Skills | Discovered skills with source; enable/disable per skill and per group. |
+| General | App theme. A form field for every documented `settings.json` key that no other tab owns; terminal-only keys grouped and labelled "no effect in T3Code"; internal keys (`lastChangelogVersion`, `deviceId`, `trackingId`) never touched. Raw JSON editor for `settings.json`. Global file only for now. |
+| Models | Providers and API-key status, custom providers/models (`models.json`), default provider/model, enabled models, thinking levels. Later: OAuth login. |
+| Plugins | Packages and per-resource toggles. Later: install, update, remove. |
+| Sub-agents | Profiles in the format of Pi's official example subagent extension (`name`, `description`, `tools`, `model`, prompt body) in `~/.pi/agent/agents/` and `.pi/agents/`. Unknown frontmatter keys are kept. Later: T3Code subagent integration. |
+
+Out of scope: configuration that belongs to individual third-party extensions.
 
 ## Contract
-Use global agent directory (PI_CODING_AGENT_DIR, otherwise ~/.pi/agent) and the explicitly selected project's .pi directory. Fixed document identifiers, never arbitrary HTTP filesystem paths. Show raw scoped values and inherited values distinctly. Do not claim live/effective T3 state. Project inspection does not grant Pi trust.
-
-Patch only explicitly edited keys. Keep unknown keys on disk without returning them indiscriminately to the browser (they can contain secrets). Reject invalid JSON without overwriting it. Preserve file content in private backups, detect stale revisions, lock with proper-lockfile as Pi does, stage writes in the same directory and rename atomically. Reject symlinked configuration targets/parents initially; report the restriction rather than follow them. Local same-user malicious processes are outside this application's sandbox guarantees.
+- **Pi's own logic.** Use public exports of `@earendil-works/pi-coding-agent`, pinned to the Pi version installed on this machine. Where Pi keeps logic internal (for example `mcp.json` validation and edits), port it from Pi's MIT source with attribution and record the Pi version it came from. A test fails when the installed Pi version differs, so the port is re-checked on every update.
+- **Files are authoritative.** Agent directory: `PI_CODING_AGENT_DIR`, else `~/.pi/agent`. Fixed document identifiers only, never arbitrary paths from HTTP. Patch only edited keys and keep unknown keys. Never overwrite invalid JSON. Lock with `proper-lockfile` as Pi does, check revisions, stage writes in the same directory and rename. Keep one private backup generation for restore/undo. Refuse symlinked configuration paths.
+- **Secrets stay on the server.** `auth.json` values, MCP `env`/`headers` values and OAuth secrets are never sent to the browser. The UI shows names only; edits are write-only (empty means keep).
+- **Never execute configuration to display it.** No extension loading or MCP connections on read.
+- **Saved means written to the file.** T3Code applies changes after `/reload` or in a new thread. Never claim live state.
 
 ## Local HTTP boundary
-Bind 127.0.0.1 only. Random per-launch access capability in URL fragment, exchanged for an HttpOnly SameSite=Strict cookie. Check exact Host and Origin, Fetch Metadata, JSON content type, and body limit. No wildcard CORS, remote fonts, telemetry, or reflected secrets. Never log capability-bearing URLs from RPC. No shell interpolation or execution on reads. Bootstrap token is generated locally, not a provider credential.
+Bun serves `127.0.0.1:4369` (configurable) and runs in the background. No login. Exact Host and Origin allowlist, Fetch Metadata cross-site rejection, JSON content type for mutations, request body limit, strict CSP, no CORS. This blocks browser-originated attacks (CSRF, DNS rebinding). Processes running as the same user are out of scope: they can already edit the files.
 
 ## UI
-Settings-oriented navigation; source/scope visible while editing; search descriptions and keys; beginner guidance with advanced details; review changed keys before save; discard is explicit; stale saves keep the draft. Never report a save as live reload. Keyboard and narrow-screen support. No fake operational buttons for unimplemented integrations.
+Horizontal tab bar like pi-web, English, light/dark from the OS, shadcn (Base UI) components. Switches save immediately. Forms save on Save, without a review step. Failed saves keep the draft. Keyboard and narrow-screen support. Tabs that are not implemented are hidden, not faked.
 
 ## Commands
-Install: bun install --frozen-lockfile --ignore-scripts
-Test: bun run test (executes node --import tsx --test)
-Types: bun run typecheck
-Lint: bun run lint
-Build: bun run build
-Browser tests: bun run test:e2e
-Start prebuilt app: node dist/server/cli.js
+Install: `bun install --frozen-lockfile`
+Test: `bun test`
+Types: `bun run typecheck`
+Lint: `bun run lint`
+Build: `bun run build`
+Browser tests: `bun run test:e2e`
+Start: `bun run start`
 
 ## Structure
-src/server: local service and persistence; src/shared: validated contracts; src/client: UI; tests: isolated node:test fixtures; e2e: browser flows; docs: parity, threat model, verification; tasks: plan and status.
+`src/server`: HTTP service and file access. `src/shared`: validated contracts. `src/client`: UI. `tests`: unit/integration tests on temporary directories. `e2e`: browser flows. `docs`: coverage and verification. `tasks`: plan and status.
+
+## Updating (manual)
+When asked to update: bump the Pi SDK to the installed Pi version, run the tests (the drift test lists `settings.json` keys without a form; the port test flags ported logic to re-check), then review pi-web settings changes since the commit recorded in `docs/parity.md`.
 
 ## Style
-ES modules, TypeScript strict mode, named functions, two-space indentation. Boundary validation returns actionable errors, never filesystem stacks. Example: `const scope = z.enum(['global', 'project']).parse(input);`.
+ES modules, TypeScript strict mode, named functions, two-space indentation. Boundary validation returns actionable errors, never filesystem stacks.
 
 ## Verification
-RED → GREEN → refactor for every behavioral slice. Temporary agent/project roots only. Test malformed data, concurrent edits, symlinks, invalid requests, unauthenticated access, backup restoration. Real browser save/reload, keyboard, responsive and accessibility tests. Pack/install smoke test with prebuilt assets and no install-time build. No real config or credentials in tests.
+RED → GREEN → refactor for every behavioral slice. Temporary agent/project directories only; never the real `~/.pi`. Each tab is checked in a real browser with screenshots before it counts as done.
 
 ## Boundaries
-Always: preserve unknown values, use public APIs, verify installed declarations and official docs, record unsupported features.
-Ask first: publishing, uploading user config, relaxing security, changing AGENTS.md, executing untrusted installed integrations.
-Never: private Pi dist imports in shipping code, silently overwrite concurrent changes, promise untested compatibility, describe pending parity as finished.
+Always: preserve unknown values, use public Pi APIs or attributed ports, record unsupported features.
+Ask first: publishing, pushing to a remote, relaxing security, changing AGENTS.md, running installed integrations.
+Never: send secrets to the browser, silently overwrite concurrent changes, claim live T3Code state.

@@ -5,19 +5,16 @@
 web
 
 ## Stack
-User-approved: React, TypeScript, Vite, shadcn/ui (Base UI), Tailwind CSS 4; Node-compatible Hono server, Zod, node:test and Playwright. Bun is development tooling, not a runtime requirement.
+React, TypeScript, Vite, shadcn/ui (Base UI), Tailwind CSS 4 for the UI. Hono on Bun for the local server, Zod for validation, `bun test` and Playwright for tests. The Pi SDK supplies Pi's own logic.
 
 ## Users
-Pi users who prefer a GUI, from beginners to power users. Must work alongside T3Code without replacing its chat or orchestration.
+One developer who uses Pi through T3Code (sometimes in a terminal) and prefers a GUI over editing JSON or running CLI commands.
 
 ## Product Purpose
-Manage Pi configuration through understandable forms. First cover pi-web settings-management parity, then remaining Pi core configuration. Native Pi files remain authoritative.
+Change Pi core configuration from a browser tab: MCP servers, system prompt inspection, skills, core settings, models, packages and sub-agent profiles. Native Pi files stay authoritative.
 
 ## Operating Context
-Server runs where Pi's configuration lives; browser may be in Windows while Pi runs in WSL. No machine-specific paths in shipped code. A saved file is not proof of an updated live session.
+Runs in WSL beside Pi and T3Code, always on at `http://localhost:4369`, opened from a bookmark in the Windows browser. A saved file is not proof that a running T3Code thread uses it.
 
 ## Capabilities and Constraints
-Track unfinished parity explicitly. Never claim live T3 prompt fidelity from a filesystem preview. Public npm/Pi package with prebuilt assets and an on-demand launcher. Do not publish without explicit authorization. Never execute configuration just to display it.
-
-## Open Decisions
-Package name is provisional, npm availability/reservation and publishing identity are unconfirmed. License must be confirmed before public release. No unverified platform support claims.
+Personal use; not published. Track feature coverage against pi-web's settings panel in docs/parity.md. Never execute configuration to display it. Never send secrets to the browser.

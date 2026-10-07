@@ -1,13 +1,16 @@
 # Implementation plan
 
-The user authorized proceeding with the agreed stack and pi-web-first scope. These are verification slices, not a reduction to an MVP. Tasks are tracked only in tasks/todo.md.
+Decisions are recorded in SPEC.md. Each step is a tested, committed slice.
 
-1. Pin baseline and dependencies; establish safe isolated tests.
-2. Native-file transactions (risk-first): known-key patches, revision checks, interoperable locks, backups, recovery, constrained paths.
-3. Authenticated on-demand server; no config execution.
-4. First end-to-end forms: model defaults and codemode, global/project scope, change review, reload notices, responsive UI.
-5. Complete integration groups from docs/parity.md, with per-flow tests.
-6. Thin Pi command launcher; public API imports only. Standalone shares server implementation.
-7. Complete residual core coverage and packaged compatibility tests.
-
-Primary risks: losing edits from other sessions (locks+revision), leaking secrets (allowlisted responses), executing packages on inspection (no auto-load), version drift (pinned docs/catalogue), T3 runtime mismatch (honest persisted-state labeling). No unverified API signatures; unresolved integration contracts are researched before implementing their slices.
+1. Rescope documents.
+2. Runtime: Bun server on port 4369, no login (Host/Origin checks stay), no review step.
+3. App shell: horizontal tab bar; current fields stay under General until their tabs exist.
+4. MCP tab: read-only list and details → enable/disable and exposure → add/edit/remove with undo → codemode controls.
+5. System prompt tab.
+6. Skills tab.
+7. General tab: remaining keys, drift test, raw JSON editor.
+8. Models tab.
+9. Plugins tab.
+10. Sub-agents tab.
+11. Background service (systemd user unit; needs one WSL restart by the user).
+12. Execution features per tab: MCP test/OAuth, model OAuth, package install.
