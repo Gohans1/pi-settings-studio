@@ -103,3 +103,26 @@ test("a provider Pi would refuse is not saved and the form keeps the draft", asy
   await expect(form.getByLabel("Base URL")).toHaveValue("http://localhost:1/v1");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("models.json is edited as raw JSON; keys stay hidden and a file Pi rejects is not saved", async ({ page }) => {
+  const file = join(agent, "models.json");
+  await writeFile(file, JSON.stringify({ providers: { o: { baseUrl: "http://localhost:1/v1", api: "openai-completions", apiKey: "fixture-raw-key", models: [{ id: "m" }] } } }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: "Edit models.json as JSON" }).click();
+  const editor = page.getByLabel("models.json", { exact: true });
+  await expect(editor).toHaveValue(/‹hidden 1›/);
+  const broken = JSON.parse(await editor.inputValue());
+  broken.providers.o.baseUrl = 5;
+  await editor.fill(JSON.stringify(broken));
+  await page.getByRole("button", { name: "Save JSON" }).click();
+  await expect(page.getByRole("alert")).toContainText("baseUrl");
+  const edited = JSON.parse(await editor.inputValue());
+  edited.providers.o.baseUrl = "http://localhost:1/v1";
+  edited.providers.o.modelOverrides = { "x/y": { name: "Y" } };
+  await editor.fill(JSON.stringify(edited));
+  await page.getByRole("button", { name: "Save JSON" }).click();
+  await expect(page.getByRole("status").first()).toContainText("Saved models.json");
+  const saved = JSON.parse(await readFile(file, "utf8")).providers.o;
+  expect([saved.apiKey, saved.modelOverrides]).toEqual(["fixture-raw-key", { "x/y": { name: "Y" } }]);
+  expect(await page.content()).not.toContain("fixture-raw-key");
+});

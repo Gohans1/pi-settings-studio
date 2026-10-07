@@ -9,7 +9,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { AuthPrompt } from "@earendil-works/pi-ai";
-import type { JobAction, JobEvent, JobPrompt, JobView } from "../shared/jobs.ts";
+import type { JobAction, JobPrompt, JobView } from "../shared/jobs.ts";
 import { isRecord, readMcpServers } from "./mcp-config.ts";
 import { maskArgs } from "./mcp-secrets.ts";
 import type { ProjectRegistry } from "./projects.ts";

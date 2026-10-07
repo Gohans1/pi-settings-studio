@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
 import { Search } from "lucide-react";
 import type { CustomProvidersView, ProvidersView, ProviderView } from "../shared/models";
-import { addCustomProvider, editCustomProvider, loadCustomProviders, loadProviders, removeCustomProvider, removeProviderKey, restoreAuth, restoreCustomProviders, saveProviderKey } from "./api";
+import { loadModelsRaw, saveModelsRaw, addCustomProvider, editCustomProvider, loadCustomProviders, loadProviders, removeCustomProvider, removeProviderKey, restoreAuth, restoreCustomProviders, saveProviderKey } from "./api";
 import { CustomProviderForm } from "./CustomProviderForm";
 import { JobPanel, useJob } from "./JobPanel";
 import { Button } from "./components/ui/button";
@@ -71,6 +72,7 @@ export function ModelsTab({ project }: { project?: string }) {
   const [undo, setUndo] = useState<"auth" | "models">();
   const [custom, setCustom] = useState<CustomProvidersView>();
   const [formError, setFormError] = useState("");
+  const [raw, setRaw] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
@@ -130,13 +132,19 @@ export function ModelsTab({ project }: { project?: string }) {
       onClick={() => undo === "auth" ? void run(restoreAuth, "Restored the previous auth.json.") : void runCustom(restoreCustomProviders, "Restored the previous models.json.")}>Undo</Button></>}</div>
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p></div>}
     {view?.error && <div role="alert" className="error"><strong>models.json has a problem</strong><p>{view.error}</p></div>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading providers…</div> : <div className="master-detail">
+    {raw ? <RawJsonEditor file="models.json" load={loadModelsRaw} save={saveModelsRaw}
+      note={`${SECRET_NOTE} modelOverrides, compat, cost, thinkingLevelMap and samplingParams are edited here. Pi checks the file before it is saved.`}
+      onClose={saved => { setRaw(false); if (saved) { setMessage("Saved models.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
+    : !view ? !error && <div className="loading" aria-busy="true">Reading providers…</div> : <div className="master-detail">
       <section className="master" aria-label="Providers">
         <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === DEFAULTS} onClick={() => setSelected(DEFAULTS)}>
           <span className="item-name">Defaults</span><span className="item-state">provider, model, thinking</span></button></li></ul>
         <section className="item-group" aria-label="Custom providers">
           <div className="list-header"><h2>models.json</h2><span>{custom?.providers.length ?? 0}</span></div>
-          <Button variant="outline" size="sm" className="add-button" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}>Add custom provider</Button>
+          <div className="actions add-button">
+            <Button variant="outline" size="sm" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}>Add custom provider</Button>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRaw(true)} aria-label="Edit models.json as JSON">Edit JSON</Button>
+          </div>
           {custom?.error && <p className="field-error">{custom.error}</p>}
           <ul className="item-list">{(custom?.providers ?? []).map(entry => <li key={entry.id}>
             <button type="button" aria-pressed={selected === CUSTOM + entry.id} onClick={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}>

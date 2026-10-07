@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { McpFileView, McpServerInput, McpServerView } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
-import { addMcpServer, editMcpServer, loadCodemode, loadMcp, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget } from "./api";
+import { addMcpServer, editMcpServer, loadCodemode, loadMcp, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget, loadMcpRaw, saveMcpRaw } from "./api";
+import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
 import { CodemodePanel } from "./CodemodePanel";
 import { McpServerForm } from "./McpServerForm";
 import { JobPanel, useJob } from "./JobPanel";
@@ -9,8 +10,6 @@ import type { JobView } from "../shared/jobs";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 
-// Not a valid server name, so it cannot collide with one.
-const CODEMODE = "#codemode";
 
 const exposureLabels: Record<string, [string, string]> = {
   codemode: ["Code mode", "Callable from codemode scripts; not declared to the model."],
@@ -91,6 +90,9 @@ export function McpTab({ project }: { project?: string }) {
   const target = (scope: "global" | "project"): McpTarget => ({ scope, project });
   // Running servers is explicit: `pi mcp list` connects every enabled server.
   const check = useJob();
+  const [rawScope, setRawScope] = useState<"global" | "project">();
+  const loadRaw = useCallback(() => loadMcpRaw(target(rawScope ?? "global")), [rawScope, project]);
+  const saveRaw = useCallback((revision: string, text: string) => saveMcpRaw(target(rawScope ?? "global"), revision, text), [rawScope, project]);
   const signIn = useJob();
 
   async function refresh() {
@@ -100,7 +102,7 @@ export function McpTab({ project }: { project?: string }) {
       setViews({ global, project: local }); setCodemode(code);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the MCP settings."); }
   }
-  useEffect(() => { setSelected(undefined); setForm(undefined); void refresh(); }, [project]);
+  useEffect(() => { setSelected(undefined); setForm(undefined); setRawScope(undefined); void refresh(); }, [project]);
 
   async function run(scope: "global" | "project", change: (revision: string) => Promise<McpFileView>, done: string, options: { undoable?: boolean } = {}) {
     const view = views[scope];
@@ -232,7 +234,10 @@ export function McpTab({ project }: { project?: string }) {
     <JobPanel job={check.job} error={check.error} onAnswer={value => void check.answer(value)} onCancel={() => void check.cancel()} onDismiss={check.dismiss}>
       {check.job && <TestResults job={check.job} />}
     </JobPanel>
-    {!global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
+    {rawScope ? <RawJsonEditor file="mcp.json" load={loadRaw} save={saveRaw}
+      note={`${SECRET_NOTE} toolExposure, oauth and auth are edited here.`}
+      onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
+    : !global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
       <div className="master">
         <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === "codemode"} onClick={() => choose("codemode")}>
           <span className="item-name">Code mode</span><span className="item-state">{codemode ? codemode.disabledByExtensions ? "off" : codemode.preference === "always" ? "always on" : "automatic" : ""}</span>
@@ -242,12 +247,16 @@ export function McpTab({ project }: { project?: string }) {
           <div className="actions add-button">
             <Button variant="outline" size="sm" disabled={busy || !!global.error} onClick={() => { setForm({ mode: "add", scope: "global" }); setFormError(""); }}>Add server</Button>
             <Button variant="outline" size="sm" disabled={check.running} onClick={() => void check.start({ action: "mcp-test", ...(project ? { project } : {}) })}>Test connections</Button>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRawScope("global")} aria-label="Edit global mcp.json as JSON">Edit JSON</Button>
           </div>
           {globalServers.length ? serverList("global", globalServers) : !global.error && <p className="empty">No MCP servers yet.</p>}
         </section>
         {project && local && <section aria-label="This project's servers" className="item-group">
           <div className="list-header"><h2>This project</h2><span>{projectServers.length} in .pi/mcp.json</span></div>
-          <Button variant="outline" size="sm" className="add-button" disabled={busy || !!local.error} onClick={() => { setForm({ mode: "add", scope: "project" }); setFormError(""); }}>Add server to project</Button>
+          <div className="actions add-button">
+            <Button variant="outline" size="sm" disabled={busy || !!local.error} onClick={() => { setForm({ mode: "add", scope: "project" }); setFormError(""); }}>Add server to project</Button>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRawScope("project")} aria-label="Edit the project's mcp.json as JSON">Edit JSON</Button>
+          </div>
           {projectServers.length ? serverList("project", projectServers) : !local.error && <p className="empty">No servers in this project's .pi/mcp.json yet.</p>}
         </section>}
       </div>

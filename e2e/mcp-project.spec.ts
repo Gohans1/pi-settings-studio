@@ -43,3 +43,20 @@ test("a global server is switched off for one project, then a project server is 
   expect((await projectFile()).mcpServers.local).toEqual({ command: "uvx" });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("mcp.json is edited as raw JSON with secrets shown as placeholders", async ({ page }) => {
+  const globalFile = join(root, "agent", "mcp.json");
+  await writeFile(globalFile, JSON.stringify({ mcpServers: { docs: { url: "https://example.com/mcp", headers: { Authorization: "Bearer fixture-raw-secret" } } } }));
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "Edit global mcp.json as JSON" }).click();
+  const editor = page.getByLabel("mcp.json", { exact: true });
+  await expect(editor).toHaveValue(/‹hidden 1›/);
+  expect(await page.content()).not.toContain("fixture-raw-secret");
+  const edited = JSON.parse(await editor.inputValue());
+  edited.mcpServers.docs.toolExposure = { "search_*": "direct" };
+  await editor.fill(JSON.stringify(edited, null, 2));
+  await page.getByRole("button", { name: "Save JSON" }).click();
+  await expect(page.getByRole("status").first()).toContainText("Saved mcp.json");
+  expect(JSON.parse(await readFile(globalFile, "utf8")).mcpServers.docs).toEqual({
+    url: "https://example.com/mcp", headers: { Authorization: "Bearer fixture-raw-secret" }, toolExposure: { "search_*": "direct" } });
+});

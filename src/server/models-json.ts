@@ -10,6 +10,7 @@ import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
 import type { CustomModel, CustomProviderInput, CustomProvidersView, CustomProviderView } from "../shared/models.ts";
 import { isRecord } from "./mcp-config.ts";
 import { withValues } from "./mcp-api.ts";
+import { maskJson, modelsSecrets, unmaskJson } from "./json-secrets.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 
 type Json = Record<string, unknown>;
@@ -76,6 +77,12 @@ function buildProvider(input: CustomProviderInput, previous: Json = {}): Json {
 
 /** Ask Pi whether it accepts the file; only problems of the edited provider block the change. */
 async function assertPiAccepts(file: Json, id: string, realPath: string): Promise<void> {
+  const error = await piModelsError(file, realPath);
+  if (error && [`Provider "${id}"`, `Provider ${id}`, `providers.${id}.`, `providers.${id}:`].some(mark => error.includes(mark))) throw new ConfigError(error);
+}
+
+/** What Pi's own loader reports for this file, if anything. */
+async function piModelsError(file: Json, realPath: string): Promise<string | undefined> {
   const dir = await mkdtemp(join(tmpdir(), "pi-settings-validate-"));
   try {
     const candidate = join(dir, "models.json");
@@ -84,8 +91,7 @@ async function assertPiAccepts(file: Json, id: string, realPath: string): Promis
       credentials: new InMemoryCredentialStore(), modelsPath: candidate, modelsStorePath: join(dir, "models-store.json"),
       allowModelNetwork: false, refreshOnCreate: false,
     });
-    const error = runtime.getError()?.replaceAll(candidate, realPath);
-    if (error && [`Provider "${id}"`, `Provider ${id}`, `providers.${id}.`, `providers.${id}:`].some(mark => error.includes(mark))) throw new ConfigError(error);
+    return runtime.getError()?.replaceAll(candidate, realPath);
   } finally { await rm(dir, { recursive: true, force: true }); }
 }
 
@@ -125,7 +131,26 @@ export function customProviderRoutes(store: ConfigStore) {
     await assertPiAccepts(file, id, path());
     return file;
   }, "models.json");
+  async function raw() {
+    const { text, revision } = await store.readText("global", "models.json");
+    let value: Json;
+    try { value = JSON.parse(text); } catch { throw new ConfigError(`${path()} is not valid JSON, so its keys cannot be hidden. Repair it in a text editor.`); }
+    if (!isRecord(value)) throw new ConfigError("models.json must contain a JSON object.");
+    return { path: path(), revision, text: maskJson(value, modelsSecrets(value)) };
+  }
   return new Hono()
+    .get("/raw", async c => c.json(await raw()))
+    .put("/raw", async c => {
+      const body = z.object({ revision, text: z.string().max(200_000) }).strict().parse(await c.req.json());
+      await store.transform("global", body.revision, async current => {
+        const next = unmaskJson(body.text, modelsSecrets(current));
+        // A file Pi rejects loses every custom provider, so it is never written.
+        const error = await piModelsError(next, path());
+        if (error) throw new ConfigError(error);
+        return next;
+      }, "models.json");
+      return c.json(await raw());
+    })
     .get("/", async c => c.json(await view()))
     .post("/", async c => {
       const body = z.object({ revision, id: PROVIDER_ID, provider: providerInput }).strict().parse(await c.req.json());

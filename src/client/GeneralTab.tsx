@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, RotateCcw } from "lucide-react";
 import { fields, sections, type SettingsChange, type SettingsView } from "../shared/settings";
-import { loadSettings, restoreSettings, saveSettings } from "./api";
+import { loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
 import { RawJsonEditor } from "./RawJsonEditor";
@@ -12,6 +12,8 @@ export function GeneralTab({ project }: { project?: string }) {
   const [scopeChoice, setScopeChoice] = useState<"global" | "project">("global");
   const scope = project ? scopeChoice : "global";
   const target = scope === "project" ? project : undefined;
+  const loadRaw = useCallback(() => loadRawSettings(scope, target), [scope, target]);
+  const saveRaw = useCallback((revision: string, text: string) => saveRawSettings(revision, text, scope, target), [scope, target]);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<SettingsView>();
   const [draft, setDraft] = useState<Record<string, SettingsChange>>({});
@@ -107,7 +109,7 @@ export function GeneralTab({ project }: { project?: string }) {
   const rawButton = <Button variant="outline" disabled={busy || !!changes.length} onClick={() => { setRaw(true); setMessage(""); }}>Edit raw JSON</Button>;
   if (raw) return <>
     <div className="page-heading"><div><h1>General</h1><p>Pi core settings shared by every project.</p></div></div>
-    <RawJsonEditor scope={scope} project={target} onClose={saved => void closeRaw(saved)} />
+    <RawJsonEditor file="settings.json" load={loadRaw} save={saveRaw} onClose={saved => void closeRaw(saved)} />
   </>;
   return <>
     <div className="page-heading"><div><h1 ref={title} tabIndex={-1}>General</h1><p>{scope === "project" ? "Settings for this project only. They override the global ones while the project is trusted." : "Pi core settings shared by every project."}</p></div>

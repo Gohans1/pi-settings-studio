@@ -44,6 +44,8 @@ export const editMcpServer = (target: McpTarget, name: string, revision: string,
   request<McpFileView>(serverUrl(target, name), "PUT", { revision, server });
 export const removeMcpServer = (target: McpTarget, name: string, revision: string) =>
   request<McpFileView>(serverUrl(target, name), "DELETE", { revision });
+export const loadMcpRaw = (target: McpTarget) => request<RawSettings>(mcpUrl(target, "/raw"));
+export const saveMcpRaw = (target: McpTarget, revision: string, text: string) => request<RawSettings>(mcpUrl(target, "/raw"), "PUT", { revision, text });
 export const restoreMcp = (target: McpTarget, revision: string) => request<McpFileView>(mcpUrl(target, "/restore"), "POST", { revision });
 export const loadCodemode = () => request<CodemodeView>("/api/codemode");
 export const saveCodemode = (revision: string, patch: { preference?: string; mode?: string; inlineBudget?: number | null }) =>
@@ -102,3 +104,5 @@ export const startJob = (body: Record<string, unknown>) => request<JobView>("/ap
 export const loadJob = (id: string) => request<JobView>(`/api/jobs/${id}`);
 export const answerJob = (id: string, promptId: string, value: string) => request<JobView>(`/api/jobs/${id}/answer`, "POST", { promptId, value });
 export const cancelJob = (id: string) => request<JobView>(`/api/jobs/${id}/cancel`, "POST", {});
+export const loadModelsRaw = () => request<RawSettings>("/api/models/custom/raw");
+export const saveModelsRaw = (revision: string, text: string) => request<RawSettings>("/api/models/custom/raw", "PUT", { revision, text });

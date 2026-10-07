@@ -83,5 +83,6 @@ test("a whole group is switched in one write", async (t) => {
   const paths = view.skills.filter(entry => entry.origin === "top-level").map(entry => entry.path);
   const response = await request("/api/skills", { method: "PATCH", headers: json, body: JSON.stringify({ revision: view.revision, paths, enabled: false }) });
   assert.equal(response.status, 200);
-  assert.deepEqual((await settings()).skills, ["-skills/alpha/SKILL.md", "-skills/beta/SKILL.md"]);
+  // Discovery order follows the filesystem (tmpfs lists newest first); the order of distinct exclusions does not matter to Pi.
+  assert.deepEqual([...(await settings()).skills].sort(), ["-skills/alpha/SKILL.md", "-skills/beta/SKILL.md"]);
 });

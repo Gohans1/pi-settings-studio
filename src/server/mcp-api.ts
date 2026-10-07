@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { McpFileView, McpServerInput, McpServerView, NamedValue } from "../shared/mcp.ts";
 import { isRecord, MCP_EXPOSURES, readMcpServers, updateMcpServer, type McpEntry } from "./mcp-config.ts";
 import { maskArgs, maskUrl, unmaskArgs, unmaskUrl } from "./mcp-secrets.ts";
+import { maskJson, mcpSecrets, unmaskJson } from "./json-secrets.ts";
 import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
 import type { ProjectRegistry } from "./projects.ts";
 import type { McpServerConfig } from "@earendil-works/pi-coding-agent";
@@ -150,7 +151,24 @@ export function mcpRoutes(store: ConfigStore, registry: ProjectRegistry) {
   const ctx = (c: { req: { param: (name: "scope") => string; query: (name: string) => string | undefined } }) => context(c.req.param("scope"), c.req.query("project"));
   const view = ({ scope, store, base }: Context) => mcpView(store, scope, base);
 
+  /** Raw text with secrets as ‹hidden N› placeholders; the revision is of the file on disk. */
+  async function raw({ scope, store }: Context) {
+    const { text, revision } = await store.readText(scope, "mcp.json");
+    let value: Record<string, unknown>;
+    try { value = JSON.parse(text); } catch { throw new ConfigError(`${store.path(scope, "mcp.json")} is not valid JSON, so its secrets cannot be hidden. Repair it in a text editor.`); }
+    if (!isRecord(value)) throw new ConfigError("mcp.json must contain a JSON object.");
+    return { path: store.path(scope, "mcp.json"), revision, text: maskJson(value, mcpSecrets(value)) };
+  }
+
   return new Hono()
+    .get("/:scope/raw", async c => c.json(await raw(await ctx(c))))
+    .put("/:scope/raw", async c => {
+      const context = await ctx(c);
+      const { revision, text } = z.object({ revision: z.string().min(1).max(100), text: z.string().max(60_000) }).strict().parse(await c.req.json());
+      // Pi skips entries it refuses; the view lists them after saving.
+      await context.store.transform(context.scope, revision, current => unmaskJson(text, mcpSecrets(current)), "mcp.json");
+      return c.json(await raw(context));
+    })
     .get("/:scope", async c => c.json(await view(await ctx(c))))
     .patch("/:scope/servers/:name", async c => {
       const context = await ctx(c);
