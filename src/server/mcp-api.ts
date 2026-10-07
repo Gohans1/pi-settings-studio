@@ -220,11 +220,11 @@ export function mcpRoutes(store: ConfigStore, registry: ProjectRegistry) {
     })
     .patch("/:scope/settings", async c => {
       const context = await ctx(c);
-      const { revision, autoEnableCodemode } = z.object({ revision: z.string().min(1).max(100), autoEnableCodemode: z.boolean() }).strict().parse(await c.req.json());
+      const { revision, autoEnableCodemode } = z.object({ revision: z.string().min(1).max(100), autoEnableCodemode: z.boolean().nullable() }).strict().parse(await c.req.json());
       await context.store.transform(context.scope, revision, file => {
-        // true is Pi's default: remove the key.
-        if (autoEnableCodemode) delete file.autoEnableCodemode;
-        else file.autoEnableCodemode = false;
+        // Globally true is Pi's default; in a project, null inherits and a value overrides.
+        if (autoEnableCodemode === null || (autoEnableCodemode && context.scope === "global")) delete file.autoEnableCodemode;
+        else file.autoEnableCodemode = autoEnableCodemode;
         return file;
       }, "mcp.json");
       return c.json(await view(context));

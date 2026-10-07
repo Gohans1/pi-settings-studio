@@ -80,6 +80,8 @@ type Selection = { scope: "global" | "project"; name: string } | "codemode";
 export function McpTab({ project }: { project?: string }) {
   const [views, setViews] = useState<{ global?: McpFileView; project?: McpFileView }>({});
   const [codemode, setCodemode] = useState<CodemodeView>();
+  const [codemodeScope, setCodemodeScope] = useState<"global" | "project">("global");
+  const codemodeProject = codemodeScope === "project" ? project : undefined;
   const [selected, setSelected] = useState<Selection>();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -98,11 +100,12 @@ export function McpTab({ project }: { project?: string }) {
   async function refresh() {
     setError("");
     try {
-      const [global, local, code] = await Promise.all([loadMcp(), project ? loadMcp(target("project")) : undefined, loadCodemode()]);
+      const [global, local, code] = await Promise.all([loadMcp(), project ? loadMcp(target("project")) : undefined, loadCodemode(codemodeProject)]);
       setViews({ global, project: local }); setCodemode(code);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the MCP settings."); }
   }
-  useEffect(() => { setSelected(undefined); setForm(undefined); setRawScope(undefined); void refresh(); }, [project]);
+  useEffect(() => { setSelected(undefined); setForm(undefined); setRawScope(undefined); setCodemodeScope("global"); }, [project]);
+  useEffect(() => { void refresh(); }, [project, codemodeProject]);
 
   async function run(scope: "global" | "project", change: (revision: string) => Promise<McpFileView>, done: string, options: { undoable?: boolean } = {}) {
     const view = views[scope];
@@ -119,13 +122,13 @@ export function McpTab({ project }: { project?: string }) {
     } finally { setBusy(false); }
   }
   async function refreshCodemode() {
-    try { setCodemode(await loadCodemode()); } catch { /* the MCP view still works */ }
+    try { setCodemode(await loadCodemode(codemodeProject)); } catch { /* the MCP view still works */ }
   }
   async function runCodemode(patch: Parameters<typeof saveCodemode>[1], done: string) {
     if (!codemode) return;
     setBusy(true); setError(""); setMessage(""); setUndo(undefined);
     try {
-      setCodemode(await saveCodemode(codemode.revision, patch));
+      setCodemode(await saveCodemode(codemode.revision, patch, codemodeProject));
       setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save Code mode.");
@@ -198,10 +201,13 @@ export function McpTab({ project }: { project?: string }) {
       title={form.mode === "add" ? (form.scope === "project" ? "Add MCP server to this project" : "Add MCP server") : undefined}
       onSave={(name, input) => void submit(name, input)} onCancel={() => setForm(undefined)} />;
   } else if (selected === "codemode" && codemode && global) {
-    detail = <CodemodePanel key={codemode.revision} view={codemode} autoEnable={global.autoEnableCodemode ?? true} busy={busy}
+    const autoScope = codemode.scope === "project" ? "project" : "global";
+    const where = autoScope === "project" ? " in this project" : "";
+    detail = <CodemodePanel key={codemode.scope + codemode.revision} view={codemode} autoEnable={global.autoEnableCodemode ?? true} busy={busy}
+      project={project} scope={codemodeScope} onScope={setCodemodeScope}
       onChange={(patch, done) => void runCodemode(patch, done)}
-      onAutoEnable={enabled => void run("global", revision => saveMcpSettings(revision, { autoEnableCodemode: enabled }),
-        enabled ? "Code mode turns on automatically again." : "Code mode no longer turns on automatically.").then(refreshCodemode)} />;
+      onAutoEnable={enabled => void run(autoScope, revision => saveMcpSettings(revision, { autoEnableCodemode: enabled }, target(autoScope)),
+        enabled === null ? "Automatic start follows the global choice in this project." : enabled ? `Code mode turns on automatically again${where}.` : `Code mode no longer turns on automatically${where}.`).then(refreshCodemode)} />;
   } else if (current && selected && selected !== "codemode") {
     const scope = selected.scope;
     const label = scope === "project" ? "the project's .pi/mcp.json" : "mcp.json";
@@ -240,7 +246,7 @@ export function McpTab({ project }: { project?: string }) {
     : !global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
       <div className="master">
         <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === "codemode"} onClick={() => choose("codemode")}>
-          <span className="item-name">Code mode</span><span className="item-state">{codemode ? codemode.disabledByExtensions ? "off" : codemode.preference === "always" ? "always on" : "automatic" : ""}</span>
+          <span className="item-name">Code mode</span><span className="item-state">{codemode ? codemode.disabledByExtensions ? "off" : (codemode.effective?.preference ?? codemode.preference) === "always" ? "always on" : "automatic" : ""}</span>
         </button></li></ul>
         <section aria-labelledby="global-servers" className="item-group">
           <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span></div>

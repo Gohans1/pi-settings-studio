@@ -4,9 +4,10 @@
 // `+codemode` to the global `defaultTools`.
 import { Hono } from "hono";
 import { z } from "zod";
-import type { CodemodePreference, CodemodeView } from "../shared/codemode.ts";
+import type { CodemodePreference, CodemodeView, ProjectCodemodePreference } from "../shared/codemode.ts";
 import { isRecord } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
+import type { ProjectRegistry } from "./projects.ts";
 
 const CODEMODE = "codemode";
 const DEFAULT_TOOLS = ["read", "bash", "edit", "write"];
@@ -45,6 +46,34 @@ export function withCodemodePreference(entries: readonly string[] | undefined, p
   return entries !== undefined && entries.some(entry => !isModifier(entry)) ? [] : undefined;
 }
 
+/** What a project's own defaultTools says about codemode: nothing (inherit), on, or off. */
+export function projectCodemodePreference(entries: readonly string[] | undefined): ProjectCodemodePreference {
+  if (!entries) return "inherit";
+  if (entries.some(entry => !isModifier(entry))) return resolveDefaultTools(entries).includes(CODEMODE) ? "always" : "automatic";
+  const last = [...entries].reverse().find(namesCodemode);
+  return last === undefined ? "inherit" : last.startsWith("-") ? "automatic" : "always";
+}
+
+/**
+ * Project edit: drop entries naming codemode, then add +codemode or -codemode. A plain project list
+ * replaces the user's selection, so "automatic" only drops codemode from it.
+ */
+export function withProjectCodemodePreference(entries: readonly string[] | undefined, preference: ProjectCodemodePreference): string[] | undefined {
+  const kept = (entries ?? []).filter(entry => !namesCodemode(entry));
+  const plain = kept.some(entry => !isModifier(entry));
+  if (preference === "always") return [...kept, `+${CODEMODE}`];
+  if (preference === "automatic" && !plain) return [...kept, `-${CODEMODE}`];
+  return kept.length ? kept : undefined;
+}
+
+/** Pi's merge: a project list of only +/- entries changes the user's selection; a plain name replaces it. */
+export function effectiveTools(user: readonly string[] | undefined, project: readonly string[] | undefined): string[] {
+  const base = user === undefined ? [...DEFAULT_TOOLS] : resolveDefaultTools(user);
+  if (!project) return base;
+  if (project.some(entry => !isModifier(entry))) return resolveDefaultTools(project);
+  return resolveDefaultTools([...base, ...project]);
+}
+
 function toolEntries(settings: Record<string, unknown>): string[] | undefined {
   const value = settings.defaultTools;
   if (value === undefined) return undefined;
@@ -64,6 +93,7 @@ async function codemodeView(store: ConfigStore): Promise<CodemodeView> {
   const codemode = isRecord(settings.codemode) ? settings.codemode : {};
   const budget = codemode.inlineBudget;
   return {
+    scope: "global",
     revision,
     preference: codemodePreferenceOf(toolEntries(settings)),
     // Pi reads anything but "only" as "on".
@@ -75,35 +105,99 @@ async function codemodeView(store: ConfigStore): Promise<CodemodeView> {
   };
 }
 
+function codemodeObject(settings: Record<string, unknown>) {
+  const codemode = isRecord(settings.codemode) ? settings.codemode : {};
+  const budget = codemode.inlineBudget;
+  return {
+    mode: codemode.mode === undefined ? undefined : codemode.mode === "only" ? "only" as const : "on" as const,
+    inlineBudget: typeof budget === "number" && Number.isSafeInteger(budget) && budget >= 0 ? budget : undefined,
+  };
+}
+
+async function readOr(store: ConfigStore, scope: "global" | "project", file?: "mcp.json"): Promise<Record<string, unknown>> {
+  try { return (await store.read(scope, file)).value; }
+  catch (error) { if (error instanceof ConfigError) return {}; throw error; }
+}
+
+/** The project's own choices, and what its sessions end up with after the global file. */
+async function projectView(store: ConfigStore, projectStore: ConfigStore): Promise<CodemodeView> {
+  const global = await readOr(store, "global");
+  const { value: local, revision } = await projectStore.read("project");
+  const own = codemodeObject(local), inherited = codemodeObject(global);
+  const globalMcp = await readOr(store, "global", "mcp.json"), localMcp = await readOr(projectStore, "project", "mcp.json");
+  const ownAuto = typeof localMcp.autoEnableCodemode === "boolean" ? localMcp.autoEnableCodemode : undefined;
+  const extensions = [...(Array.isArray(global.extensions) ? global.extensions : []), ...(Array.isArray(local.extensions) ? local.extensions : [])];
+  return {
+    scope: "project",
+    revision,
+    preference: projectCodemodePreference(toolEntries(local)),
+    mode: own.mode ?? "on",
+    ...(own.mode ? { ownMode: own.mode } : {}),
+    ...(own.inlineBudget !== undefined ? { inlineBudget: own.inlineBudget } : {}),
+    defaultInlineBudget: DEFAULT_INLINE_BUDGET,
+    autoEnableCodemode: ownAuto ?? true,
+    ...(ownAuto !== undefined ? { ownAutoEnable: ownAuto } : {}),
+    disabledByExtensions: extensions.lastIndexOf(`-builtin:${CODEMODE}`) > extensions.lastIndexOf(`+builtin:${CODEMODE}`),
+    effective: {
+      preference: effectiveTools(toolEntries(global), toolEntries(local)).includes(CODEMODE) ? "always" : "automatic",
+      mode: own.mode ?? inherited.mode ?? "on",
+      inlineBudget: own.inlineBudget ?? inherited.inlineBudget ?? DEFAULT_INLINE_BUDGET,
+      autoEnableCodemode: ownAuto ?? (typeof globalMcp.autoEnableCodemode === "boolean" ? globalMcp.autoEnableCodemode : true),
+    },
+  };
+}
+
 const codemodePatch = z.object({
   revision: z.string().min(1).max(100),
-  preference: z.enum(["automatic", "always"]).optional(),
-  mode: z.enum(["on", "only"]).optional(),
+  preference: z.enum(["automatic", "always", "inherit"]).optional(),
+  mode: z.enum(["on", "only"]).nullable().optional(),
   inlineBudget: z.number().int().min(0).max(MAX_INLINE_BUDGET).nullable().optional(),
 }).strict();
 
-export function codemodeRoutes(store: ConfigStore) {
+/** Apply mode/budget edits to the codemode object. In global scope "on" is Pi's default and is removed. */
+function editCodemodeObject(settings: Record<string, unknown>, mode: "on" | "only" | null | undefined, inlineBudget: number | null | undefined, project: boolean) {
+  if (mode === undefined && inlineBudget === undefined) return;
+  if (settings.codemode !== undefined && !isRecord(settings.codemode)) throw new ConfigError("codemode in settings.json is not an object. Repair it first.");
+  const codemode = { ...(settings.codemode as Record<string, unknown> | undefined) };
+  if (mode === null || (mode === "on" && !project)) delete codemode.mode;
+  else if (mode) codemode.mode = mode;
+  if (inlineBudget === null) delete codemode.inlineBudget;
+  else if (inlineBudget !== undefined) codemode.inlineBudget = inlineBudget;
+  if (Object.keys(codemode).length) settings.codemode = codemode;
+  else delete settings.codemode;
+}
+
+export function codemodeRoutes(store: ConfigStore, registry: ProjectRegistry) {
   return new Hono()
-    .get("/", async c => c.json(await codemodeView(store)))
+    .get("/", async c => {
+      const project = c.req.query("project");
+      if (project === undefined) return c.json(await codemodeView(store));
+      return c.json(await projectView(store, registry.storeFor(await registry.require(project))));
+    })
     .patch("/", async c => {
       const { revision, preference, mode, inlineBudget } = codemodePatch.parse(await c.req.json());
+      const project = c.req.query("project");
+      if (project !== undefined) {
+        const projectStore = registry.storeFor(await registry.require(project));
+        await projectStore.transform("project", revision, settings => {
+          if (preference) {
+            const next = withProjectCodemodePreference(toolEntries(settings), preference);
+            if (next === undefined) delete settings.defaultTools;
+            else settings.defaultTools = next;
+          }
+          editCodemodeObject(settings, mode, inlineBudget, true);
+          return settings;
+        });
+        return c.json(await projectView(store, projectStore));
+      }
+      if (preference === "inherit" || mode === null) throw new ConfigError("The global settings have nothing to inherit from.");
       await store.transform("global", revision, settings => {
         if (preference) {
           const next = withCodemodePreference(toolEntries(settings), preference);
           if (next === undefined) delete settings.defaultTools;
           else settings.defaultTools = next;
         }
-        if (mode !== undefined || inlineBudget !== undefined) {
-          if (settings.codemode !== undefined && !isRecord(settings.codemode)) throw new ConfigError("codemode in settings.json is not an object. Repair it first.");
-          const codemode = { ...(settings.codemode as Record<string, unknown> | undefined) };
-          // "on" and an empty budget are Pi's defaults: remove the keys.
-          if (mode === "on") delete codemode.mode;
-          else if (mode) codemode.mode = mode;
-          if (inlineBudget === null) delete codemode.inlineBudget;
-          else if (inlineBudget !== undefined) codemode.inlineBudget = inlineBudget;
-          if (Object.keys(codemode).length) settings.codemode = codemode;
-          else delete settings.codemode;
-        }
+        editCodemodeObject(settings, mode, inlineBudget, false);
         return settings;
       });
       return c.json(await codemodeView(store));

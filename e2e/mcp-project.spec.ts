@@ -60,3 +60,21 @@ test("mcp.json is edited as raw JSON with secrets shown as placeholders", async 
   expect(JSON.parse(await readFile(globalFile, "utf8")).mcpServers.docs).toEqual({
     url: "https://example.com/mcp", headers: { Authorization: "Bearer fixture-raw-secret" }, toolExposure: { "search_*": "direct" } });
 });
+
+test("Code mode is set for one project, then back to the global choice", async ({ page }) => {
+  const settings = join(project, ".pi", "settings.json");
+  await page.goto(server.url + "#mcp");
+  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("button", { name: /^Code mode/ }).click();
+  const panel = page.getByRole("region", { name: "Code mode" });
+  await panel.getByRole("radio", { name: "This project" }).check();
+  await panel.getByRole("radio", { name: /Always on/ }).check();
+  await expect(page.getByRole("status").first()).toContainText("Code mode is always on in this project");
+  expect(JSON.parse(await readFile(settings, "utf8"))).toEqual({ defaultTools: ["+codemode"] });
+  await panel.getByLabel("Turn Code mode on automatically").selectOption("off");
+  await expect(page.getByRole("status").first()).toContainText("no longer turns on automatically");
+  expect(JSON.parse(await readFile(join(project, ".pi", "mcp.json"), "utf8")).autoEnableCodemode).toBe(false);
+  await panel.getByRole("radio", { name: /Same as global/ }).first().check();
+  await expect(page.getByRole("status").first()).toContainText("follows the global choice");
+  expect(JSON.parse(await readFile(settings, "utf8"))).toEqual({});
+});

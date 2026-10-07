@@ -47,11 +47,11 @@ export const removeMcpServer = (target: McpTarget, name: string, revision: strin
 export const loadMcpRaw = (target: McpTarget) => request<RawSettings>(mcpUrl(target, "/raw"));
 export const saveMcpRaw = (target: McpTarget, revision: string, text: string) => request<RawSettings>(mcpUrl(target, "/raw"), "PUT", { revision, text });
 export const restoreMcp = (target: McpTarget, revision: string) => request<McpFileView>(mcpUrl(target, "/restore"), "POST", { revision });
-export const loadCodemode = () => request<CodemodeView>("/api/codemode");
-export const saveCodemode = (revision: string, patch: { preference?: string; mode?: string; inlineBudget?: number | null }) =>
-  request<CodemodeView>("/api/codemode", "PATCH", { revision, ...patch });
-export const saveMcpSettings = (revision: string, patch: { autoEnableCodemode: boolean }) =>
-  request<McpFileView>(mcpUrl(GLOBAL, "/settings"), "PATCH", { revision, ...patch });
+export const loadCodemode = (project?: string) => request<CodemodeView>(withProject("/api/codemode", project));
+export const saveCodemode = (revision: string, patch: { preference?: string; mode?: string | null; inlineBudget?: number | null }, project?: string) =>
+  request<CodemodeView>(withProject("/api/codemode", project), "PATCH", { revision, ...patch });
+export const saveMcpSettings = (revision: string, patch: { autoEnableCodemode: boolean | null }, target: McpTarget = GLOBAL) =>
+  request<McpFileView>(mcpUrl(target, "/settings"), "PATCH", { revision, ...patch });
 export const loadSessions = () => request<SessionSummary[]>("/api/sessions");
 export const loadSystemPrompt = (id: string) => request<SystemPromptView>(`/api/sessions/${encodeURIComponent(id)}/system-prompt`);
 export const loadSkills = (project?: string) => request<SkillsView>(withProject("/api/skills", project));
