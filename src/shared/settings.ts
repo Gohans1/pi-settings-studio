@@ -11,8 +11,8 @@ export type Field = {
   schema: z.ZodType;
 };
 
-const text = z.string().max(500).refine(v => !/[\u0000-\u001f]/.test(v), "Control characters are not allowed.");
-const lines = z.array(text.min(1)).max(200);
+const text = z.string().max(500).refine(v => [...v].every(char => char.charCodeAt(0) >= 32), "Control characters are not allowed.");
+const lines = z.array(text).max(200).transform(entries => entries.filter(entry => entry.length > 0));
 export const fields: Field[] = [
   { key: "defaultProvider", label: "Default provider", section: "models", kind: "text", help: "Provider ID to use when Pi starts. Leave inherited for automatic selection.", schema: text },
   { key: "defaultModel", label: "Default model", section: "models", kind: "text", help: "Exact model ID, not its display name. Availability and credentials are checked by Pi at startup.", schema: text },
