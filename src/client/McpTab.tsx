@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { McpFileView, McpServerInput, McpServerView } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
-import { addMcpServer, editMcpServer, loadCodemode, loadMcp, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings } from "./api";
+import { addMcpServer, editMcpServer, loadCodemode, loadMcp, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget } from "./api";
 import { CodemodePanel } from "./CodemodePanel";
 import { McpServerForm } from "./McpServerForm";
 import { Button } from "./components/ui/button";
@@ -34,8 +34,8 @@ function Names({ names }: { names: string[] }) {
   return <>{names.map(name => <code key={name} className="chip">{name}</code>)}<span className="muted"> values hidden</span></>;
 }
 
-function ServerDetail({ server, busy, onExposure, onEdit, onRemove }: {
-  server: McpServerView; busy: boolean; onExposure: (exposure: string) => void; onEdit: () => void; onRemove: () => void;
+function ServerDetail({ server, busy, onExposure, actions, children }: {
+  server: McpServerView; busy: boolean; onExposure?: (exposure: string) => void; actions?: ReactNode; children?: ReactNode;
 }) {
   const rows: [string, React.ReactNode][] = [];
   if (server.description) rows.push(["Description", server.description]);
@@ -48,7 +48,7 @@ function ServerDetail({ server, busy, onExposure, onEdit, onRemove }: {
   const auth = signIn(server);
   if (auth) rows.push(["Sign-in", auth]);
   rows.push(["Tools", <>
-    <select aria-label={`Tool exposure for ${server.name}`} value={server.exposure} disabled={busy || !!server.error} onChange={event => onExposure(event.target.value)}>
+    <select aria-label={`Tool exposure for ${server.name}`} value={server.exposure} disabled={busy || !!server.error || !onExposure} onChange={event => onExposure?.(event.target.value)}>
       {Object.entries(exposureLabels).map(([value, [label]]) => <option key={value} value={value}>{label}{value === "codemode" ? " (default)" : ""}</option>)}
     </select>
     <p className="muted">{exposureLabels[server.exposure]?.[1]}</p>
@@ -59,42 +59,44 @@ function ServerDetail({ server, busy, onExposure, onEdit, onRemove }: {
     <h2 id="server-title">{server.name}</h2>
     {server.error && <div className="error"><strong>Pi refuses this entry, so it never connects:</strong><p>{server.error}</p></div>}
     {!server.error && !server.enabled && <p className="notice">Turned off in the file, so it does not connect.</p>}
+    {children}
     <dl className="detail-list">{rows.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
-    <div className="actions detail-actions">
-      <Button variant="outline" disabled={busy} onClick={onEdit} aria-label={`Edit ${server.name}`}>Edit</Button>
-      <Button variant="destructive" disabled={busy} onClick={onRemove} aria-label={`Remove ${server.name}`}>Remove</Button>
-    </div>
+    {actions && <div className="actions detail-actions">{actions}</div>}
   </section>;
 }
 
-export function McpTab() {
-  const [view, setView] = useState<McpFileView>();
+type Selection = { scope: "global" | "project"; name: string } | "codemode";
+
+export function McpTab({ project }: { project?: string }) {
+  const [views, setViews] = useState<{ global?: McpFileView; project?: McpFileView }>({});
   const [codemode, setCodemode] = useState<CodemodeView>();
-  const [selected, setSelected] = useState<string>();
+  const [selected, setSelected] = useState<Selection>();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<"view" | "add" | "edit">("view");
+  const [form, setForm] = useState<{ mode: "add" | "edit"; scope: "global" | "project" }>();
   const [formError, setFormError] = useState("");
-  const [undo, setUndo] = useState(false);
+  const [undo, setUndo] = useState<McpTarget>();
+  const target = (scope: "global" | "project"): McpTarget => ({ scope, project });
 
   async function refresh() {
     setError("");
     try {
-      const [mcp, code] = await Promise.all([loadMcp(), loadCodemode()]);
-      setView(mcp); setCodemode(code);
-    }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the MCP settings."); }
+      const [global, local, code] = await Promise.all([loadMcp(), project ? loadMcp(target("project")) : undefined, loadCodemode()]);
+      setViews({ global, project: local }); setCodemode(code);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the MCP settings."); }
   }
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { setSelected(undefined); setForm(undefined); void refresh(); }, [project]);
 
-  async function run(change: (revision: string) => Promise<McpFileView>, done: string, options: { undoable?: boolean } = {}) {
+  async function run(scope: "global" | "project", change: (revision: string) => Promise<McpFileView>, done: string, options: { undoable?: boolean } = {}) {
+    const view = views[scope];
     if (!view) return;
-    setBusy(true); setError(""); setMessage(""); setUndo(false);
+    setBusy(true); setError(""); setMessage(""); setUndo(undefined);
     try {
-      setView(await change(view.revision));
+      const next = await change(view.revision);
+      setViews(current => ({ ...current, [scope]: next }));
       setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
-      setUndo(!!options.undoable);
+      if (options.undoable) setUndo(target(scope));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not change the server.");
       await refresh();
@@ -105,7 +107,7 @@ export function McpTab() {
   }
   async function runCodemode(patch: Parameters<typeof saveCodemode>[1], done: string) {
     if (!codemode) return;
-    setBusy(true); setError(""); setMessage(""); setUndo(false);
+    setBusy(true); setError(""); setMessage(""); setUndo(undefined);
     try {
       setCodemode(await saveCodemode(codemode.revision, patch));
       setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
@@ -114,61 +116,116 @@ export function McpTab() {
       await refreshCodemode();
     } finally { setBusy(false); }
   }
-  const save = (name: string, patch: { enabled?: boolean; exposure?: string }, done: string) =>
-    run(revision => saveMcpServer(name, revision, patch), done);
   async function submit(name: string, input: McpServerInput) {
+    if (!form || selected === "codemode") return;
+    const view = views[form.scope];
     if (!view) return;
-    setBusy(true); setFormError(""); setMessage(""); setUndo(false);
+    setBusy(true); setFormError(""); setMessage(""); setUndo(undefined);
     try {
-      setView(mode === "add" ? await addMcpServer(view.revision, name, input) : await editMcpServer(selected!, view.revision, input));
-      setMessage(`${mode === "add" ? name : selected} ${mode === "add" ? "added" : "saved"}. Applies to new T3Code threads, or after /reload.`);
-      if (mode === "add") setSelected(name);
-      setMode("view");
+      const next = form.mode === "add" ? await addMcpServer(target(form.scope), view.revision, name, input)
+        : await editMcpServer(target(form.scope), selected!.name, view.revision, input);
+      setViews(current => ({ ...current, [form.scope]: next }));
+      const shown = form.mode === "add" ? name : selected!.name;
+      setMessage(`${shown} ${form.mode === "add" ? "added" : "saved"}. Applies to new T3Code threads, or after /reload.`);
+      setSelected({ scope: form.scope, name: shown });
+      setForm(undefined);
     } catch (cause) {
-      // Keep the draft next to the error; reload the view in case the file changed.
+      // Keep the draft next to the error; reload in case the file changed.
       setFormError(cause instanceof Error ? cause.message : "Could not save the server.");
-      try {
-      const [mcp, code] = await Promise.all([loadMcp(), loadCodemode()]);
-      setView(mcp); setCodemode(code);
-    } catch { /* the form error already explains */ }
+      try { const next = await loadMcp(target(form.scope)); setViews(current => ({ ...current, [form.scope]: next })); } catch { /* the form error explains */ }
     } finally { setBusy(false); }
   }
 
-  const servers = view?.servers ?? [];
-  const on = servers.filter(server => server.enabled && !server.error).length;
-  const current = servers.find(server => server.name === selected);
+  const global = views.global, local = views.project;
+  const globalServers = global?.servers ?? [];
+  const projectServers = local?.servers ?? [];
+  const inProject = (name: string) => projectServers.find(server => server.name === name);
+  const current = selected && selected !== "codemode" ? (views[selected.scope]?.servers ?? []).find(server => server.name === selected.name) : undefined;
+  const isSelected = (scope: "global" | "project", name: string) => selected !== "codemode" && selected?.scope === scope && selected.name === name;
+  const choose = (next: Selection) => { setSelected(next); setForm(undefined); };
+
+  /** The global server's state in the chosen project: an override switch, or a replacement note. */
+  function projectControls(name: string) {
+    if (!project || !local || local.error) return undefined;
+    const entry = inProject(name);
+    const globalEntry = globalServers.find(server => server.name === name);
+    if (entry && !entry.override) return <p className="notice">This project's .pi/mcp.json defines its own "{name}" server, which replaces the global one there.</p>;
+    const enabled = entry ? entry.enabled : !!globalEntry?.enabled;
+    return <fieldset className="in-project" aria-label="In this project"><legend>In this project</legend>
+      <div className="switch-row"><Switch aria-label={`Enable ${name} in this project`} checked={enabled} disabled={busy || !globalEntry}
+        onCheckedChange={on => void run("project", revision => saveMcpServer(target("project"), name, revision, { enabled: on }), `${name} turned ${on ? "on" : "off"} in this project.`)} />
+        <span>{entry ? `${enabled ? "On" : "Off"} here (override in .pi/mcp.json)` : "Same as global"}</span></div>
+      {entry && <Button variant="outline" size="sm" disabled={busy}
+        onClick={() => void run("project", revision => removeMcpServer(target("project"), name, revision), `${name} follows the global setting again in this project.`)}>Use the global setting</Button>}
+    </fieldset>;
+  }
+
+  function serverList(scope: "global" | "project", list: McpServerView[]) {
+    return <ul className="item-list">{list.map(server => {
+      const local = scope === "global" ? inProject(server.name) : undefined;
+      const state = scope === "project" && server.override ? `override, ${server.enabled ? "on" : "off"}`
+        : local ? (local.override ? `${shortState(server)}, ${local.enabled ? "on" : "off"} here` : `${shortState(server)}, replaced here`) : shortState(server);
+      return <li key={server.name}>
+        <button type="button" aria-pressed={isSelected(scope, server.name)} onClick={() => choose({ scope, name: server.name })}>
+          <span className="item-name">{server.name}</span><span className="item-state" data-state={shortState(server)}>{state}</span>
+        </button>
+        <Switch aria-label={scope === "global" ? `Enable ${server.name}` : `Enable ${server.name} in this project`} checked={server.enabled} disabled={busy}
+          onCheckedChange={enabled => void run(scope, revision => saveMcpServer(target(scope), server.name, revision, { enabled }),
+            `${server.name} turned ${enabled ? "on" : "off"}${scope === "project" ? " in this project" : ""}.`)} />
+      </li>;
+    })}</ul>;
+  }
+
+  let detail: ReactNode = <section className="detail"><p className="empty">Select a server to see its details.</p></section>;
+  if (form) {
+    detail = <McpServerForm key={form.mode + form.scope + (current?.name ?? "")} server={form.mode === "edit" ? current : undefined} busy={busy} error={formError}
+      title={form.mode === "add" ? (form.scope === "project" ? "Add MCP server to this project" : "Add MCP server") : undefined}
+      onSave={(name, input) => void submit(name, input)} onCancel={() => setForm(undefined)} />;
+  } else if (selected === "codemode" && codemode && global) {
+    detail = <CodemodePanel key={codemode.revision} view={codemode} autoEnable={global.autoEnableCodemode ?? true} busy={busy}
+      onChange={(patch, done) => void runCodemode(patch, done)}
+      onAutoEnable={enabled => void run("global", revision => saveMcpSettings(revision, { autoEnableCodemode: enabled }),
+        enabled ? "Code mode turns on automatically again." : "Code mode no longer turns on automatically.").then(refreshCodemode)} />;
+  } else if (current && selected && selected !== "codemode") {
+    const scope = selected.scope;
+    const label = scope === "project" ? "the project's .pi/mcp.json" : "mcp.json";
+    detail = current.override
+      ? <ServerDetail server={current} busy={busy}>{projectControls(current.name)}<p className="muted">Other settings come from the global server.</p></ServerDetail>
+      : <ServerDetail server={current} busy={busy}
+        onExposure={exposure => void run(scope, revision => saveMcpServer(target(scope), current.name, revision, { exposure }), `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`)}
+        actions={<>
+          <Button variant="outline" disabled={busy} onClick={() => { setForm({ mode: "edit", scope }); setFormError(""); }} aria-label={`Edit ${current.name}`}>Edit</Button>
+          <Button variant="destructive" disabled={busy} aria-label={`Remove ${current.name}`}
+            onClick={() => void run(scope, revision => removeMcpServer(target(scope), current.name, revision), `Removed ${current.name} from ${label}.`, { undoable: true })}>Remove</Button>
+        </>}>{scope === "global" ? projectControls(current.name) : undefined}</ServerDetail>;
+  }
+
+  const on = globalServers.filter(server => server.enabled && !server.error).length;
   return <>
     <div className="page-heading"><div><h1>MCP</h1><p>Servers Pi connects to. Changes apply to new T3Code threads, or after /reload.</p></div></div>
-    {view && <div className="scope-info"><code>{view.path}</code></div>}
-    <div role="status" className="feedback">{message}{undo && view && <>{" "}<Button variant="outline" size="sm" disabled={busy}
-      onClick={() => void run(restoreMcp, "Restored the previous mcp.json.")}>Undo</Button></>}</div>
+    {global && <div className="scope-info"><code>{global.path}</code>{local && <><br /><code>{local.path}</code></>}</div>}
+    <div role="status" className="feedback">{message}{undo && <>{" "}<Button variant="outline" size="sm" disabled={busy}
+      onClick={() => { const scope = undo.scope; void run(scope, revision => restoreMcp(target(scope), revision), "Restored the previous file."); }}>Undo</Button></>}</div>
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Try again</Button></div>}
-    {view?.error && <div role="alert" className="error"><strong>Pi loads none of these servers</strong><p>{view.error}</p></div>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
-      <section className="master" aria-labelledby="global-servers">
-        <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === CODEMODE} onClick={() => { setSelected(CODEMODE); setMode("view"); }}>
+    {global?.error && <div role="alert" className="error"><strong>Pi loads none of the global servers</strong><p>{global.error}</p></div>}
+    {local?.error && <div role="alert" className="error"><strong>Pi loads none of this project's servers</strong><p>{local.error}</p></div>}
+    {!global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
+      <div className="master">
+        <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === "codemode"} onClick={() => choose("codemode")}>
           <span className="item-name">Code mode</span><span className="item-state">{codemode ? codemode.disabledByExtensions ? "off" : codemode.preference === "always" ? "always on" : "automatic" : ""}</span>
         </button></li></ul>
-        <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {servers.length} servers on</span></div>
-        <Button variant="outline" size="sm" className="add-button" disabled={busy || !!view.error} onClick={() => { setMode("add"); setFormError(""); }}>Add server</Button>
-        {servers.length ? <ul className="item-list">{servers.map(server => <li key={server.name}>
-          <button type="button" aria-pressed={server.name === selected} onClick={() => { setSelected(server.name); setMode("view"); }}>
-            <span className="item-name">{server.name}</span><span className="item-state" data-state={shortState(server)}>{shortState(server)}</span>
-          </button>
-          <Switch aria-label={`Enable ${server.name}`} checked={server.enabled} disabled={busy}
-            onCheckedChange={enabled => void save(server.name, { enabled }, `${server.name} turned ${enabled ? "on" : "off"}.`)} />
-        </li>)}</ul> : !view.error && <p className="empty">No MCP servers yet.</p>}
-      </section>
-      {mode !== "view" ? <McpServerForm key={mode + (selected ?? "")} server={mode === "edit" ? current : undefined} busy={busy} error={formError}
-        onSave={(name, input) => void submit(name, input)} onCancel={() => setMode("view")} />
-      : selected === CODEMODE && codemode ? <CodemodePanel key={codemode.revision} view={codemode} autoEnable={view.autoEnableCodemode ?? true} busy={busy}
-        onChange={(patch, done) => void runCodemode(patch, done)}
-        onAutoEnable={enabled => void run(revision => saveMcpSettings(revision, { autoEnableCodemode: enabled }),
-          enabled ? "Code mode turns on automatically again." : "Code mode no longer turns on automatically.").then(refreshCodemode)} />
-      : current ? <ServerDetail server={current} busy={busy}
-        onExposure={exposure => void save(current.name, { exposure }, `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`)}
-        onEdit={() => { setMode("edit"); setFormError(""); }}
-        onRemove={() => void run(revision => removeMcpServer(current.name, revision), `Removed ${current.name} from mcp.json.`, { undoable: true })} /> : <section className="detail"><p className="empty">Select a server to see its details.</p></section>}
+        <section aria-labelledby="global-servers" className="item-group">
+          <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span></div>
+          <Button variant="outline" size="sm" className="add-button" disabled={busy || !!global.error} onClick={() => { setForm({ mode: "add", scope: "global" }); setFormError(""); }}>Add server</Button>
+          {globalServers.length ? serverList("global", globalServers) : !global.error && <p className="empty">No MCP servers yet.</p>}
+        </section>
+        {project && local && <section aria-label="This project's servers" className="item-group">
+          <div className="list-header"><h2>This project</h2><span>{projectServers.length} in .pi/mcp.json</span></div>
+          <Button variant="outline" size="sm" className="add-button" disabled={busy || !!local.error} onClick={() => { setForm({ mode: "add", scope: "project" }); setFormError(""); }}>Add server to project</Button>
+          {projectServers.length ? serverList("project", projectServers) : !local.error && <p className="empty">No servers in this project's .pi/mcp.json yet.</p>}
+        </section>}
+      </div>
+      {detail}
     </div>}
   </>;
 }

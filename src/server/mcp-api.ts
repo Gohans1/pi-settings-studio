@@ -3,7 +3,9 @@ import { z } from "zod";
 import type { McpFileView, McpServerInput, McpServerView, NamedValue } from "../shared/mcp.ts";
 import { isRecord, MCP_EXPOSURES, readMcpServers, updateMcpServer, type McpEntry } from "./mcp-config.ts";
 import { maskArgs, maskUrl, unmaskArgs, unmaskUrl } from "./mcp-secrets.ts";
-import { ConfigError, type ConfigStore } from "./store.ts";
+import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
+import type { ProjectRegistry } from "./projects.ts";
+import type { McpServerConfig } from "@earendil-works/pi-coding-agent";
 
 function strings(value: unknown): string[] | undefined {
   return Array.isArray(value) && value.every(entry => typeof entry === "string") ? value : undefined;
@@ -18,14 +20,16 @@ function secretValues(entry: Record<string, unknown>): string[] {
   return [entry.env, entry.headers].flatMap(group => isRecord(group) ? Object.values(group).filter((value): value is string => typeof value === "string") : []);
 }
 
-function toView({ name, raw, config, error }: McpEntry): McpServerView {
-  const entry = isRecord(raw) ? raw : {};
+function toView({ name, raw, config, error, override }: McpEntry): McpServerView {
+  // An override shows the merged server: the global entry with the project's switches.
+  const entry = override && config ? config as unknown as Record<string, unknown> : isRecord(raw) ? raw : {};
   const args = strings(entry.args);
   const url = text(entry.url);
   const exposure = (config ?? entry).exposure;
   return {
     name,
     ...(error ? { error } : {}),
+    ...(override ? { override } : {}),
     enabled: entry.enabled !== false,
     exposure: typeof exposure === "string" ? exposure : "codemode",
     ...(typeof entry.url === "string" ? { transport: "http" as const } : typeof entry.command === "string" ? { transport: "stdio" as const } : {}),
@@ -42,16 +46,16 @@ function toView({ name, raw, config, error }: McpEntry): McpServerView {
   };
 }
 
-export async function mcpView(store: ConfigStore): Promise<McpFileView> {
-  const path = store.path("global", "mcp.json");
-  const hasBackup = await store.hasBackup("global", "mcp.json");
+export async function mcpView(store: ConfigStore, scope: Scope = "global", base?: Map<string, McpServerConfig>): Promise<McpFileView> {
+  const path = store.path(scope, "mcp.json");
+  const hasBackup = await store.hasBackup(scope, "mcp.json");
   let document;
-  try { document = await store.read("global", "mcp.json"); }
+  try { document = await store.read(scope, "mcp.json"); }
   catch (error) {
     if (!(error instanceof ConfigError)) throw error;
     return { path, revision: "invalid", exists: true, hasBackup, error: error.message, servers: [] };
   }
-  const { servers, error, autoEnableCodemode } = readMcpServers(document.value);
+  const { servers, error, autoEnableCodemode } = readMcpServers(document.value, base);
   return { path, revision: document.revision, exists: document.exists, hasBackup, ...(error ? { error } : {}), autoEnableCodemode, servers: servers.map(toView) };
 }
 
@@ -120,71 +124,97 @@ function buildEntry(input: McpServerInput, previous: Record<string, unknown> = {
 }
 
 /** Never write an entry Pi would refuse. */
-function assertAccepted(file: Record<string, unknown>, name: string): Record<string, unknown> {
-  const { servers: entries, error } = readMcpServers(file);
+function assertAccepted(file: Record<string, unknown>, name: string, base?: Map<string, McpServerConfig>): Record<string, unknown> {
+  const { servers: entries, error } = readMcpServers(file, base);
   const entry = entries.find(server => server.name === name);
   if (error ?? entry?.error) throw new ConfigError((error ?? entry?.error)!);
   return file;
 }
 
-export function mcpRoutes(store: ConfigStore) {
+const SCOPE = z.enum(["global", "project"]);
+type Context = { scope: Scope; store: ConfigStore; base?: Map<string, McpServerConfig> };
+
+export function mcpRoutes(store: ConfigStore, registry: ProjectRegistry) {
+  /** Global servers, which a project file can override or replace. */
+  async function globalServers(): Promise<Map<string, McpServerConfig>> {
+    try {
+      const { servers } = readMcpServers((await store.read("global", "mcp.json")).value);
+      return new Map(servers.flatMap(server => server.config ? [[server.name, server.config] as const] : []));
+    } catch (error) { if (error instanceof ConfigError) return new Map(); throw error; }
+  }
+  async function context(scopeParam: string, project: string | undefined): Promise<Context> {
+    const scope = SCOPE.parse(scopeParam);
+    if (scope === "global") return { scope, store };
+    return { scope, store: registry.storeFor(await registry.require(project)), base: await globalServers() };
+  }
+  const ctx = (c: { req: { param: (name: "scope") => string; query: (name: string) => string | undefined } }) => context(c.req.param("scope"), c.req.query("project"));
+  const view = ({ scope, store, base }: Context) => mcpView(store, scope, base);
+
   return new Hono()
-    .get("/global", async c => c.json(await mcpView(store)))
-    .patch("/global/servers/:name", async c => {
+    .get("/:scope", async c => c.json(await view(await ctx(c))))
+    .patch("/:scope/servers/:name", async c => {
+      const context = await ctx(c);
       const { revision, ...patch } = serverPatch.parse(await c.req.json());
       const name = c.req.param("name");
-      await store.transform("global", revision, value => {
-        try { return updateMcpServer(value, name, patch as Parameters<typeof updateMcpServer>[2]); }
+      await context.store.transform(context.scope, revision, value => {
+        // In a project, a global server without a project entry gets an override, as /mcp does.
+        const override = !!context.base?.has(name);
+        try { return updateMcpServer(value, name, patch as Parameters<typeof updateMcpServer>[2], { override }); }
         catch (error) { throw new ConfigError(error instanceof Error ? error.message : "Cannot change this server."); }
       }, "mcp.json");
-      return c.json(await mcpView(store));
+      return c.json(await view(context));
     })
-    .post("/global/servers", async c => {
+    .post("/:scope/servers", async c => {
+      const context = await ctx(c);
       const { revision, name, server } = z.object({ revision: z.string().min(1).max(100), name: z.string().max(200), server: serverInput }).strict().parse(await c.req.json());
-      await store.transform("global", revision, file => {
+      await context.store.transform(context.scope, revision, file => {
         const entries = servers(file);
-        if (Object.hasOwn(entries, name)) throw new ConfigError(`A server named "${name}" already exists.`);
+        if (Object.hasOwn(entries, name)) throw new ConfigError(`A server named "${name}" already exists in this file.`);
         entries[name] = buildEntry(server);
-        return assertAccepted(file, name);
+        return assertAccepted(file, name, context.base);
       }, "mcp.json");
-      return c.json(await mcpView(store));
+      return c.json(await view(context));
     })
-    .put("/global/servers/:name", async c => {
+    .put("/:scope/servers/:name", async c => {
+      const context = await ctx(c);
       const { revision, server } = z.object({ revision: z.string().min(1).max(100), server: serverInput }).strict().parse(await c.req.json());
       const name = c.req.param("name");
-      await store.transform("global", revision, file => {
+      await context.store.transform(context.scope, revision, file => {
         const entries = servers(file);
         const previous = entries[name];
         if (!isRecord(previous)) throw new ConfigError(`mcp.json does not define MCP server "${name}"`);
         entries[name] = buildEntry(server, previous);
-        return assertAccepted(file, name);
+        return assertAccepted(file, name, context.base);
       }, "mcp.json");
-      return c.json(await mcpView(store));
+      return c.json(await view(context));
     })
-    .delete("/global/servers/:name", async c => {
+    .delete("/:scope/servers/:name", async c => {
+      const context = await ctx(c);
       const { revision } = revisionOnly.parse(await c.req.json());
       const name = c.req.param("name");
-      await store.transform("global", revision, file => {
+      await context.store.transform(context.scope, revision, file => {
         const entries = servers(file);
         if (!Object.hasOwn(entries, name)) throw new ConfigError(`mcp.json does not define MCP server "${name}"`);
         delete entries[name];
         return file;
       }, "mcp.json");
-      return c.json(await mcpView(store));
+      return c.json(await view(context));
     })
-    .patch("/global/settings", async c => {
+    .patch("/:scope/settings", async c => {
+      const context = await ctx(c);
       const { revision, autoEnableCodemode } = z.object({ revision: z.string().min(1).max(100), autoEnableCodemode: z.boolean() }).strict().parse(await c.req.json());
-      await store.transform("global", revision, file => {
+      await context.store.transform(context.scope, revision, file => {
         // true is Pi's default: remove the key.
         if (autoEnableCodemode) delete file.autoEnableCodemode;
         else file.autoEnableCodemode = false;
         return file;
       }, "mcp.json");
-      return c.json(await mcpView(store));
+      return c.json(await view(context));
     })
-    .post("/global/restore", async c => {
+    .post("/:scope/restore", async c => {
+      const context = await ctx(c);
       const { revision } = revisionOnly.parse(await c.req.json());
-      await store.restore("global", revision, "mcp.json");
-      return c.json(await mcpView(store));
+      await context.store.restore(context.scope, revision, "mcp.json");
+      return c.json(await view(context));
     });
 }

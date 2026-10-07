@@ -27,21 +27,26 @@ export const restoreSettings = (scope: Scope, revision: string, project?: string
   request<SettingsView>(withProject(`/api/settings/${scope}/restore`, project), "POST", { revision, confirm: true });
 export const loadProjects = () => request<ProjectView[]>("/api/projects");
 export const saveTrust = (project: string, decision: boolean | null) => request<TrustView>("/api/projects/trust", "POST", { project, decision });
-export const loadMcp = () => request<McpFileView>("/api/mcp/global");
-export const saveMcpServer = (name: string, revision: string, patch: { enabled?: boolean; exposure?: string }) =>
-  request<McpFileView>(`/api/mcp/global/servers/${encodeURIComponent(name)}`, "PATCH", { revision, ...patch });
-export const addMcpServer = (revision: string, name: string, server: McpServerInput) =>
-  request<McpFileView>("/api/mcp/global/servers", "POST", { revision, name, server });
-export const editMcpServer = (name: string, revision: string, server: McpServerInput) =>
-  request<McpFileView>(`/api/mcp/global/servers/${encodeURIComponent(name)}`, "PUT", { revision, server });
-export const removeMcpServer = (name: string, revision: string) =>
-  request<McpFileView>(`/api/mcp/global/servers/${encodeURIComponent(name)}`, "DELETE", { revision });
-export const restoreMcp = (revision: string) => request<McpFileView>("/api/mcp/global/restore", "POST", { revision });
+/** Which mcp.json: the global one, or a project's .pi/mcp.json. */
+export type McpTarget = { scope: "global" | "project"; project?: string };
+const GLOBAL: McpTarget = { scope: "global" };
+const mcpUrl = (target: McpTarget, path = "") => withProject(`/api/mcp/${target.scope}${path}`, target.scope === "project" ? target.project : undefined);
+const serverUrl = (target: McpTarget, name: string) => mcpUrl(target, `/servers/${encodeURIComponent(name)}`);
+export const loadMcp = (target = GLOBAL) => request<McpFileView>(mcpUrl(target));
+export const saveMcpServer = (target: McpTarget, name: string, revision: string, patch: { enabled?: boolean; exposure?: string }) =>
+  request<McpFileView>(serverUrl(target, name), "PATCH", { revision, ...patch });
+export const addMcpServer = (target: McpTarget, revision: string, name: string, server: McpServerInput) =>
+  request<McpFileView>(mcpUrl(target, "/servers"), "POST", { revision, name, server });
+export const editMcpServer = (target: McpTarget, name: string, revision: string, server: McpServerInput) =>
+  request<McpFileView>(serverUrl(target, name), "PUT", { revision, server });
+export const removeMcpServer = (target: McpTarget, name: string, revision: string) =>
+  request<McpFileView>(serverUrl(target, name), "DELETE", { revision });
+export const restoreMcp = (target: McpTarget, revision: string) => request<McpFileView>(mcpUrl(target, "/restore"), "POST", { revision });
 export const loadCodemode = () => request<CodemodeView>("/api/codemode");
 export const saveCodemode = (revision: string, patch: { preference?: string; mode?: string; inlineBudget?: number | null }) =>
   request<CodemodeView>("/api/codemode", "PATCH", { revision, ...patch });
 export const saveMcpSettings = (revision: string, patch: { autoEnableCodemode: boolean }) =>
-  request<McpFileView>("/api/mcp/global/settings", "PATCH", { revision, ...patch });
+  request<McpFileView>(mcpUrl(GLOBAL, "/settings"), "PATCH", { revision, ...patch });
 export const loadSessions = () => request<SessionSummary[]>("/api/sessions");
 export const loadSystemPrompt = (id: string) => request<SystemPromptView>(`/api/sessions/${encodeURIComponent(id)}/system-prompt`);
 export const loadSkills = () => request<SkillsView>("/api/skills");

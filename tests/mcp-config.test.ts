@@ -55,3 +55,26 @@ test("the MCP port matches the Pi SDK in node_modules; re-check Pi's source when
   const sdk = JSON.parse(readFileSync("node_modules/@earendil-works/pi-coding-agent/package.json", "utf8"));
   assert.equal(sdk.version, PI_PORT_VERSION);
 });
+
+test("project files follow Pi's rules: overrides need a global server, may only set enabled, exposure and toolExposure, and cannot use auth", () => {
+  const base = new Map([["shared", { command: "x", env: { K: "v" } }]]);
+  const { servers } = readMcpServers({ mcpServers: {
+    shared: { enabled: false },
+    orphan: { enabled: false },
+    sneaky: { url: "https://example.com/mcp", auth: { provider: "anthropic" } },
+    mixed: { enabled: false, cwd: "/tmp" },
+    local: { command: "y" },
+  } }, base);
+  const byName = Object.fromEntries(servers.map(server => [server.name, server]));
+  assert.deepEqual([byName.shared!.override, byName.shared!.config], [true, { command: "x", env: { K: "v" }, enabled: false }]);
+  assert.equal(byName.orphan!.error, 'server "orphan" needs "command" or "url", or a global server to override');
+  assert.equal(byName.sneaky!.error, 'server "sneaky": auth is only allowed in the global mcp.json');
+  assert.equal(byName.mixed!.error, 'server "mixed" needs "command" or "url", or a global server to override');
+  assert.equal(byName.local!.error, undefined);
+});
+
+test("in an override, the default values stay written, as Pi's /mcp does", () => {
+  const file = { mcpServers: { shared: { enabled: false } } };
+  assert.deepEqual(updateMcpServer(file, "shared", { enabled: true }).mcpServers, { shared: { enabled: true } });
+  assert.deepEqual(updateMcpServer({}, "fresh", { enabled: false }, { override: true }).mcpServers, { fresh: { enabled: false } });
+});

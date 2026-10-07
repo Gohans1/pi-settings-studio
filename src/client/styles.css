@@ -172,6 +172,8 @@ textarea { resize: vertical; }
 .scope-choice { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 16px; border: 0; padding: 0; }
 .scope-choice legend { font-weight: 560; margin-bottom: 6px; }
 .scope-choice label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.in-project { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px 12px; margin: 14px 0 0; display: grid; gap: 10px; justify-items: start; }
+.in-project legend { padding: 0 4px; font-weight: 560; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {

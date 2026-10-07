@@ -99,7 +99,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
     await store.restore(scope, input.revision);
     return c.json(await view(scope, store));
   });
-  app.route("/api/mcp", mcpRoutes(store));
+  app.route("/api/mcp", mcpRoutes(store, registry));
   app.route("/api/codemode", codemodeRoutes(store));
   app.route("/api/sessions", sessionRoutes(agentDir));
   app.route("/api/skills", skillRoutes(store, agentDir));

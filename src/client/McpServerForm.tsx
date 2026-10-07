@@ -47,13 +47,13 @@ function NamedRows({ kind, rows, onChange }: { kind: "variable" | "header"; rows
   </div>;
 }
 
-export function McpServerForm({ server, busy, error, onSave, onCancel }: {
-  server?: McpServerView; busy: boolean; error: string;
+export function McpServerForm({ server, busy, error, title: heading, onSave, onCancel }: {
+  server?: McpServerView; busy: boolean; error: string; title?: string;
   onSave: (name: string, input: McpServerInput) => void; onCancel: () => void;
 }) {
   const [draft, setDraft] = useState(() => draftFrom(server));
   const set = (patch: Partial<Draft>) => setDraft(current => ({ ...current, ...patch }));
-  const title = server ? `Edit ${server.name}` : "Add MCP server";
+  const title = heading ?? (server ? `Edit ${server.name}` : "Add MCP server");
   function submit(event: FormEvent) {
     event.preventDefault();
     onSave(draft.name.trim(), toInput(draft));

@@ -11,7 +11,11 @@ const LOOPBACK_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
 const SERVER_NAME = /^[A-Za-z0-9_-]+$/;
 
 type Json = Record<string, unknown>;
-export type McpEntry = { name: string; raw: unknown; config?: McpServerConfig; error?: string };
+export type McpEntry = { name: string; raw: unknown; config?: McpServerConfig; error?: string; override?: boolean };
+
+const OVERRIDE_KEYS = ["enabled", "exposure", "toolExposure"];
+/** An entry without command, url or type overrides the global server of the same name. */
+export const isOverride = (value: Json) => value.command === undefined && value.url === undefined && value.type === undefined;
 
 export function isRecord(value: unknown): value is Json {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -137,39 +141,59 @@ export function validateMcpServerConfig(name: string, raw: unknown): McpServerCo
 }
 
 /**
- * Read the global `mcp.json` the way Pi does, but keep refused entries (with Pi's reason)
- * so the UI can show and fix them. Project overrides are not handled here yet.
+ * Read an `mcp.json` the way Pi does, but keep refused entries (with Pi's reason) so the UI can
+ * show and fix them. With `base` (the global servers), the file is read as a project file.
  */
-export function readMcpServers(file: Json): { servers: McpEntry[]; autoEnableCodemode?: boolean; error?: string } {
+export function readMcpServers(file: Json, base?: Map<string, McpServerConfig>): { servers: McpEntry[]; autoEnableCodemode?: boolean; error?: string } {
   if (file.mcpServers !== undefined && !isRecord(file.mcpServers)) return { servers: [], error: 'expected an object with an "mcpServers" object' };
   if (file.autoEnableCodemode !== undefined && typeof file.autoEnableCodemode !== "boolean") {
     return { servers: [], error: "autoEnableCodemode must be a boolean" };
   }
   const servers: McpEntry[] = [];
-  const accepted: string[] = [];
+  const accepted: string[] = [...(base?.keys() ?? [])];
   for (const [name, raw] of Object.entries(file.mcpServers ?? {})) {
+    if (base && isRecord(raw) && isOverride(raw)) {
+      const global = base.get(name);
+      const extra = Object.keys(raw).filter(key => !OVERRIDE_KEYS.includes(key));
+      if (!global) servers.push({ name, raw, error: `server "${name}" needs "command" or "url", or a global server to override` });
+      else if (extra.length) servers.push({ name, raw, error: `server "${name}": an override can only set ${OVERRIDE_KEYS.join(", ")}` });
+      else {
+        const config = validateMcpServerConfig(name, { ...global, ...raw });
+        servers.push(typeof config === "string" ? { name, raw, error: config } : { name, raw, config, override: true });
+      }
+      continue;
+    }
     const config = validateMcpServerConfig(name, raw);
     if (typeof config === "string") { servers.push({ name, raw, error: config }); continue; }
     // Names that differ only in `-` and `_` would share a namespace.
-    const clash = accepted.find(other => mcpNamespace(other) === mcpNamespace(name));
+    const clash = accepted.find(other => other !== name && mcpNamespace(other) === mcpNamespace(name));
     if (clash) { servers.push({ name, raw, error: `server "${name}" conflicts with "${clash}"` }); continue; }
+    if (base && "url" in config && config.auth) { servers.push({ name, raw, error: `server "${name}": auth is only allowed in the global mcp.json` }); continue; }
     accepted.push(name);
     servers.push({ name, raw, config });
   }
   return { servers, ...(typeof file.autoEnableCodemode === "boolean" ? { autoEnableCodemode: file.autoEnableCodemode } : {}) };
 }
 
-/** Pi's `updateMcpServerConfig`: `enabled: true` and `exposure: "codemode"` are defaults and remove the key. */
-export function updateMcpServer(file: Json, name: string, patch: { enabled?: boolean; exposure?: McpExposure }): Json {
+/**
+ * Pi's `updateMcpServerConfig`: `enabled: true` and `exposure: "codemode"` are defaults and remove
+ * the key, except in an override, which replaces the global values. With `override`, a missing
+ * entry is added as an override.
+ */
+export function updateMcpServer(file: Json, name: string, patch: { enabled?: boolean; exposure?: McpExposure }, options: { override?: boolean } = {}): Json {
   const next = structuredClone(file);
-  const server = isRecord(next.mcpServers) ? next.mcpServers[name] : undefined;
+  if (next.mcpServers !== undefined && !isRecord(next.mcpServers)) throw new Error('mcp.json needs an "mcpServers" object');
+  const servers = (next.mcpServers ??= {}) as Json;
+  if (servers[name] === undefined && options.override) servers[name] = {};
+  const server = servers[name];
   if (!isRecord(server)) throw new Error(`mcp.json does not define MCP server "${name}"`);
+  const keepDefaults = isOverride(server);
   if (patch.enabled !== undefined) {
-    if (patch.enabled) delete server.enabled;
-    else server.enabled = false;
+    if (patch.enabled && !keepDefaults) delete server.enabled;
+    else server.enabled = patch.enabled;
   }
   if (patch.exposure !== undefined) {
-    if (patch.exposure === "codemode") delete server.exposure;
+    if (patch.exposure === "codemode" && !keepDefaults) delete server.exposure;
     else server.exposure = patch.exposure;
   }
   return next;

@@ -7,6 +7,8 @@ export type McpServerView = {
   name: string;
   /** Pi's reason for refusing the entry; Pi skips refused entries. */
   error?: string;
+  /** A project entry that only switches the global server of the same name. */
+  override?: boolean;
   enabled: boolean;
   exposure: string;
   transport?: "stdio" | "http";
