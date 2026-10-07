@@ -13,7 +13,7 @@
 - [x] System prompt tab.
 - [x] Skills tab (user and package skills; project skills pending).
 - [x] General tab, drift test, raw JSON.
-- [ ] Models tab.
+- [ ] Models tab: providers and API keys done; defaults pickers and custom providers (models.json) pending.
 - [x] Plugins tab (built-ins, user files, packages; install/update/remove later).
 - [x] Sub-agents tab (user profiles; project .pi/agents and T3Code integration later).
 - [ ] Background service on port 4369.

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Bot, Layers, Puzzle, ScrollText, Server, SlidersHorizontal } from "lucide-react";
+import { Bot, Boxes, Layers, Puzzle, ScrollText, Server, SlidersHorizontal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { GeneralTab } from "./GeneralTab";
 import { McpTab } from "./McpTab";
+import { ModelsTab } from "./ModelsTab";
 import { PluginsTab } from "./PluginsTab";
 import { SubagentsTab } from "./SubagentsTab";
 import { SkillsTab } from "./SkillsTab";
@@ -11,6 +12,7 @@ import { SystemPromptTab } from "./SystemPromptTab";
 // Only implemented tabs are listed (SPEC.md: no fake tabs).
 const tabs = [
   { id: "general", label: "General", icon: SlidersHorizontal, Panel: GeneralTab },
+  { id: "models", label: "Models", icon: Boxes, Panel: ModelsTab },
   { id: "skills", label: "Skills", icon: Layers, Panel: SkillsTab },
   { id: "subagents", label: "Sub-agents", icon: Bot, Panel: SubagentsTab },
   { id: "plugins", label: "Plugins", icon: Puzzle, Panel: PluginsTab },

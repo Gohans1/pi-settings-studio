@@ -159,6 +159,11 @@ textarea { resize: vertical; }
 .prompt-preview { margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
 .prompt-preview pre { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.6 ui-monospace, monospace; max-height: 360px; overflow: auto; }
 .master > [data-slot=button] { margin-bottom: 10px; }
+.key-form { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin-top: 20px; }
+.key-form label { display: grid; gap: 6px; font-weight: 560; width: min(360px, 100%); }
+.key-form input { font-weight: 400; }
+.key-form [data-slot=button] { min-height: 40px; padding-inline: 16px; }
+.key-form p { flex-basis: 100%; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {

@@ -6,7 +6,7 @@ import lockfile from "proper-lockfile";
 
 export type Scope = "global" | "project";
 // Fixed documents only; HTTP never supplies a path.
-export type DocumentName = "settings.json" | "mcp.json";
+export type DocumentName = "settings.json" | "mcp.json" | "auth.json" | "models.json";
 export type Change = { path: string[]; value?: unknown; remove?: true };
 export type Document = { value: Record<string, unknown>; revision: string; exists: boolean; indent: string };
 const MAX_BYTES = 1024 * 1024;
@@ -110,7 +110,7 @@ export class ConfigStore {
 
   path(scope: Scope, file: DocumentName = "settings.json"): string {
     if (scope !== "global" && scope !== "project") throw new ConfigError("Unknown settings scope.", 400);
-    if (file !== "settings.json" && file !== "mcp.json") throw new ConfigError("Unknown configuration file.", 400);
+    if (!["settings.json", "mcp.json", "auth.json", "models.json"].includes(file)) throw new ConfigError("Unknown configuration file.", 400);
     return join(resolve(this.roots[scope]), file);
   }
 

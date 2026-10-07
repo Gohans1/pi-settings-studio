@@ -4,6 +4,7 @@ import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PluginsView, SkillsView } from "../shared/resources";
 import type { AgentInput, AgentsView } from "../shared/agents";
+import type { ProvidersView } from "../shared/models";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -51,3 +52,9 @@ export const addAgent = (input: AgentInput) => request<AgentsView>("/api/agents"
 export const editAgent = (file: string, revision: string, input: AgentInput) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}`, "PUT", { revision, ...input });
 export const removeAgent = (file: string, revision: string) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}`, "DELETE", { revision });
 export const restoreAgent = (file: string) => request<AgentsView>(`/api/agents/${encodeURIComponent(file)}/restore`, "POST", {});
+export const loadProviders = () => request<ProvidersView>("/api/models/providers");
+export const saveProviderKey = (id: string, revision: string, key: string) =>
+  request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "PUT", { revision, key });
+export const removeProviderKey = (id: string, revision: string) =>
+  request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "DELETE", { revision });
+export const restoreAuth = (revision: string) => request<ProvidersView>("/api/models/auth/restore", "POST", { revision });
