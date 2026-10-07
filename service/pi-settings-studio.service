@@ -1,0 +1,12 @@
+# systemd user unit: keeps Pi Settings Studio running at http://localhost:4369.
+# Install: see README "Run in the background". Requires systemd in WSL (systemd=true in /etc/wsl.conf).
+[Unit]
+Description=Pi Settings Studio (local settings GUI for Pi)
+
+[Service]
+WorkingDirectory=%h/projects/pi-settings-studio
+ExecStart=/usr/local/bin/bun src/server/cli.ts --port 4369
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

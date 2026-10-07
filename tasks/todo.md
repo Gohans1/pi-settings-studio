@@ -17,5 +17,5 @@
 - [ ] Models: custom providers form for models.json (raw edits meanwhile: none, models.json holds secrets).
 - [x] Plugins tab (built-ins, user files, packages; install/update/remove later).
 - [x] Sub-agents tab (user profiles; project .pi/agents and T3Code integration later).
-- [ ] Background service on port 4369.
+- [ ] Background service on port 4369 (unit file ready; install after WSL restarts with systemd).
 - [ ] Execution features: MCP test/OAuth, model OAuth, package install.
