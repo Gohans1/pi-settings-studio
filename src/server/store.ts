@@ -5,8 +5,10 @@ import { dirname, join, parse, resolve } from "node:path";
 import lockfile from "proper-lockfile";
 
 export type Scope = "global" | "project";
+// Fixed documents only; HTTP never supplies a path.
+export type DocumentName = "settings.json" | "mcp.json";
 export type Change = { path: string[]; value?: unknown; remove?: true };
-export type Document = { value: Record<string, unknown>; revision: string; exists: boolean };
+export type Document = { value: Record<string, unknown>; revision: string; exists: boolean; indent: string };
 const MAX_BYTES = 1024 * 1024;
 const forbidden = new Set(["__proto__", "constructor", "prototype"]);
 
@@ -26,13 +28,15 @@ function decode(raw: string | undefined): Document {
   let value: unknown = {};
   if (raw !== undefined) {
     try { value = JSON.parse(raw.replace(/^\uFEFF/, "")); }
-    catch { throw new ConfigError("Settings must contain valid JSON. Fix the file before saving."); }
+    catch { throw new ConfigError("The file must contain valid JSON. Fix the file before saving."); }
   }
-  if (!object(value)) throw new ConfigError("Settings must contain a JSON object.");
+  if (!object(value)) throw new ConfigError("The file must contain a JSON object.");
   return {
     value,
     exists: raw !== undefined,
     revision: raw === undefined ? "missing" : createHash("sha256").update(raw).digest("hex"),
+    // Keep the file's indentation when rewriting it, as Pi does.
+    indent: (raw && /^([ \t]+)\S/m.exec(raw)?.[1]) || "  ",
   };
 }
 
@@ -100,40 +104,51 @@ function applyChanges(source: Record<string, unknown>, changes: Change[]): Recor
 export class ConfigStore {
   constructor(private readonly roots: Record<Scope, string>) {}
 
-  path(scope: Scope): string {
+  path(scope: Scope, file: DocumentName = "settings.json"): string {
     if (scope !== "global" && scope !== "project") throw new ConfigError("Unknown settings scope.", 400);
-    return join(resolve(this.roots[scope]), "settings.json");
+    if (file !== "settings.json" && file !== "mcp.json") throw new ConfigError("Unknown configuration file.", 400);
+    return join(resolve(this.roots[scope]), file);
   }
 
-  async read(scope: Scope): Promise<Document> { return decode(await readRaw(this.path(scope))); }
-
-  async patch(scope: Scope, revision: string, changes: Change[]): Promise<Document> {
-    return this.update(scope, revision, current => JSON.stringify(applyChanges(current.value, changes), null, 2) + "\n");
+  async hasBackup(scope: Scope, file?: DocumentName): Promise<boolean> {
+    try { return (await lstat(this.path(scope, file) + ".pi-settings-backup")).isFile(); }
+    catch (error) { if (isMissing(error)) return false; throw error; }
   }
 
-  async restore(scope: Scope, revision: string): Promise<Document> {
+  async read(scope: Scope, file?: DocumentName): Promise<Document> { return decode(await readRaw(this.path(scope, file))); }
+
+  async patch(scope: Scope, revision: string, changes: Change[], file?: DocumentName): Promise<Document> {
+    return this.transform(scope, revision, value => applyChanges(value, changes), file);
+  }
+
+  /** Replace the document with `edit(current)`, under the lock and revision check. */
+  async transform(scope: Scope, revision: string, edit: (value: Record<string, unknown>) => Record<string, unknown>, file?: DocumentName): Promise<Document> {
+    return this.update(scope, revision, current => JSON.stringify(edit(current.value), null, current.indent) + "\n", file);
+  }
+
+  async restore(scope: Scope, revision: string, file?: DocumentName): Promise<Document> {
     return this.update(scope, revision, async () => {
-      const backup = await readRaw(this.path(scope) + ".pi-settings-backup");
+      const backup = await readRaw(this.path(scope, file) + ".pi-settings-backup");
       if (backup === undefined) throw new ConfigError("No backup is available.");
       decode(backup);
       return backup;
-    });
+    }, file);
   }
 
-  private async update(scope: Scope, revision: string, next: (current: Document) => string | Promise<string>): Promise<Document> {
-    const path = this.path(scope);
+  private async update(scope: Scope, revision: string, next: (current: Document) => string | Promise<string>, file?: DocumentName): Promise<Document> {
+    const path = this.path(scope, file);
     await assertSafe(path);
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
     const release = await lockfile.lock(path, { realpath: false, retries: { retries: 8, minTimeout: 15, maxTimeout: 100 } });
     try {
       const raw = await readRaw(path);
       const current = decode(raw);
-      if (current.revision !== revision) throw new ConfigError("Settings changed in another session. Reload and review your draft before saving.", 409);
+      if (current.revision !== revision) throw new ConfigError("The file changed in another session. Reload and check your draft before saving.", 409);
       const text = await next(current);
-      if (Buffer.byteLength(text) > MAX_BYTES) throw new ConfigError("Settings exceed 1 MiB.");
+      if (Buffer.byteLength(text) > MAX_BYTES) throw new ConfigError("The file would exceed 1 MiB.");
       if (raw !== undefined) await atomicWrite(path + ".pi-settings-backup", raw);
       // Catch uncooperative editors too, up to this final pre-rename check.
-      if (decode(await readRaw(path)).revision !== revision) throw new ConfigError("Settings changed while saving. Reload before trying again.", 409);
+      if (decode(await readRaw(path)).revision !== revision) throw new ConfigError("The file changed while saving. Reload before trying again.", 409);
       await atomicWrite(path, text);
       return decode(text);
     } finally { await release(); }

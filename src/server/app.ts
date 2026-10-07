@@ -1,10 +1,10 @@
-import { lstat } from "node:fs/promises";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { serveStatic } from "@hono/bun";
 import { z } from "zod";
 import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
 import { changeSchema, fields, readSetting, type SettingsView } from "../shared/settings.ts";
+import { mcpRoutes } from "./mcp-api.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
@@ -54,10 +54,7 @@ export function createApp({ store, origins, staticDir }: AppOptions) {
       const fallback = parsedParent.success ? parsedParent.data : field.defaultValue;
       if (fallback !== undefined) inherited[field.key] = fallback;
     }
-    let hasBackup = false;
-    try { hasBackup = (await lstat(store.path(scope) + ".pi-settings-backup")).isFile(); }
-    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
-    return { scope, path: store.path(scope), revision: current.revision, values, inherited, invalid, exists: current.exists, hasBackup };
+    return { scope, path: store.path(scope), revision: current.revision, values, inherited, invalid, exists: current.exists, hasBackup: await store.hasBackup(scope) };
   }
 
   app.get("/api/settings/:scope", async c => c.json(await view(SCOPE.parse(c.req.param("scope")))));
@@ -79,6 +76,7 @@ export function createApp({ store, origins, staticDir }: AppOptions) {
     await store.restore(scope, input.revision);
     return c.json(await view(scope));
   });
+  app.route("/api/mcp", mcpRoutes(store));
   app.get("/api/status", c => c.json({ source: "persisted-files", liveSession: false, catalogue: "Pi 1.0.3", parityComplete: false }));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));

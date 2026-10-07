@@ -1,8 +1,12 @@
 # Third-party notices
 
-## shadcn/ui Button (Base Nova)
+## Pi (`@earendil-works/pi-coding-agent` 1.0.3)
 
-`src/client/components/ui/button.tsx` is adapted from https://ui.shadcn.com/r/styles/base-nova/button.json (retrieved 2026-10-07; import alias adapted to this project).
+`src/server/mcp-config.ts` ports `mcp.json` validation and edit rules from `dist/core/mcp-servers.js` and `dist/extensions/mcp/config.js`. License: MIT (per the package's `package.json`), author Mario Zechner.
+
+## shadcn/ui (Base Nova)
+
+`src/client/components/ui/button.tsx`, `tabs.tsx` and `switch.tsx` come from the shadcn registry (base-nova style, retrieved 2026-10-07; `cn` import pointed at `@/lib/utils`). The `data-horizontal`/`data-vertical` custom variants in `src/client/styles.css` come from `shadcn@4.21.4` `dist/tailwind.css`.
 
 MIT License
 
@@ -26,4 +30,4 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Other dependencies retain their own licenses. A full distribution-license inventory remains a release gate.
+Other dependencies retain their own licenses.

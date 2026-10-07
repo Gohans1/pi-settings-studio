@@ -1,4 +1,5 @@
 import type { SettingsView, SettingsChange } from "../shared/settings";
+import type { McpFileView } from "../shared/mcp";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -16,3 +17,4 @@ export const saveSettings = (scope: Scope, revision: string, changes: SettingsCh
   request<SettingsView>(`/api/settings/${scope}`, "PATCH", { revision, changes });
 export const restoreSettings = (scope: Scope, revision: string) =>
   request<SettingsView>(`/api/settings/${scope}/restore`, "POST", { revision, confirm: true });
+export const loadMcp = () => request<McpFileView>("/api/mcp/global");

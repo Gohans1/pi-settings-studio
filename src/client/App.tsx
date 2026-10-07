@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { Server, SlidersHorizontal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { GeneralTab } from "./GeneralTab";
+import { McpTab } from "./McpTab";
 
 // Only implemented tabs are listed (SPEC.md: no fake tabs).
 const tabs = [
   { id: "general", label: "General", icon: SlidersHorizontal, Panel: GeneralTab },
+  { id: "mcp", label: "MCP", icon: Server, Panel: McpTab },
 ];
 
 function tabFromHash(): string {

@@ -4,9 +4,9 @@
 - [x] Local HTTP API with Host/Origin checks.
 - [x] First form slice (7 model/codemode keys).
 - [x] Rescope documents.
-- [ ] Bun runtime, port 4369, no login, no review step.
-- [ ] Tab bar shell.
-- [ ] MCP: list and details.
+- [x] Bun runtime, port 4369, no login, no review step.
+- [x] Tab bar shell.
+- [x] MCP: list and details (global).
 - [ ] MCP: enable/disable, exposure.
 - [ ] MCP: add, edit, remove, undo.
 - [ ] MCP: codemode controls.
