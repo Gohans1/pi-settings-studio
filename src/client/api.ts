@@ -2,7 +2,7 @@ import type { SettingsView, SettingsChange } from "../shared/settings";
 import type { McpFileView, McpServerInput } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
-import type { SkillsView } from "../shared/resources";
+import type { PluginsView, SkillsView } from "../shared/resources";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -42,3 +42,6 @@ export const saveSkills = (revision: string, paths: string[], enabled: boolean) 
 export type RawSettings = { path: string; text: string; revision: string };
 export const loadRawSettings = () => request<RawSettings>("/api/settings/global/raw");
 export const saveRawSettings = (revision: string, text: string) => request<RawSettings>("/api/settings/global/raw", "PUT", { revision, text });
+export const loadPlugins = () => request<PluginsView>("/api/plugins");
+export const savePlugins = (revision: string, items: { type: string; path: string }[], enabled: boolean) =>
+  request<PluginsView>("/api/plugins", "PATCH", { revision, items, enabled });

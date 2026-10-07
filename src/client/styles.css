@@ -151,6 +151,10 @@ textarea { resize: vertical; }
 .raw-editor h2 { margin: 0; }
 .raw-editor label { display: grid; gap: 6px; font-weight: 560; }
 .raw-editor textarea { font: 12px/1.6 ui-monospace, monospace; font-weight: 400; width: 100%; tab-size: 2; }
+.packages { margin-top: 40px; display: grid; gap: 10px; }
+.packages h2 { font-size: 17px; margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.package-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.package-list li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {

@@ -1,4 +1,7 @@
+export type ResourceType = "extensions" | "skills" | "prompts" | "themes";
+
 export type ResourceView = {
+  type: ResourceType;
   /** Identifies the resource in requests; the server re-resolves it and never uses it as a path to open. */
   path: string;
   name: string;
@@ -12,3 +15,6 @@ export type ResourceView = {
 };
 
 export type SkillsView = { revision: string; skills: ResourceView[] };
+
+export type PackageView = { source: string; installed: boolean; filtered: boolean };
+export type PluginsView = { revision: string; resources: ResourceView[]; packages: PackageView[] };

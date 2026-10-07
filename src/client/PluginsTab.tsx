@@ -1,0 +1,99 @@
+import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
+import type { PluginsView, ResourceView } from "../shared/resources";
+import { loadPlugins, savePlugins } from "./api";
+import { Button } from "./components/ui/button";
+import { Switch } from "./components/ui/switch";
+
+const typeLabels: Record<string, string> = { extensions: "extension", prompts: "prompt", themes: "theme" };
+const builtinNotes: Record<string, string> = {
+  mcp: "Turning it off turns off Pi's MCP support: no mcp.json server connects.",
+  codemode: "Turning it off removes the codemode tool, so MCP tools with codemode exposure cannot be called.",
+  "tool-search": "Turning it off removes tool_search, so deferred MCP tools cannot be loaded.",
+  "llama.cpp": "Local llama.cpp provider support.",
+};
+
+function PluginDetail({ item }: { item: ResourceView }) {
+  const builtin = item.group.startsWith("Built-in");
+  return <section className="detail" aria-labelledby="plugin-title">
+    <h2 id="plugin-title">{item.name}</h2>
+    {!item.enabled && <p className="notice">Turned off, so Pi does not load it.</p>}
+    {builtin && builtinNotes[item.name] && <p className="notice">{builtinNotes[item.name]}</p>}
+    <dl className="detail-list">
+      <div><dt>Type</dt><dd>{builtin ? "built-in extension" : typeLabels[item.type]}</dd></div>
+      {item.description && <div><dt>Description</dt><dd>{item.description}</dd></div>}
+      <div><dt>Source</dt><dd>{item.group}</dd></div>
+      <div><dt>{builtin ? "Name" : "File"}</dt><dd><code>{item.path}</code></dd></div>
+    </dl>
+  </section>;
+}
+
+export function PluginsTab() {
+  const [view, setView] = useState<PluginsView>();
+  const [selected, setSelected] = useState<string>();
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function refresh() {
+    setError("");
+    try { setView(await loadPlugins()); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the plugins."); }
+  }
+  useEffect(() => { void refresh(); }, []);
+
+  async function toggle(items: ResourceView[], enabled: boolean, label = items[0]?.name) {
+    if (!view || !items.length) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      setView(await savePlugins(view.revision, items.map(item => ({ type: item.type, path: item.path })), enabled));
+      setMessage(`${label} turned ${enabled ? "on" : "off"}. Applies to new T3Code threads, or after /reload.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not change the plugins.");
+      await refresh();
+    } finally { setBusy(false); }
+  }
+
+  const resources = view?.resources ?? [];
+  const needle = query.trim().toLowerCase();
+  const visible = resources.filter(item => !needle || `${item.name} ${item.description ?? ""} ${item.group}`.toLowerCase().includes(needle));
+  const groups = [...new Set(resources.map(item => item.group))].filter(group => visible.some(item => item.group === group));
+  const current = resources.find(item => item.path === selected);
+  return <>
+    <div className="page-heading"><div><h1>Plugins</h1><p>Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab.</p></div>
+      <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search plugins" placeholder="Search plugins…" value={query} onChange={event => setQuery(event.target.value)} /></div></div>
+    <div role="status" className="feedback">{message}</div>
+    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Reload</Button></div>}
+    {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <>
+      <div className="master-detail">
+        <section className="master" aria-label="Plugin list">
+          {!visible.length && <p className="empty">{resources.length ? "No matching plugins." : "No plugins found."}</p>}
+          {groups.map(group => {
+            const members = visible.filter(item => item.group === group);
+            return <div key={group} className="item-group">
+              <div className="list-header"><h2>{group}</h2>
+                <Switch aria-label={`Enable everything in ${group}`} checked={members.every(item => item.enabled)} disabled={busy}
+                  onCheckedChange={enabled => void toggle(members.filter(item => item.enabled !== enabled), enabled, `Everything in ${group}`)} /></div>
+              <ul className="item-list">{members.map(item => <li key={item.type + item.path}>
+                <button type="button" aria-pressed={item.path === selected} onClick={() => setSelected(item.path)}>
+                  <span className="item-name">{item.name}</span><span className="item-state">{item.enabled ? typeLabels[item.type] : "off"}</span>
+                </button>
+                <Switch aria-label={`Enable ${item.name}`} checked={item.enabled} disabled={busy} onCheckedChange={enabled => void toggle([item], enabled)} />
+              </li>)}</ul>
+            </div>;
+          })}
+        </section>
+        {current ? <PluginDetail item={current} /> : <section className="detail"><p className="empty">Select a plugin to see its details.</p></section>}
+      </div>
+      <section className="packages" aria-labelledby="packages-title">
+        <h2 id="packages-title">Packages</h2>
+        {view.packages.length ? <ul className="package-list">{view.packages.map(pkg => <li key={pkg.source}>
+          <code>{pkg.source}</code>
+          <span className="muted">{pkg.installed ? "Installed" : "Not installed. Run pi install or pi update in a terminal."}{pkg.filtered ? " · has resource filters" : ""}</span>
+        </li>)}</ul> : <p className="empty">No packages in settings.json.</p>}
+        <p className="muted">Installing, updating and removing packages from here comes later.</p>
+      </section>
+    </>}
+  </>;
+}

@@ -13,7 +13,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.0.3 (installed). Ported Pi logi
 | General: remaining `settings.json` keys, raw JSON, theme | components/SettingsPanel.tsx (chat options intentionally excluded) | Done: every documented key, drift test, raw JSON; app theme follows the OS |
 | Models: providers, keys, custom models, defaults, thinking | components/ModelsConfig.tsx; app/api/models-config | Pending |
 | Models: OAuth login | app/api/auth | Later |
-| Plugins: packages and resource toggles | components/PluginsConfig.tsx; app/api/plugins | Pending |
+| Plugins: packages and resource toggles | components/PluginsConfig.tsx; app/api/plugins | Done for user scope (built-ins, user files, package resources); project scope pending |
 | Plugins: install, update, remove | app/api/plugins | Later |
 | Sub-agents (Pi example format) | components/AgentsConfig.tsx; app/api/subagents | Pending |
 

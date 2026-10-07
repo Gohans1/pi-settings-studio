@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Layers, ScrollText, Server, SlidersHorizontal } from "lucide-react";
+import { Layers, Puzzle, ScrollText, Server, SlidersHorizontal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { GeneralTab } from "./GeneralTab";
 import { McpTab } from "./McpTab";
+import { PluginsTab } from "./PluginsTab";
 import { SkillsTab } from "./SkillsTab";
 import { SystemPromptTab } from "./SystemPromptTab";
 
@@ -10,6 +11,7 @@ import { SystemPromptTab } from "./SystemPromptTab";
 const tabs = [
   { id: "general", label: "General", icon: SlidersHorizontal, Panel: GeneralTab },
   { id: "skills", label: "Skills", icon: Layers, Panel: SkillsTab },
+  { id: "plugins", label: "Plugins", icon: Puzzle, Panel: PluginsTab },
   { id: "mcp", label: "MCP", icon: Server, Panel: McpTab },
   { id: "system-prompt", label: "System prompt", icon: ScrollText, Panel: SystemPromptTab },
 ];
