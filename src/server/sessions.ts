@@ -6,7 +6,7 @@ import { contentText, getCurrentSystemMessage, getSystemMessageText, type Messag
 import type { SessionSummary, SystemPromptView } from "../shared/sessions.ts";
 
 // ponytail: reads <agentDir>/sessions only; a custom `sessionDir` setting is not followed yet.
-async function listSessions(agentDir: string) {
+export async function listSessions(agentDir: string) {
   const root = join(agentDir, "sessions");
   let dirs: string[] = [];
   try { dirs = (await readdir(root, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => join(root, entry.name)); }

@@ -106,12 +106,14 @@ function applyChanges(source: Record<string, unknown>, changes: Change[]): Recor
 }
 
 export class ConfigStore {
-  constructor(private readonly roots: Record<Scope, string>) {}
+  constructor(private readonly roots: { global: string; project?: string }) {}
 
   path(scope: Scope, file: DocumentName = "settings.json"): string {
     if (scope !== "global" && scope !== "project") throw new ConfigError("Unknown settings scope.", 400);
+    const root = this.roots[scope];
+    if (root === undefined) throw new ConfigError("Choose a project first.", 400);
     if (!["settings.json", "mcp.json", "auth.json", "models.json"].includes(file)) throw new ConfigError("Unknown configuration file.", 400);
-    return join(resolve(this.roots[scope]), file);
+    return join(resolve(root), file);
   }
 
   async hasBackup(scope: Scope, file?: DocumentName): Promise<boolean> {

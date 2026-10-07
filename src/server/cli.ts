@@ -16,7 +16,8 @@ try {
     if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Port must be an integer between 0 and 65535.");
     const rawAgentDir = values["agent-dir"] ?? process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
     const agentDir = resolve(rawAgentDir.replace(/^~(?=[/\\]|$)/, homedir()));
-    const running = await startServer({ agentDir, projectDir: resolve(values.project ?? process.cwd()), port });
+    // Projects come from Pi's sessions; --project adds one that has none yet.
+    const running = await startServer({ agentDir, projectDir: values.project && resolve(values.project), port });
     process.stderr.write(`Pi Settings Studio: ${running.url}\n`);
     const stop = () => { void running.close().catch(() => { process.exitCode = 1; }); };
     process.once("SIGINT", stop);

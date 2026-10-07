@@ -5,6 +5,7 @@ import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PluginsView, SkillsView } from "../shared/resources";
 import type { AgentInput, AgentsView } from "../shared/agents";
 import type { ModelSummary, ProvidersView } from "../shared/models";
+import type { ProjectView, TrustView } from "../shared/projects";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -17,11 +18,15 @@ async function request<T>(url: string, method = "GET", body?: unknown): Promise<
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }
-export const loadSettings = (scope: Scope) => request<SettingsView>(`/api/settings/${scope}`);
-export const saveSettings = (scope: Scope, revision: string, changes: SettingsChange[]) =>
-  request<SettingsView>(`/api/settings/${scope}`, "PATCH", { revision, changes });
-export const restoreSettings = (scope: Scope, revision: string) =>
-  request<SettingsView>(`/api/settings/${scope}/restore`, "POST", { revision, confirm: true });
+/** Project-scoped requests name the project; the server accepts only projects it listed. */
+export const withProject = (url: string, project?: string) => project ? `${url}${url.includes("?") ? "&" : "?"}project=${encodeURIComponent(project)}` : url;
+export const loadSettings = (scope: Scope, project?: string) => request<SettingsView>(withProject(`/api/settings/${scope}`, project));
+export const saveSettings = (scope: Scope, revision: string, changes: SettingsChange[], project?: string) =>
+  request<SettingsView>(withProject(`/api/settings/${scope}`, project), "PATCH", { revision, changes });
+export const restoreSettings = (scope: Scope, revision: string, project?: string) =>
+  request<SettingsView>(withProject(`/api/settings/${scope}/restore`, project), "POST", { revision, confirm: true });
+export const loadProjects = () => request<ProjectView[]>("/api/projects");
+export const saveTrust = (project: string, decision: boolean | null) => request<TrustView>("/api/projects/trust", "POST", { project, decision });
 export const loadMcp = () => request<McpFileView>("/api/mcp/global");
 export const saveMcpServer = (name: string, revision: string, patch: { enabled?: boolean; exposure?: string }) =>
   request<McpFileView>(`/api/mcp/global/servers/${encodeURIComponent(name)}`, "PATCH", { revision, ...patch });

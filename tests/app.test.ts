@@ -16,7 +16,7 @@ async function fixture(t: import("node:test").TestContext) {
   await mkdir(roots.project, { recursive: true });
   const file = join(roots.global, "settings.json");
   await writeFile(file, JSON.stringify({ defaultModel: "global-model", defaultThinkingLevel: "high", privateExtension: { apiKey: "fixture-secret" } }));
-  const app = createApp({ store: new ConfigStore(roots), agentDir: roots.global, origins: [origin, localhostOrigin] });
+  const app = createApp({ store: new ConfigStore(roots), agentDir: roots.global, projects: [join(root, "project")], origins: [origin, localhostOrigin] });
   async function request(path: string, options: RequestInit = {}, base = origin) {
     return app.request(new Request(base + path, { ...options, headers: { host: new URL(base).host, ...options.headers } }));
   }
@@ -49,7 +49,7 @@ test("Host, Origin, Fetch Metadata and JSON checks prevent cross-site mutation",
 test("project reads distinguish local and inherited values without leaking unknown settings", async (t) => {
   const { request, roots } = await fixture(t);
   await writeFile(join(roots.project, "settings.json"), '{"defaultModel":"project-model"}');
-  const response = await request("/api/settings/project", {});
+  const response = await request(`/api/settings/project?project=${encodeURIComponent(join(roots.project, ".."))}`, {});
   assert.equal(response.status, 200);
   const data = await response.json();
   assert.equal(data.values.defaultModel, "project-model");

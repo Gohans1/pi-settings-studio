@@ -27,6 +27,8 @@ export type Field = {
   options?: readonly Option[];
   /** Pi's default, shown when the file has no value. */
   defaultValue?: unknown;
+  /** Pi reads it only from the global settings.json. */
+  globalOnly?: boolean;
   schema: z.ZodType;
 };
 
@@ -49,12 +51,12 @@ export const fields: Field[] = [
   { key: "thinkingBudgets.low", label: "Thinking budget: low", section: "models", help: "Token budget for the low thinking level.", ...number() },
   { key: "thinkingBudgets.medium", label: "Thinking budget: medium", section: "models", help: "Token budget for the medium thinking level.", ...number() },
   { key: "thinkingBudgets.high", label: "Thinking budget: high", section: "models", help: "Token budget for the high thinking level.", ...number() },
-  { key: "cacheWarming", label: "Prompt cache warming", section: "models", help: "Keep provider prompt caches warm during runs (streaming) or also between runs (idle). Only when it saves at least $0.05.", defaultValue: "streaming", ...select(choices("off", "streaming", "idle")) },
+  { key: "cacheWarming", globalOnly: true, label: "Prompt cache warming", section: "models", help: "Keep provider prompt caches warm during runs (streaming) or also between runs (idle). Only when it saves at least $0.05.", defaultValue: "streaming", ...select(choices("off", "streaming", "idle")) },
   { key: "showCacheMissNotices", label: "Cache notices", section: "models", help: "Show notices for significant cache misses, cache warming, compaction usage and provider recovery.", defaultValue: false, ...bool },
   // Messages & interaction
   { key: "steeringMode", label: "Steering delivery", section: "interaction", help: "How queued steering messages are delivered.", defaultValue: "one-at-a-time", ...select(choices("one-at-a-time", "all")) },
   { key: "followUpMode", label: "Follow-up delivery", section: "interaction", help: "How queued follow-up messages are delivered.", defaultValue: "one-at-a-time", ...select(choices("one-at-a-time", "all")) },
-  { key: "defaultProjectTrust", label: "Default project trust", section: "interaction", help: "Fallback when a project has no saved trust decision. Global setting only.", defaultValue: "ask", ...select(choices("ask", "always", "never")) },
+  { key: "defaultProjectTrust", globalOnly: true, label: "Default project trust", section: "interaction", help: "Fallback when a project has no saved trust decision. Global setting only.", defaultValue: "ask", ...select(choices("ask", "always", "never")) },
   { key: "enableSkillCommands", label: "Skill commands", section: "interaction", help: "Register skills as /skill:name commands. Typed /skill:name commands work either way.", defaultValue: true, ...bool },
   // Tools
   { key: "defaultTools", label: "Startup tools", section: "tools", kind: "lines", help: "One tool per line. Plain names replace the defaults; +name adds and -name removes. An empty list disables built-in tools, not extension or SDK tools.", defaultValue: ["read", "bash", "edit", "write"], schema: lines },
@@ -67,7 +69,7 @@ export const fields: Field[] = [
   { key: "branchSummary.skipPrompt", label: "Skip branch summary prompt", section: "context", help: "Skip the branch-summary prompt and default to no summary.", defaultValue: false, ...bool },
   // Network & retries
   { key: "transport", label: "Transport", section: "network", help: "Preferred transport for providers that support several.", defaultValue: "auto", ...select(choices("auto", "sse", "websocket", "websocket-cached")) },
-  { key: "httpProxy", label: "HTTP proxy", section: "network", kind: "text", help: "Proxy URL applied as HTTP_PROXY and HTTPS_PROXY for Pi's HTTP clients. Global setting only.", schema: text },
+  { key: "httpProxy", globalOnly: true, label: "HTTP proxy", section: "network", kind: "text", help: "Proxy URL applied as HTTP_PROXY and HTTPS_PROXY for Pi's HTTP clients. Global setting only.", schema: text },
   { key: "httpIdleTimeoutMs", label: "HTTP idle timeout (ms)", section: "network", help: "Header and body idle timeout. 0 disables it.", defaultValue: 300000, ...number() },
   { key: "websocketConnectTimeoutMs", label: "WebSocket connect timeout (ms)", section: "network", help: "0 disables it.", defaultValue: 15000, ...number() },
   { key: "retry.enabled", label: "Automatic retry", section: "network", help: "Retry transient failures at the agent level.", defaultValue: true, ...bool },

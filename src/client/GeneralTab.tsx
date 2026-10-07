@@ -6,10 +6,11 @@ import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
 import { RawJsonEditor } from "./RawJsonEditor";
 
-// General edits the global settings file only (SPEC.md).
-const scope = "global";
-
-export function GeneralTab() {
+export function GeneralTab({ project }: { project?: string }) {
+  // The project's own .pi/settings.json overrides the global file key by key.
+  const [scopeChoice, setScopeChoice] = useState<"global" | "project">("global");
+  const scope = project ? scopeChoice : "global";
+  const target = scope === "project" ? project : undefined;
   const [query, setQuery] = useState("");
   const [view, setView] = useState<SettingsView>();
   const [draft, setDraft] = useState<Record<string, SettingsChange>>({});
@@ -31,11 +32,12 @@ export function GeneralTab() {
   useEffect(() => {
     let active = true;
     setLoading(true); setError(""); setMessage(""); setView(undefined);
-    void loadSettings(scope).then(data => {
+    setDraft({});
+    void loadSettings(scope, target).then(data => {
       if (active) setView(data);
     }).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [scope, target]);
   useEffect(() => {
     if (!changes.length) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
@@ -65,7 +67,7 @@ export function GeneralTab() {
     if (!view) return;
     setBusy(true); setError(""); setMessage("");
     try {
-      setView(await saveSettings(scope, view.revision, changes));
+      setView(await saveSettings(scope, view.revision, changes, target));
       setDraft({}); setMessage("Saved to file. Reload Pi or start a new session to apply supported settings.");
       title.current?.focus();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Save failed. Your draft is unchanged."); }
@@ -75,7 +77,7 @@ export function GeneralTab() {
     if (!view) return;
     setBusy(true); setError(""); setMessage("");
     try {
-      setView(await restoreSettings(scope, view.revision));
+      setView(await restoreSettings(scope, view.revision, target));
       setRestore(false); setMessage("Previous file restored. Reload Pi to apply the change.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Restore failed."); }
     finally { setBusy(false); }
@@ -83,7 +85,7 @@ export function GeneralTab() {
   async function refresh() {
     setBusy(true); setError(""); setMessage("");
     try {
-      setView(await loadSettings(scope));
+      setView(await loadSettings(scope, target));
       setMessage(changes.length ? "File reloaded. Your draft is still here; check it against the new values." : "Settings reloaded from disk.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Reload failed."); }
     finally { setBusy(false); }
@@ -97,18 +99,22 @@ export function GeneralTab() {
     setDraft({});
     setError("");
     setLoading(true);
-    try { setView(await loadSettings(scope)); setMessage("Saved settings.json. Applies to new T3Code threads, or after /reload."); }
+    try { setView(await loadSettings(scope, target)); setMessage("Saved settings.json. Applies to new T3Code threads, or after /reload."); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Reload failed."); }
     finally { setLoading(false); }
   }
-  const rawButton = <Button variant="outline" disabled={busy || !!changes.length} onClick={() => { setRaw(true); setMessage(""); }}>Edit raw JSON</Button>;
+  const rawButton = scope === "global" && <Button variant="outline" disabled={busy || !!changes.length} onClick={() => { setRaw(true); setMessage(""); }}>Edit raw JSON</Button>;
   if (raw) return <>
     <div className="page-heading"><div><h1>General</h1><p>Pi core settings shared by every project.</p></div></div>
     <RawJsonEditor onClose={saved => void closeRaw(saved)} />
   </>;
   return <>
-    <div className="page-heading"><div><h1 ref={title} tabIndex={-1}>General</h1><p>Pi core settings shared by every project.</p></div>
+    <div className="page-heading"><div><h1 ref={title} tabIndex={-1}>General</h1><p>{scope === "project" ? "Settings for this project only. They override the global ones while the project is trusted." : "Pi core settings shared by every project."}</p></div>
       <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search settings" placeholder="Search settings or keys…" value={query} onChange={e => setQuery(e.target.value)} /></div></div>
+    {project && <fieldset className="scope-choice"><legend>Edit</legend>
+      <label><input type="radio" name="general-scope" checked={scope === "global"} disabled={busy || !!changes.length} onChange={() => setScopeChoice("global")} />Global settings</label>
+      <label><input type="radio" name="general-scope" checked={scope === "project"} disabled={busy || !!changes.length} onChange={() => setScopeChoice("project")} />This project</label>
+    </fieldset>}
     {view && <div className="scope-info"><code>{view.path}</code></div>}
     {!needle && <nav className="section-links" aria-label="Setting groups">{sections.map(section => <a key={section.id} href={"#group-" + section.id}
       onClick={event => { event.preventDefault(); document.getElementById("group-" + section.id)?.scrollIntoView({ behavior: "smooth" }); }}>{section.title}</a>)}</nav>}
@@ -125,7 +131,8 @@ export function GeneralTab() {
               const edit = draft[field.key];
               const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
               const value = edit ? "value" in edit ? edit.value : view.inherited[field.key] : view.values[field.key] ?? view.inherited[field.key];
-              return <SettingField key={field.key} field={field} value={value} overridden={overridden}
+              return <SettingField key={field.key} field={field} value={value} overridden={overridden} scope={scope}
+                disabled={scope === "project" && !!field.globalOnly}
                 invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
                 onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;
             })}</div>

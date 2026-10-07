@@ -10,14 +10,16 @@ import { sessionRoutes } from "./sessions.ts";
 import { pluginRoutes, skillRoutes } from "./resources.ts";
 import { agentRoutes } from "./agents.ts";
 import { modelRoutes } from "./models.ts";
+import { projectRegistry, projectRoutes } from "./projects.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
-export type AppOptions = { store: ConfigStore; agentDir: string; origins: string[]; staticDir?: string };
+export type AppOptions = { store: ConfigStore; agentDir: string; origins: string[]; staticDir?: string; projects?: string[] };
 const SCOPE = z.enum(["global", "project"]);
 
-export function createApp({ store, agentDir, origins, staticDir }: AppOptions) {
+export function createApp({ store, agentDir, origins, staticDir, projects = [] }: AppOptions) {
   const app = new Hono();
+  const registry = projectRegistry(agentDir, projects);
   const hosts = origins.map(origin => new URL(origin).host);
 
   app.use("*", async (c, next) => {
@@ -41,7 +43,11 @@ export function createApp({ store, agentDir, origins, staticDir }: AppOptions) {
     await next();
   });
   app.use("/api/*", bodyLimit({ maxSize: 64 * 1024, onError: c => c.json({ error: "Request exceeds 64 KiB." }, 413) }));
-  async function view(scope: Scope): Promise<SettingsView> {
+  /** Global settings use the app's store; project settings need a known project in ?project=. */
+  async function storeFor(scope: Scope, project: string | undefined): Promise<ConfigStore> {
+    return scope === "global" ? store : registry.storeFor(await registry.require(project));
+  }
+  async function view(scope: Scope, store: ConfigStore): Promise<SettingsView> {
     const current = await store.read(scope);
     const parent = scope === "project" ? await store.read("global") : undefined;
     const values: Record<string, unknown> = {};
@@ -62,18 +68,23 @@ export function createApp({ store, agentDir, origins, staticDir }: AppOptions) {
     return { scope, path: store.path(scope), revision: current.revision, values, inherited, invalid, exists: current.exists, hasBackup: await store.hasBackup(scope) };
   }
 
-  app.get("/api/settings/:scope", async c => c.json(await view(SCOPE.parse(c.req.param("scope")))));
+  app.get("/api/settings/:scope", async c => {
+    const scope = SCOPE.parse(c.req.param("scope"));
+    return c.json(await view(scope, await storeFor(scope, c.req.query("project"))));
+  });
   app.patch("/api/settings/:scope", async c => {
     const scope = SCOPE.parse(c.req.param("scope"));
+    const store = await storeFor(scope, c.req.query("project"));
     const input = changeSchema.parse(await c.req.json());
     const changes = input.changes.map(change => {
       const field = fields.find(f => f.key === change.key);
       if (!field) throw new ConfigError("This setting is not supported by the current editor.");
+      if (scope === "project" && field.globalOnly) throw new ConfigError(`${field.label} can only be set in the global settings.json; Pi ignores it in a project.`);
       return "remove" in change ? { path: field.key.split("."), remove: true as const }
         : { path: field.key.split("."), value: field.schema.parse(change.value) };
     });
     await store.patch(scope, input.revision, changes);
-    return c.json(await view(scope));
+    return c.json(await view(scope, store));
   });
   app.get("/api/settings/global/raw", async c => c.json({ path: store.path("global"), ...await store.readText("global") }));
   app.put("/api/settings/global/raw", async c => {
@@ -83,9 +94,10 @@ export function createApp({ store, agentDir, origins, staticDir }: AppOptions) {
   });
   app.post("/api/settings/:scope/restore", async c => {
     const scope = SCOPE.parse(c.req.param("scope"));
+    const store = await storeFor(scope, c.req.query("project"));
     const input = z.object({ revision: z.string().min(1).max(100), confirm: z.literal(true) }).strict().parse(await c.req.json());
     await store.restore(scope, input.revision);
-    return c.json(await view(scope));
+    return c.json(await view(scope, store));
   });
   app.route("/api/mcp", mcpRoutes(store));
   app.route("/api/codemode", codemodeRoutes(store));
@@ -94,6 +106,7 @@ export function createApp({ store, agentDir, origins, staticDir }: AppOptions) {
   app.route("/api/plugins", pluginRoutes(store, agentDir));
   app.route("/api/agents", agentRoutes(store, agentDir));
   app.route("/api/models", modelRoutes(store, agentDir));
+  app.route("/api/projects", projectRoutes(registry, store, agentDir));
   app.get("/api/status", c => c.json({ source: "persisted-files", liveSession: false, catalogue: "Pi 1.0.3", parityComplete: false }));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));

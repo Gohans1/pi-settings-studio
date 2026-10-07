@@ -2,15 +2,16 @@ import type { Field } from "../shared/settings";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 
-export function SettingField({ field, value, overridden, invalid, onChange, onReset }: {
-  field: Field; value: unknown; overridden: boolean; invalid: boolean;
+export function SettingField({ field, value, overridden, invalid, scope = "global", disabled = false, onChange, onReset }: {
+  field: Field; value: unknown; overridden: boolean; invalid: boolean; scope?: "global" | "project"; disabled?: boolean;
   onChange: (value: unknown) => void; onReset: () => void;
 }) {
   const id = "setting-" + field.key;
-  const common = { id, "aria-describedby": id + "-help", "aria-invalid": invalid || undefined };
+  const common = { id, disabled, "aria-describedby": id + "-help", "aria-invalid": invalid || undefined };
+  const fallback = scope === "project" ? "the inherited value" : "Pi's default";
   let control;
   if (field.kind === "boolean") {
-    control = <Switch aria-labelledby={id + "-label"} aria-describedby={id + "-help"} checked={value === true} onCheckedChange={onChange} />;
+    control = <Switch aria-labelledby={id + "-label"} aria-describedby={id + "-help"} checked={value === true} disabled={disabled} onCheckedChange={onChange} />;
   } else if (field.kind === "select") {
     // Options can be strings, numbers or booleans; JSON keeps their type through <select>.
     control = <select {...common} value={value === undefined ? "" : JSON.stringify(value)} onChange={e => onChange(JSON.parse(e.target.value))}>
@@ -37,8 +38,8 @@ export function SettingField({ field, value, overridden, invalid, onChange, onRe
     </div>
     <div className="setting-control">
       {control}
-      <div className="field-meta"><span>{overridden ? "Set in settings.json" : "Pi's default"}</span>
-        {overridden && <Button type="button" variant="ghost" size="sm" onClick={onReset} aria-label={"Reset " + field.label + " to Pi's default"}>Use default</Button>}
+      <div className="field-meta"><span>{disabled ? "Global only: Pi ignores it in a project" : overridden ? (scope === "project" ? "Set in this project" : "Set in settings.json") : (scope === "project" ? "Inherited" : "Pi's default")}</span>
+        {overridden && !disabled && <Button type="button" variant="ghost" size="sm" onClick={onReset} aria-label={`Reset ${field.label} to ${fallback}`}>{scope === "project" ? "Use inherited" : "Use default"}</Button>}
       </div>
       {invalid && <p className="field-error">Enter a valid value.</p>}
     </div>
