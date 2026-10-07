@@ -78,3 +78,53 @@ test("invalid exposures, unknown servers and stale revisions change nothing", as
   assert.equal((await patch("a", { revision: "stale", enabled: false })).status, 409);
   assert.equal(await readFile(file, "utf8"), original);
 });
+
+const json = { origin, "content-type": "application/json" };
+
+test("adding a server writes a Pi-valid entry; duplicates and entries Pi would refuse are rejected", async (t) => {
+  const { request, file } = await fixture(t, JSON.stringify({ mcpServers: { "dev-tools": { command: "x" } } }));
+  const { revision } = await (await request("/api/mcp/global")).json();
+  const add = (body: object) => request("/api/mcp/global/servers", { method: "POST", headers: json, body: JSON.stringify({ revision, ...body }) });
+  for (const [body, message] of [
+    [{ name: "dev-tools", server: { transport: "stdio", command: "y" } }, /already exists/],
+    [{ name: "dev_tools", server: { transport: "stdio", command: "y" } }, /conflicts with "dev-tools"/],
+    [{ name: "web", server: { transport: "http", url: "ftp://nope" } }, /url must be an http or https URL/],
+  ] as const) {
+    const response = await add(body);
+    assert.equal(response.status, 422);
+    assert.match((await response.json()).error, message);
+  }
+  const ok = await add({ name: "files", server: { transport: "stdio", command: "npx", args: ["-y", "fs"], env: [{ name: "TOKEN", value: "fixture-secret" }], description: "Files" } });
+  assert.equal(ok.status, 200);
+  assert.doesNotMatch(JSON.stringify(await ok.json()), /fixture-secret/);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")).mcpServers.files, { command: "npx", args: ["-y", "fs"], env: { TOKEN: "fixture-secret" }, description: "Files" });
+});
+
+test("editing keeps hidden values unless replaced and keeps keys the form does not manage", async (t) => {
+  const { request, file } = await fixture(t, JSON.stringify({ mcpServers: { search: {
+    command: "uvx", env: { KEEP: "fixture-keep", DROP: "fixture-drop" }, enabled: false, exposure: "direct", toolExposure: { "a*": "hidden" },
+  } } }));
+  const { revision } = await (await request("/api/mcp/global")).json();
+  const edit = (server: object) => request("/api/mcp/global/servers/search", { method: "PUT", headers: json, body: JSON.stringify({ revision, server }) });
+  const missing = await edit({ transport: "stdio", command: "uvx", env: [{ name: "NEW" }] });
+  assert.equal(missing.status, 422);
+  assert.match((await missing.json()).error, /Enter a value for NEW/);
+  assert.equal((await edit({ transport: "stdio", command: "uvx2", env: [{ name: "KEEP" }, { name: "NEW", value: "fixture-new" }] })).status, 200);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")).mcpServers.search, {
+    command: "uvx2", env: { KEEP: "fixture-keep", NEW: "fixture-new" }, enabled: false, exposure: "direct", toolExposure: { "a*": "hidden" },
+  });
+});
+
+test("removing a server can be undone from the backup", async (t) => {
+  const original = JSON.stringify({ mcpServers: { a: { command: "x" }, b: { url: "https://example.com/mcp" } } }, null, 2) + "\n";
+  const { request, file } = await fixture(t, original);
+  const { revision } = await (await request("/api/mcp/global")).json();
+  const removed = await request("/api/mcp/global/servers/a", { method: "DELETE", headers: json, body: JSON.stringify({ revision }) });
+  assert.equal(removed.status, 200);
+  const after = await removed.json();
+  assert.deepEqual(after.servers.map((s: { name: string }) => s.name), ["b"]);
+  assert.equal(after.hasBackup, true);
+  const undo = await request("/api/mcp/global/restore", { method: "POST", headers: json, body: JSON.stringify({ revision: after.revision }) });
+  assert.equal(undo.status, 200);
+  assert.equal(await readFile(file, "utf8"), original);
+});

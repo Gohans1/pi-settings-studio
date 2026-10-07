@@ -78,6 +78,9 @@ test("desktop and narrow layouts are accessible, keyboard usable and error-free"
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.emulateMedia({ colorScheme: "light" });
   await page.getByLabel("Default model", { exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Use inherited Default model" })).toBeFocused();

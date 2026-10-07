@@ -8,7 +8,7 @@
 - [x] Tab bar shell.
 - [x] MCP: list and details (global).
 - [x] MCP: enable/disable, exposure.
-- [ ] MCP: add, edit, remove, undo.
+- [x] MCP: add, edit, remove, undo.
 - [ ] MCP: codemode controls.
 - [ ] System prompt tab.
 - [ ] Skills tab.

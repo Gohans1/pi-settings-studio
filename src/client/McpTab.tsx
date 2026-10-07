@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import type { McpFileView, McpServerView } from "../shared/mcp";
-import { loadMcp, saveMcpServer } from "./api";
+import type { McpFileView, McpServerInput, McpServerView } from "../shared/mcp";
+import { addMcpServer, editMcpServer, loadMcp, removeMcpServer, restoreMcp, saveMcpServer } from "./api";
+import { McpServerForm } from "./McpServerForm";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 
@@ -28,7 +29,9 @@ function Names({ names }: { names: string[] }) {
   return <>{names.map(name => <code key={name} className="chip">{name}</code>)}<span className="muted"> values hidden</span></>;
 }
 
-function ServerDetail({ server, busy, onExposure }: { server: McpServerView; busy: boolean; onExposure: (exposure: string) => void }) {
+function ServerDetail({ server, busy, onExposure, onEdit, onRemove }: {
+  server: McpServerView; busy: boolean; onExposure: (exposure: string) => void; onEdit: () => void; onRemove: () => void;
+}) {
   const rows: [string, React.ReactNode][] = [];
   if (server.description) rows.push(["Description", server.description]);
   if (server.transport) rows.push(["Transport", server.transport === "http" ? "Streamable HTTP" : "stdio"]);
@@ -52,6 +55,10 @@ function ServerDetail({ server, busy, onExposure }: { server: McpServerView; bus
     {server.error && <div className="error"><strong>Pi refuses this entry, so it never connects:</strong><p>{server.error}</p></div>}
     {!server.error && !server.enabled && <p className="notice">Turned off in the file, so it does not connect.</p>}
     <dl className="detail-list">{rows.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
+    <div className="actions detail-actions">
+      <Button variant="outline" disabled={busy} onClick={onEdit} aria-label={`Edit ${server.name}`}>Edit</Button>
+      <Button variant="destructive" disabled={busy} onClick={onRemove} aria-label={`Remove ${server.name}`}>Remove</Button>
+    </div>
   </section>;
 }
 
@@ -61,6 +68,9 @@ export function McpTab() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<"view" | "add" | "edit">("view");
+  const [formError, setFormError] = useState("");
+  const [undo, setUndo] = useState(false);
 
   async function refresh() {
     setError("");
@@ -69,15 +79,32 @@ export function McpTab() {
   }
   useEffect(() => { void refresh(); }, []);
 
-  async function save(name: string, patch: { enabled?: boolean; exposure?: string }, done: string) {
+  async function run(change: (revision: string) => Promise<McpFileView>, done: string, options: { undoable?: boolean } = {}) {
     if (!view) return;
-    setBusy(true); setError(""); setMessage("");
+    setBusy(true); setError(""); setMessage(""); setUndo(false);
     try {
-      setView(await saveMcpServer(name, view.revision, patch));
+      setView(await change(view.revision));
       setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
+      setUndo(!!options.undoable);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not change the server.");
       await refresh();
+    } finally { setBusy(false); }
+  }
+  const save = (name: string, patch: { enabled?: boolean; exposure?: string }, done: string) =>
+    run(revision => saveMcpServer(name, revision, patch), done);
+  async function submit(name: string, input: McpServerInput) {
+    if (!view) return;
+    setBusy(true); setFormError(""); setMessage(""); setUndo(false);
+    try {
+      setView(mode === "add" ? await addMcpServer(view.revision, name, input) : await editMcpServer(selected!, view.revision, input));
+      setMessage(`${mode === "add" ? name : selected} ${mode === "add" ? "added" : "saved"}. Applies to new T3Code threads, or after /reload.`);
+      if (mode === "add") setSelected(name);
+      setMode("view");
+    } catch (cause) {
+      // Keep the draft next to the error; reload the view in case the file changed.
+      setFormError(cause instanceof Error ? cause.message : "Could not save the server.");
+      try { setView(await loadMcp()); } catch { /* the form error already explains */ }
     } finally { setBusy(false); }
   }
 
@@ -87,22 +114,28 @@ export function McpTab() {
   return <>
     <div className="page-heading"><div><h1>MCP</h1><p>Servers Pi connects to. Changes apply to new T3Code threads, or after /reload.</p></div></div>
     {view && <div className="scope-info"><code>{view.path}</code></div>}
-    <div role="status" className="feedback">{message}</div>
+    <div role="status" className="feedback">{message}{undo && view && <>{" "}<Button variant="outline" size="sm" disabled={busy}
+      onClick={() => void run(restoreMcp, "Restored the previous mcp.json.")}>Undo</Button></>}</div>
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Try again</Button></div>}
     {view?.error && <div role="alert" className="error"><strong>Pi loads none of these servers</strong><p>{view.error}</p></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
       <section className="master" aria-labelledby="global-servers">
         <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {servers.length} servers on</span></div>
+        <Button variant="outline" size="sm" className="add-button" disabled={busy || !!view.error} onClick={() => { setMode("add"); setFormError(""); }}>Add server</Button>
         {servers.length ? <ul className="item-list">{servers.map(server => <li key={server.name}>
-          <button type="button" aria-pressed={server.name === selected} onClick={() => setSelected(server.name)}>
+          <button type="button" aria-pressed={server.name === selected} onClick={() => { setSelected(server.name); setMode("view"); }}>
             <span className="item-name">{server.name}</span><span className="item-state" data-state={shortState(server)}>{shortState(server)}</span>
           </button>
           <Switch aria-label={`Enable ${server.name}`} checked={server.enabled} disabled={busy}
             onCheckedChange={enabled => void save(server.name, { enabled }, `${server.name} turned ${enabled ? "on" : "off"}.`)} />
         </li>)}</ul> : !view.error && <p className="empty">No MCP servers yet.</p>}
       </section>
-      {current ? <ServerDetail server={current} busy={busy}
-        onExposure={exposure => void save(current.name, { exposure }, `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`)} /> : <section className="detail"><p className="empty">Select a server to see its details.</p></section>}
+      {mode !== "view" ? <McpServerForm key={mode + (selected ?? "")} server={mode === "edit" ? current : undefined} busy={busy} error={formError}
+        onSave={(name, input) => void submit(name, input)} onCancel={() => setMode("view")} />
+      : current ? <ServerDetail server={current} busy={busy}
+        onExposure={exposure => void save(current.name, { exposure }, `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`)}
+        onEdit={() => { setMode("edit"); setFormError(""); }}
+        onRemove={() => void run(revision => removeMcpServer(current.name, revision), `Removed ${current.name} from mcp.json.`, { undoable: true })} /> : <section className="detail"><p className="empty">Select a server to see its details.</p></section>}
     </div>}
   </>;
 }

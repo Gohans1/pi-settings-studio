@@ -35,7 +35,7 @@ button, summary, select { cursor: pointer; }
 button:disabled, select:disabled { cursor: not-allowed; opacity: .6; }
 input, select, textarea { caret-color: var(--primary); }
 input::placeholder, textarea::placeholder { color: var(--muted-foreground); opacity: 1; }
-button { color: inherit; }
+@layer base { button { color: inherit; } }
 p { margin: 0; }
 h1 { font-size: 28px; font-weight: 620; line-height: 1.25; letter-spacing: -.025em; margin: 0 0 8px; }
 h2 { font-size: 21px; font-weight: 600; margin: 0 0 12px; }
@@ -47,6 +47,7 @@ svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.7; }
 .tab-bar { height: 60px !important; gap: 4px; }
 .tab-bar [data-slot=tabs-trigger] { height: 100%; padding-inline: 10px; font-size: 13px; }
 .tab-bar [data-slot=tabs-trigger]::after { bottom: 0; }
+.tab-bar [data-slot=tabs-trigger]:not([data-active]) { color: var(--muted-foreground); }
 .search { display: flex; align-items: center; gap: 10px; width: min(320px, 100%); color: var(--muted-foreground); border-bottom: 1px solid var(--border); }
 .search input { min-width: 0; width: 100%; background: transparent; border: 0; padding: 8px 0; color: var(--foreground); }
 select, input:not([type=search]), textarea { border: 1px solid var(--input); background: var(--control); color: var(--foreground); border-radius: var(--radius); padding: 9px 12px; min-height: 40px; }
@@ -101,6 +102,16 @@ textarea { resize: vertical; }
 .detail-list dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .chip { display: inline-block; margin: 0 6px 4px 0; padding: 1px 6px; border: 1px solid var(--border); border-radius: var(--radius); }
 .notice { padding: 10px 14px; background: var(--muted); border-radius: var(--radius); color: var(--muted-foreground); }
+.add-button { margin-top: 10px; }
+.detail-actions { margin-top: 20px; }
+.server-form { display: grid; gap: 16px; max-width: 640px; }
+.server-form label, .server-form fieldset { display: grid; gap: 6px; font-weight: 560; }
+.server-form label > *, .server-form fieldset { font-weight: 400; }
+.server-form fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin: 0; }
+.server-form legend { padding: 0 4px; font-weight: 560; }
+.named-rows { display: grid; gap: 8px; justify-items: start; }
+.named-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 8px; width: 100%; }
+.feedback [data-slot=button] { margin-left: 8px; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {

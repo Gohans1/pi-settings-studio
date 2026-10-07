@@ -1,5 +1,5 @@
 import type { SettingsView, SettingsChange } from "../shared/settings";
-import type { McpFileView } from "../shared/mcp";
+import type { McpFileView, McpServerInput } from "../shared/mcp";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -20,3 +20,10 @@ export const restoreSettings = (scope: Scope, revision: string) =>
 export const loadMcp = () => request<McpFileView>("/api/mcp/global");
 export const saveMcpServer = (name: string, revision: string, patch: { enabled?: boolean; exposure?: string }) =>
   request<McpFileView>(`/api/mcp/global/servers/${encodeURIComponent(name)}`, "PATCH", { revision, ...patch });
+export const addMcpServer = (revision: string, name: string, server: McpServerInput) =>
+  request<McpFileView>("/api/mcp/global/servers", "POST", { revision, name, server });
+export const editMcpServer = (name: string, revision: string, server: McpServerInput) =>
+  request<McpFileView>(`/api/mcp/global/servers/${encodeURIComponent(name)}`, "PUT", { revision, server });
+export const removeMcpServer = (name: string, revision: string) =>
+  request<McpFileView>(`/api/mcp/global/servers/${encodeURIComponent(name)}`, "DELETE", { revision });
+export const restoreMcp = (revision: string) => request<McpFileView>("/api/mcp/global/restore", "POST", { revision });

@@ -33,3 +33,19 @@ export type McpFileView = {
   autoEnableCodemode?: boolean;
   servers: McpServerView[];
 };
+
+/** A name with an optional new value. Without a value, an edit keeps the stored one. */
+export type NamedValue = { name: string; value?: string };
+
+/** What the server form edits. Keys it does not manage (enabled, exposure, oauth…) are kept. */
+export type McpServerInput = {
+  transport: "stdio" | "http";
+  description?: string;
+  command?: string;
+  args?: string[];
+  cwd?: string;
+  env?: NamedValue[];
+  url?: string;
+  headers?: NamedValue[];
+  timeout?: number;
+};
