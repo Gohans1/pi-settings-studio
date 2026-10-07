@@ -9,7 +9,7 @@
 - [x] MCP: list and details (global).
 - [x] MCP: enable/disable, exposure.
 - [x] MCP: add, edit, remove, undo.
-- [ ] MCP: codemode controls.
+- [x] MCP: codemode controls.
 - [ ] System prompt tab.
 - [ ] Skills tab.
 - [ ] General tab, drift test, raw JSON.

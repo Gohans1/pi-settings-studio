@@ -6,7 +6,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.0.3 (installed). Ported Pi logi
 
 | Tab | pi-web source | Status |
 |---|---|---|
-| MCP: list, enable/disable, exposure, add/edit/remove, codemode | components/McpConfig.tsx; app/api/mcp; app/api/tools/settings | Pending |
+| MCP: list, enable/disable, exposure, add/edit/remove, codemode | components/McpConfig.tsx; app/api/mcp; app/api/tools/settings | Done for the global mcp.json; project group pending (needs the project picker) |
 | MCP: connection test, OAuth sign-in, paste import | components/McpConfig.tsx; lib/mcp-test.ts; lib/mcp-import-core.ts | Later |
 | System prompt (from T3Code session files, not pi-web's live chat) | components/SystemPromptPanel.tsx | Pending |
 | Skills: discovery, details, enable/disable | components/SkillsConfig.tsx; app/api/skills | Pending |

@@ -39,11 +39,10 @@ test("stale saves retain the draft and never overwrite a concurrent update", asy
   await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("my-draft");
 });
 
-test("search finds codemode settings; invalid budget is never saved", async ({ page }) => {
-  await page.getByRole("searchbox", { name: "Search settings" }).fill("inlineBudget");
-  await page.getByLabel("Inline tool budget", { exact: true }).fill("-1");
-  await expect(page.getByText("Enter a valid value.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
+test("search narrows the settings by label or key", async ({ page }) => {
+  await page.getByRole("searchbox", { name: "Search settings" }).fill("enabledModels");
+  await expect(page.getByLabel("Enabled models", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Default model", { exact: true })).toBeHidden();
 });
 
 test("backup restore is explicit and restores the original native document", async ({ page }) => {

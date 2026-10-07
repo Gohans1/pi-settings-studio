@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
 import { changeSchema, fields, readSetting, type SettingsView } from "../shared/settings.ts";
 import { mcpRoutes } from "./mcp-api.ts";
+import { codemodeRoutes } from "./codemode.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
@@ -77,6 +78,7 @@ export function createApp({ store, origins, staticDir }: AppOptions) {
     return c.json(await view(scope));
   });
   app.route("/api/mcp", mcpRoutes(store));
+  app.route("/api/codemode", codemodeRoutes(store));
   app.get("/api/status", c => c.json({ source: "persisted-files", liveSession: false, catalogue: "Pi 1.0.3", parityComplete: false }));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));

@@ -1,5 +1,6 @@
 import type { SettingsView, SettingsChange } from "../shared/settings";
 import type { McpFileView, McpServerInput } from "../shared/mcp";
+import type { CodemodeView } from "../shared/codemode";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -27,3 +28,8 @@ export const editMcpServer = (name: string, revision: string, server: McpServerI
 export const removeMcpServer = (name: string, revision: string) =>
   request<McpFileView>(`/api/mcp/global/servers/${encodeURIComponent(name)}`, "DELETE", { revision });
 export const restoreMcp = (revision: string) => request<McpFileView>("/api/mcp/global/restore", "POST", { revision });
+export const loadCodemode = () => request<CodemodeView>("/api/codemode");
+export const saveCodemode = (revision: string, patch: { preference?: string; mode?: string; inlineBudget?: number | null }) =>
+  request<CodemodeView>("/api/codemode", "PATCH", { revision, ...patch });
+export const saveMcpSettings = (revision: string, patch: { autoEnableCodemode: boolean }) =>
+  request<McpFileView>("/api/mcp/global/settings", "PATCH", { revision, ...patch });

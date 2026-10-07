@@ -9,7 +9,7 @@ import { Button } from "./components/ui/button";
 const scope = "global";
 const groups = [
   { id: "models", title: "Models & thinking" },
-  { id: "tools", title: "Tools & codemode" },
+  { id: "tools", title: "Tools" },
 ] as const;
 
 export function GeneralTab() {

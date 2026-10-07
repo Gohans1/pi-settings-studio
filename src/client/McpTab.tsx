@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import type { McpFileView, McpServerInput, McpServerView } from "../shared/mcp";
-import { addMcpServer, editMcpServer, loadMcp, removeMcpServer, restoreMcp, saveMcpServer } from "./api";
+import type { CodemodeView } from "../shared/codemode";
+import { addMcpServer, editMcpServer, loadCodemode, loadMcp, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings } from "./api";
+import { CodemodePanel } from "./CodemodePanel";
 import { McpServerForm } from "./McpServerForm";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
+
+// Not a valid server name, so it cannot collide with one.
+const CODEMODE = "#codemode";
 
 const exposureLabels: Record<string, [string, string]> = {
   codemode: ["Code mode", "Callable from codemode scripts; not declared to the model."],
@@ -64,6 +69,7 @@ function ServerDetail({ server, busy, onExposure, onEdit, onRemove }: {
 
 export function McpTab() {
   const [view, setView] = useState<McpFileView>();
+  const [codemode, setCodemode] = useState<CodemodeView>();
   const [selected, setSelected] = useState<string>();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -74,7 +80,10 @@ export function McpTab() {
 
   async function refresh() {
     setError("");
-    try { setView(await loadMcp()); }
+    try {
+      const [mcp, code] = await Promise.all([loadMcp(), loadCodemode()]);
+      setView(mcp); setCodemode(code);
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the MCP settings."); }
   }
   useEffect(() => { void refresh(); }, []);
@@ -91,6 +100,20 @@ export function McpTab() {
       await refresh();
     } finally { setBusy(false); }
   }
+  async function refreshCodemode() {
+    try { setCodemode(await loadCodemode()); } catch { /* the MCP view still works */ }
+  }
+  async function runCodemode(patch: Parameters<typeof saveCodemode>[1], done: string) {
+    if (!codemode) return;
+    setBusy(true); setError(""); setMessage(""); setUndo(false);
+    try {
+      setCodemode(await saveCodemode(codemode.revision, patch));
+      setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save Code mode.");
+      await refreshCodemode();
+    } finally { setBusy(false); }
+  }
   const save = (name: string, patch: { enabled?: boolean; exposure?: string }, done: string) =>
     run(revision => saveMcpServer(name, revision, patch), done);
   async function submit(name: string, input: McpServerInput) {
@@ -104,7 +127,10 @@ export function McpTab() {
     } catch (cause) {
       // Keep the draft next to the error; reload the view in case the file changed.
       setFormError(cause instanceof Error ? cause.message : "Could not save the server.");
-      try { setView(await loadMcp()); } catch { /* the form error already explains */ }
+      try {
+      const [mcp, code] = await Promise.all([loadMcp(), loadCodemode()]);
+      setView(mcp); setCodemode(code);
+    } catch { /* the form error already explains */ }
     } finally { setBusy(false); }
   }
 
@@ -120,6 +146,9 @@ export function McpTab() {
     {view?.error && <div role="alert" className="error"><strong>Pi loads none of these servers</strong><p>{view.error}</p></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
       <section className="master" aria-labelledby="global-servers">
+        <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === CODEMODE} onClick={() => { setSelected(CODEMODE); setMode("view"); }}>
+          <span className="item-name">Code mode</span><span className="item-state">{codemode ? codemode.disabledByExtensions ? "off" : codemode.preference === "always" ? "always on" : "automatic" : ""}</span>
+        </button></li></ul>
         <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {servers.length} servers on</span></div>
         <Button variant="outline" size="sm" className="add-button" disabled={busy || !!view.error} onClick={() => { setMode("add"); setFormError(""); }}>Add server</Button>
         {servers.length ? <ul className="item-list">{servers.map(server => <li key={server.name}>
@@ -132,6 +161,10 @@ export function McpTab() {
       </section>
       {mode !== "view" ? <McpServerForm key={mode + (selected ?? "")} server={mode === "edit" ? current : undefined} busy={busy} error={formError}
         onSave={(name, input) => void submit(name, input)} onCancel={() => setMode("view")} />
+      : selected === CODEMODE && codemode ? <CodemodePanel key={codemode.revision} view={codemode} autoEnable={view.autoEnableCodemode ?? true} busy={busy}
+        onChange={(patch, done) => void runCodemode(patch, done)}
+        onAutoEnable={enabled => void run(revision => saveMcpSettings(revision, { autoEnableCodemode: enabled }),
+          enabled ? "Code mode turns on automatically again." : "Code mode no longer turns on automatically.").then(refreshCodemode)} />
       : current ? <ServerDetail server={current} busy={busy}
         onExposure={exposure => void save(current.name, { exposure }, `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`)}
         onEdit={() => { setMode("edit"); setFormError(""); }}

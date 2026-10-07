@@ -33,7 +33,7 @@ html { scrollbar-color: var(--input) var(--background); }
 button, input, select, textarea { font: inherit; }
 button, summary, select { cursor: pointer; }
 button:disabled, select:disabled { cursor: not-allowed; opacity: .6; }
-input, select, textarea { caret-color: var(--primary); }
+input, select, textarea { caret-color: var(--primary); accent-color: var(--primary); }
 input::placeholder, textarea::placeholder { color: var(--muted-foreground); opacity: 1; }
 @layer base { button { color: inherit; } }
 p { margin: 0; }
@@ -112,6 +112,20 @@ textarea { resize: vertical; }
 .named-rows { display: grid; gap: 8px; justify-items: start; }
 .named-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 8px; width: 100%; }
 .feedback [data-slot=button] { margin-left: 8px; }
+.codemode-item { margin: 0 0 20px; }
+.codemode { display: grid; gap: 16px; max-width: 680px; }
+.codemode h2 { margin: 0; }
+.codemode fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px 12px; margin: 0; display: grid; gap: 4px; }
+.codemode legend { padding: 0 4px; font-weight: 560; }
+.choice { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; cursor: pointer; }
+.choice > span { display: grid; }
+.choice input { margin-top: 4px; }
+.budget { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; }
+.budget label { display: grid; gap: 6px; font-weight: 560; width: min(220px, 100%); }
+.budget input { font-weight: 400; }
+.budget p { flex-basis: 100%; }
+.budget [data-slot=button] { min-height: 40px; padding-inline: 16px; }
+.switch-row { display: flex; gap: 12px; align-items: center; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {

@@ -163,6 +163,16 @@ export function mcpRoutes(store: ConfigStore) {
       }, "mcp.json");
       return c.json(await mcpView(store));
     })
+    .patch("/global/settings", async c => {
+      const { revision, autoEnableCodemode } = z.object({ revision: z.string().min(1).max(100), autoEnableCodemode: z.boolean() }).strict().parse(await c.req.json());
+      await store.transform("global", revision, file => {
+        // true is Pi's default: remove the key.
+        if (autoEnableCodemode) delete file.autoEnableCodemode;
+        else file.autoEnableCodemode = false;
+        return file;
+      }, "mcp.json");
+      return c.json(await mcpView(store));
+    })
     .post("/global/restore", async c => {
       const { revision } = revisionOnly.parse(await c.req.json());
       await store.restore("global", revision, "mcp.json");

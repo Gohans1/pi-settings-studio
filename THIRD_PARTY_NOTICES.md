@@ -4,6 +4,10 @@
 
 `src/server/mcp-config.ts` ports `mcp.json` validation and edit rules from `dist/core/mcp-servers.js` and `dist/extensions/mcp/config.js`. License: MIT (per the package's `package.json`), author Mario Zechner.
 
+## pi-web
+
+`src/server/codemode.ts` follows the Code mode rules of pi-web's `lib/codemode-settings.ts` and `lib/powershell-settings.ts` (commit `fdeea87`). License: MIT, Copyright (c) 2026 agegr.
+
 ## shadcn/ui (Base Nova)
 
 `src/client/components/ui/button.tsx`, `tabs.tsx` and `switch.tsx` come from the shadcn registry (base-nova style, retrieved 2026-10-07; `cn` import pointed at `@/lib/utils`). The `data-horizontal`/`data-vertical` custom variants in `src/client/styles.css` come from `shadcn@4.21.4` `dist/tailwind.css`.

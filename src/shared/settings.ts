@@ -19,8 +19,6 @@ export const fields: Field[] = [
   { key: "defaultThinkingLevel", label: "Thinking level", section: "models", kind: "select", help: "Preferred reasoning effort. Support depends on the selected model.", options: ["off", "minimal", "low", "medium", "high", "xhigh", "max"], defaultValue: "medium", schema: z.enum(["off", "minimal", "low", "medium", "high", "xhigh", "max"]) },
   { key: "enabledModels", label: "Enabled models", section: "models", kind: "lines", help: "One model pattern per line, using Pi's --models format. An inherited value allows all available models.", schema: lines },
   { key: "defaultTools", label: "Startup tools", section: "tools", kind: "lines", help: "One tool per line. +codemode adds codemode to inherited tools. Plain names replace the selection; an empty list disables built-in tools, not SDK or extension tools.", defaultValue: ["read", "bash", "edit", "write"], schema: lines },
-  { key: "codemode.mode", label: "Codemode exposure", section: "tools", kind: "select", help: "on keeps declared tools visible; only routes eligible tools through codemode. Applies when codemode is enabled.", options: ["on", "only"], defaultValue: "on", schema: z.enum(["on", "only"]) },
-  { key: "codemode.inlineBudget", label: "Inline tool budget", section: "tools", kind: "number", help: "Estimated tokens allowed for tool declarations. Zero lists namespaces only; remaining tools are discovered with searchTools().", defaultValue: 3000, schema: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) },
 ];
 export const changeSchema = z.object({
   revision: z.string().min(1).max(100),

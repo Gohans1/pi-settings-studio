@@ -15,7 +15,7 @@ async function fixture(t: import("node:test").TestContext) {
   await mkdir(roots.global, { recursive: true });
   await mkdir(roots.project, { recursive: true });
   const file = join(roots.global, "settings.json");
-  await writeFile(file, JSON.stringify({ defaultModel: "global-model", codemode: { mode: "only" }, privateExtension: { apiKey: "fixture-secret" } }));
+  await writeFile(file, JSON.stringify({ defaultModel: "global-model", defaultThinkingLevel: "high", privateExtension: { apiKey: "fixture-secret" } }));
   const app = createApp({ store: new ConfigStore(roots), origins: [origin, localhostOrigin] });
   async function request(path: string, options: RequestInit = {}, base = origin) {
     return app.request(new Request(base + path, { ...options, headers: { host: new URL(base).host, ...options.headers } }));
@@ -54,7 +54,7 @@ test("project reads distinguish local and inherited values without leaking unkno
   const data = await response.json();
   assert.equal(data.values.defaultModel, "project-model");
   assert.equal(data.inherited.defaultModel, "global-model");
-  assert.equal(data.inherited["codemode.mode"], "only");
+  assert.equal(data.inherited.defaultThinkingLevel, "high");
   assert.doesNotMatch(JSON.stringify(data), /fixture-secret|privateExtension/);
   assert.match(response.headers.get("content-security-policy")!, /frame-ancestors 'none'/);
   assert.equal(response.headers.get("cache-control"), "no-store");

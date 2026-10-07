@@ -100,3 +100,27 @@ test("a server Pi would refuse is not saved and the form keeps the draft", async
   expect(JSON.parse(await readFile(file, "utf8")).mcpServers.web).toBeUndefined();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("Code mode choices save at once; the tool list budget saves on Save", async ({ page }) => {
+  const settings = async () => JSON.parse(await readFile(join(root, "agent", "settings.json"), "utf8"));
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: /^Code mode/ }).click();
+  const panel = page.getByRole("region", { name: "Code mode" });
+  await panel.getByRole("radio", { name: /Always on/ }).check();
+  await expect(page.getByRole("status")).toContainText("Code mode is always on");
+  expect((await settings()).defaultTools).toEqual(["+codemode"]);
+  await panel.getByRole("radio", { name: /In scripts/ }).check();
+  await expect(page.getByRole("status")).toContainText("Built-in tools are called from scripts");
+  expect((await settings()).codemode).toEqual({ mode: "only" });
+  const budget = panel.getByLabel("Tool list budget");
+  await budget.fill("-1");
+  await expect(panel.getByRole("button", { name: "Save budget" })).toBeDisabled();
+  await budget.fill("1200");
+  await panel.getByRole("button", { name: "Save budget" }).click();
+  await expect(page.getByRole("status")).toContainText("Tool list budget saved");
+  expect((await settings()).codemode).toEqual({ mode: "only", inlineBudget: 1200 });
+  await panel.getByRole("switch", { name: "Turn Code mode on automatically" }).click();
+  await expect(page.getByRole("status")).toContainText("no longer turns on automatically");
+  expect(JSON.parse(await readFile(file, "utf8")).autoEnableCodemode).toBe(false);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
