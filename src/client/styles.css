@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
+/* From shadcn@4.21.4 dist/tailwind.css (MIT): Base UI marks orientation with data-orientation. */
+@custom-variant data-horizontal { &:where([data-orientation="horizontal"]) { @slot; } }
+@custom-variant data-vertical { &:where([data-orientation="vertical"]) { @slot; } }
 :root {
   --background: #fbfbf9; --foreground: #222822; --muted: #f0f2ed;
   --muted-foreground: #60695e; --border: #d5dbd1; --input: #c4ccbf;
@@ -38,27 +41,21 @@ h1 { font-size: 28px; font-weight: 620; line-height: 1.25; letter-spacing: -.025
 h2 { font-size: 21px; font-weight: 600; margin: 0 0 12px; }
 code { font-family: ui-monospace, monospace; font-size: 12px; overflow-wrap: anywhere; }
 svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.7; }
-.workspace { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100svh; }
-.sidebar { padding: 28px 20px; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 44px; }
-.identity { display: flex; align-items: center; gap: 12px; font-weight: 650; font-size: 17px; line-height: 1.3; }
-.identity svg { width: 24px; height: 24px; color: var(--primary); }
-.identity-detail { display: block; font-size: 12px; font-weight: 450; color: var(--muted-foreground); }
-nav { display: grid; gap: 8px; }
-nav button { display: flex; align-items: center; gap: 10px; background: transparent; border: 0; border-radius: var(--radius); text-align: left; padding: 12px; font-size: 13px; }
-nav button:hover { background: var(--secondary); }
-nav button[aria-current] { background: var(--secondary); color: var(--secondary-foreground); font-weight: 650; }
-.sidebar-note { display: flex; align-items: flex-start; gap: 10px; margin-top: auto; padding-top: 32px; color: var(--muted-foreground); font-size: 12px; }
-.main-column { min-width: 0; }
-.toolbar { min-height: 80px; padding: 16px 40px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.search { display: flex; align-items: center; gap: 10px; max-width: 400px; flex: 1; color: var(--muted-foreground); }
+.app { display: block; min-height: 100svh; }
+.app-header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 32px; padding: 0 40px; min-height: 60px; background: var(--sidebar); border-bottom: 1px solid var(--border); overflow-x: auto; }
+.identity { font-weight: 650; font-size: 17px; }
+.tab-bar { height: 60px !important; gap: 4px; }
+.tab-bar [data-slot=tabs-trigger] { height: 100%; padding-inline: 10px; font-size: 13px; }
+.tab-bar [data-slot=tabs-trigger]::after { bottom: 0; }
+.search { display: flex; align-items: center; gap: 10px; width: min(320px, 100%); color: var(--muted-foreground); border-bottom: 1px solid var(--border); }
 .search input { min-width: 0; width: 100%; background: transparent; border: 0; padding: 8px 0; color: var(--foreground); }
-.scope-label { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--muted-foreground); }
 select, input:not([type=search]), textarea { border: 1px solid var(--input); background: var(--control); color: var(--foreground); border-radius: var(--radius); padding: 9px 12px; min-height: 40px; }
 main { max-width: 1160px; padding: 40px; margin-inline: auto; }
 .page-heading { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
 .page-heading p { color: var(--muted-foreground); }
-.preview-label { color: var(--muted-foreground); font-size: 11px; white-space: nowrap; border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; }
-.scope-info { margin-top: 24px; display: grid; gap: 6px; color: var(--muted-foreground); font-size: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.scope-info { margin-top: 12px; color: var(--muted-foreground); font-size: 12px; overflow-wrap: anywhere; }
+.settings-group { margin-top: 36px; }
+.settings-group h2 { font-size: 17px; padding-bottom: 12px; margin: 0; border-bottom: 1px solid var(--border); }
 .setting-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .85fr); gap: 40px; padding: 28px 0; border-bottom: 1px solid var(--border); }
 .setting-label label { font-weight: 620; }
 .setting-label p { color: var(--muted-foreground); font-size: 13px; margin-top: 6px; max-width: 62ch; }
@@ -85,28 +82,18 @@ textarea { resize: vertical; }
 .loading, .empty { padding: 40px 0; color: var(--muted-foreground); }
 .review { padding-top: 28px; }
 .review p { color: var(--muted-foreground); max-width: 75ch; margin-bottom: 20px; }
-.change-list { list-style: none; margin: 24px 0; padding: 0; }
-.change-list li { display: grid; gap: 8px; padding: 20px 0; border-block-end: 1px solid var(--border); }
-.change-list li > code { color: var(--muted-foreground); }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {
-  .workspace { grid-template-columns: 200px minmax(0, 1fr); }
-  .toolbar { padding: 16px 24px; }
+  .app-header { padding: 0 24px; gap: 20px; }
   main { padding: 28px 24px; }
   .setting-row { gap: 24px; }
   .page-heading { flex-direction: column; }
 }
 @media (max-width: 700px) {
-  .workspace { display: block; }
-  .sidebar { padding: 16px; border-right: 0; border-bottom: 1px solid var(--border); gap: 16px; }
-  .identity-detail { display: inline; margin-left: 6px; }
-  nav { display: flex; gap: 4px; flex-wrap: wrap; }
-  nav button { padding: 10px; min-height: 44px; }
-  .sidebar-note { display: none; }
-  .toolbar { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
-  .search { flex-basis: 100%; max-width: none; }
-  .scope-label { width: 100%; justify-content: space-between; }
+  .app-header { padding: 0 16px; gap: 12px; }
+  .identity { display: none; }
+  .search { width: 100%; }
   main { padding: 28px 16px; }
   h1 { font-size: 26px; }
   .setting-row { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 0; }

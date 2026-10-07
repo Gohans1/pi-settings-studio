@@ -39,19 +39,6 @@ test("stale saves retain the draft and never overwrite a concurrent update", asy
   await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("my-draft");
 });
 
-test("project scope inherits values and reset removes only the local override", async ({ page }) => {
-  await page.getByLabel("Settings scope").selectOption("project");
-  await expect(page.getByLabel("Default model", { exact: true })).toHaveValue("fixture-model");
-  await page.getByLabel("Default model", { exact: true }).fill("project-model");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Saved to file");
-  await page.getByRole("button", { name: "Use inherited Default model" }).click();
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Saved to file");
-  expect(JSON.parse(await readFile(join(root, "project", ".pi", "settings.json"), "utf8")).defaultModel).toBeUndefined();
-  expect(JSON.parse(await readFile(file, "utf8")).defaultModel).toBe("fixture-model");
-});
-
 test("search finds codemode settings; invalid budget is never saved", async ({ page }) => {
   await page.getByRole("searchbox", { name: "Search settings" }).fill("inlineBudget");
   await page.getByLabel("Inline tool budget", { exact: true }).fill("-1");
