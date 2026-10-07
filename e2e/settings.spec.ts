@@ -69,6 +69,7 @@ test("model patterns can be entered as separate lines without losing Enter", asy
 });
 
 test("desktop and narrow layouts are accessible, keyboard usable and error-free", async ({ page }) => {
+  test.slow(); // Four axe passes over the full General page.
   const errors: string[] = [];
   page.on("pageerror", e => errors.push(e.message));
   await expect(page.getByRole("heading", { name: "Models & thinking" })).toBeVisible();
@@ -84,6 +85,15 @@ test("desktop and narrow layouts are accessible, keyboard usable and error-free"
   await page.emulateMedia({ colorScheme: "light" });
   await page.getByLabel("Default model", { exact: true }).focus();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Use inherited Default model" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Reset Default model to Pi's default" })).toBeFocused();
   expect(errors).toEqual([]);
+});
+
+test("a switch and a typed choice save with their JSON types", async ({ page }) => {
+  await page.getByRole("switch", { name: "Automatic compaction" }).click();
+  await page.getByLabel("Image protocol").selectOption("false");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Saved");
+  const saved = JSON.parse(await readFile(file, "utf8"));
+  expect([saved.compaction, saved.terminal]).toEqual([{ enabled: false }, { images: false }]);
 });

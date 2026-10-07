@@ -98,3 +98,22 @@ test("backup recovery requires confirmation and a current revision", async (t) =
   assert.equal(restored.status, 200);
   assert.equal((await restored.json()).values.defaultModel, "global-model");
 });
+
+test("booleans, nested numbers and typed choices are saved with their JSON types", async (t) => {
+  const { request, file } = await fixture(t);
+  const headers = { origin, "content-type": "application/json" };
+  const patch = async (changes: object[]) => {
+    const { revision } = await (await request("/api/settings/global")).json();
+    return request("/api/settings/global", { method: "PATCH", headers, body: JSON.stringify({ revision, changes }) });
+  };
+  for (const changes of [[{ key: "editorPaddingX", value: 5 }], [{ key: "terminal.images", value: "png" }], [{ key: "fullscreenWheelScrollLines", value: "500" }]]) {
+    assert.equal((await patch(changes)).status, 422);
+  }
+  assert.equal((await patch([
+    { key: "compaction.enabled", value: false }, { key: "retry.provider.maxRetries", value: 2 },
+    { key: "terminal.images", value: false }, { key: "quietStartup", value: "header" }, { key: "fullscreenWheelScrollLines", value: "6" },
+  ])).status, 200);
+  const saved = JSON.parse(await readFile(file, "utf8"));
+  assert.deepEqual([saved.compaction, saved.retry, saved.terminal, saved.quietStartup, saved.fullscreenWheelScrollLines],
+    [{ enabled: false }, { provider: { maxRetries: 2 } }, { images: false }, "header", 6]);
+});

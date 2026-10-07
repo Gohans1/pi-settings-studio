@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, RotateCcw } from "lucide-react";
-import { fields, type SettingsChange, type SettingsView } from "../shared/settings";
+import { fields, sections, type SettingsChange, type SettingsView } from "../shared/settings";
 import { loadSettings, restoreSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
 
 // General edits the global settings file only (SPEC.md).
 const scope = "global";
-const groups = [
-  { id: "models", title: "Models & thinking" },
-  { id: "tools", title: "Tools" },
-] as const;
 
 export function GeneralTab() {
   const [query, setQuery] = useState("");
@@ -97,19 +93,22 @@ export function GeneralTab() {
     <div className="page-heading"><div><h1 ref={title} tabIndex={-1}>General</h1><p>Pi core settings shared by every project.</p></div>
       <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search settings" placeholder="Search settings or keys…" value={query} onChange={e => setQuery(e.target.value)} /></div></div>
     {view && <div className="scope-info"><code>{view.path}</code></div>}
+    {!needle && <nav className="section-links" aria-label="Setting groups">{sections.map(section => <a key={section.id} href={"#group-" + section.id}
+      onClick={event => { event.preventDefault(); document.getElementById("group-" + section.id)?.scrollIntoView({ behavior: "smooth" }); }}>{section.title}</a>)}</nav>}
     <div role="status" className="feedback">{message}</div>
     {error && <div role="alert" className="error"><strong>Could not complete the operation</strong><p>{error}</p><Button variant="outline" disabled={busy} onClick={() => void refresh()}>Reload settings</Button></div>}
     {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && <>
       {restore ? <section className="review"><h2>Restore previous file?</h2><p>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</p><div className="actions"><Button variant="outline" disabled={busy} onClick={() => setRestore(false)}>Cancel</Button><Button disabled={busy} onClick={() => void recover()}>Confirm restore</Button></div></section> : <>
-        {groups.map(group => {
+        {sections.map(group => {
           const items = results.filter(field => field.section === group.id);
           return items.length > 0 && <section key={group.id} className="settings-group" aria-labelledby={"group-" + group.id}>
             <h2 id={"group-" + group.id}>{group.title}</h2>
+            {"note" in group && <p className="notice">{group.note}</p>}
             <div className="settings-list">{items.map(field => {
               const edit = draft[field.key];
               const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
               const value = edit ? "value" in edit ? edit.value : view.inherited[field.key] : view.values[field.key] ?? view.inherited[field.key];
-              return <SettingField key={field.key} field={field} value={value} inherited={view.inherited[field.key]} overridden={overridden}
+              return <SettingField key={field.key} field={field} value={value} overridden={overridden}
                 invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
                 onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;
             })}</div>
