@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
   await mkdir(agentDir);
   file = join(agentDir, "settings.json");
   await writeFile(file, JSON.stringify({ defaultProvider: "test-provider", shellCommandPrefix: "fixture-prefix", extensionSecret: "fixture-not-real" }));
-  server = await startServer({ agentDir, projectDir: join(root, "project"), staticDir: resolve("dist/client") });
+  server = await startServer({ agentDir, projectDir: join(root, "project"), port: 0, staticDir: resolve("dist/client") });
   await page.goto(server.url);
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
