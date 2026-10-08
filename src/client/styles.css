@@ -217,9 +217,9 @@
   .detail-header h2 { margin: 0; overflow-wrap: anywhere; }
   .detail-header .actions { margin-inline-start: auto; }
   .detail > :is(.notice, .error) { margin-bottom: --spacing(4); }
-  .detail > header:not(.detail-header) h2 { margin: 0; }
-  .detail > header:not(.detail-header) > p { margin: --spacing(1) 0 0; }
-  .detail > header .file-path { margin-top: --spacing(2); }
+  /* An editor's heading block: title, what it does, the file. */
+  :is(.detail, .raw-editor) > header:not(.detail-header) { display: grid; gap: --spacing(1); justify-items: start; }
+  :is(.detail, .raw-editor) > header:not(.detail-header) :is(h2, p) { margin: 0; }
   .detail-list { margin: 0; display: grid; }
   .detail-list > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: --spacing(4); padding: --spacing(2.5) 0; border-top: 1px solid var(--border); }
   .detail-list > div:last-child { border-bottom: 1px solid var(--border); }

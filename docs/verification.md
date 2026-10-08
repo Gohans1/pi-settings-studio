@@ -1,3 +1,22 @@
+# Verification — interface craft pass, 2026-10-08
+
+Scope: app shell, workbench panes for every list tab, toast confirmations, menus for secondary actions, the General index and save bar, focus, contrast and narrow-screen behaviour. Reviewed against the `better-accessibility`, `better-layout`, `better-writing`, `better-typography`, `better-colors` and `better-ui` skills, Emil Kowalski's motion rules and Impeccable's craft floor.
+
+| Check | Result |
+|---|---|
+| `bun test` | 215 passed (36 files), including 30 new contrast pairs for the selected row, popovers, callout surfaces and the toast |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run test:e2e` (axe in light and dark mode) | 54 passed: 45 updated for menus and the Packages entry, 9 new (window title, toast dismissal, narrow-screen list/detail turns, no sideways overflow at 1280/900/320, save bar in view, section index position and counts, "/" to search, an emptied number field returning to Pi's default) |
+| Impeccable detector | No findings on `src/client` and `dist/client` |
+
+Found and fixed with a test first: Save stayed disabled after a number field was emptied, though its help says empty means Pi's default; Save and Save shortcuts were disabled for invalid values instead of leading to them; "Use default" buttons were named "Reset …", which voice control cannot reach; screen-reader text in the narrow section index escaped its scroller and widened the page.
+
+Manual browser checks against a temporary copy of the real configuration (secrets in `mcp.json` and `models.json` replaced, no `auth.json`): every tab at 1280×800 and 390×844 in light and dark; empty, selected, editing, raw JSON, project-scoped and trust states; menus and the toast with Undo; a keyboard walk through the header, page actions and list. Nothing was written to the real `~/.pi`.
+
+Not verified: Windows' Segoe UI, forced-colors mode, a real screen reader, 200% zoom on a desktop browser. The client bundle grew from 523 KB to 632 KB (Base UI's menu positioning); it is served locally.
+
+---
+
 # Verification — Flexoki design system, 2026-10-08
 
 Scope: Flexoki colour tokens with `light-dark()`, the type scale, spacing and radius scales, layout tokens, working `dark:` variants, the tailwind-merge type scale, removed `!important`, named transitions.
