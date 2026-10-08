@@ -84,7 +84,7 @@ const body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("pi-update") }).strict(),
 ]);
 
-export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, command = piCommand()) {
+export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, command = piCommand(), onPackageChange = () => {}) {
   const jobs = new Map<string, Job>();
   function create(action: JobAction, title: string, secrets: string[]): Job {
     const job: Job = { id: randomUUID(), action, title, status: "running", output: "", events: [], secrets, cancel: () => {} };
@@ -196,17 +196,20 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
         }
         case "package-install": case "package-remove": {
           const job = create(input.action, `${input.action === "package-install" ? "Install" : "Remove"} ${input.source}`, secrets);
-          runPi(job, [input.action === "package-install" ? "install" : "remove", input.source, ...local], cwd);
+          onPackageChange();
+          runPi(job, [input.action === "package-install" ? "install" : "remove", input.source, ...local], cwd, onPackageChange);
           return c.json(view(job));
         }
         case "package-update": {
           const job = create(input.action, `Update ${input.source}`, secrets);
-          runPi(job, ["update", input.source], agentDir);
+          onPackageChange();
+          runPi(job, ["update", input.source], agentDir, onPackageChange);
           return c.json(view(job));
         }
         case "packages-update": {
           const job = create(input.action, "Update all packages", secrets);
-          runPi(job, ["update", "--extensions"], agentDir);
+          onPackageChange();
+          runPi(job, ["update", "--extensions"], agentDir, onPackageChange);
           return c.json(view(job));
         }
         case "models-refresh": {

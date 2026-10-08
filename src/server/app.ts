@@ -27,6 +27,7 @@ const SCOPE = z.enum(["global", "project"]);
 export function createApp({ store, agentDir, origins, staticDir, projects = [] }: AppOptions) {
   const app = new Hono();
   const registry = projectRegistry(agentDir, projects);
+  const packageChecks: import("./resources.ts").PackageUpdateCache = new Map();
   const hosts = origins.map(origin => new URL(origin).host);
 
   app.use("*", async (c, next) => {
@@ -119,13 +120,13 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/codemode", codemodeRoutes(store, registry));
   app.route("/api/sessions", sessionRoutes(agentDir, projects));
   app.route("/api/skills", skillRoutes(store, registry, agentDir));
-  app.route("/api/plugins", pluginRoutes(store, registry, agentDir));
+  app.route("/api/plugins", pluginRoutes(store, registry, agentDir, packageChecks));
   app.route("/api/agents", agentRoutes(store, registry, agentDir));
   app.route("/api/models", modelRoutes(store, agentDir));
   app.route("/api/projects", projectRoutes(registry, store, agentDir));
   app.route("/api/instructions", instructionRoutes(store, registry, agentDir));
   app.route("/api/keybindings", keybindingRoutes(store));
-  app.route("/api/jobs", jobRoutes(store, registry, agentDir));
+  app.route("/api/jobs", jobRoutes(store, registry, agentDir, undefined, () => packageChecks.clear()));
   app.route("/api/themes", themeRoutes(store, registry, agentDir));
   app.route("/api/resource-files", resourceFileRoutes(store, registry, agentDir));
   app.route("/api/resource-paths", resourcePathRoutes(store, registry, agentDir));

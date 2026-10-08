@@ -8,8 +8,8 @@ import { homedir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 import { Hono } from "hono";
 import { z } from "zod";
-import { DefaultPackageManager, loadSkills, parseFrontmatter, SettingsManager, type ResolvedResource } from "@earendil-works/pi-coding-agent";
-import type { PackageView, PluginsView, ResourceType, ResourceView, SkillsView } from "../shared/resources.ts";
+import { DefaultPackageManager, loadSkills, parseFrontmatter, ProjectTrustStore, SettingsManager, type ResolvedResource } from "@earendil-works/pi-coding-agent";
+import type { PackageUpdateCheck, PackageView, PluginsView, ResourceType, ResourceView, SkillsView } from "../shared/resources.ts";
 import { isRecord } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 import type { ProjectRegistry } from "./projects.ts";
@@ -194,7 +194,12 @@ export function skillRoutes(store: ConfigStore, registry: ProjectRegistry, agent
 const PLUGIN_TYPES = ["extensions", "prompts", "themes"] as const;
 const FILTER_KEYS = ["autoload", "extensions", "skills", "prompts", "themes"];
 
-export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
+/** Memory only; package mutations clear both completed and in-flight entries. */
+export type PackageUpdateCache = Map<string, {
+  revision: string; projectRevision?: string; result?: PackageUpdateCheck; pending?: Promise<PackageUpdateCheck>;
+}>;
+
+export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, checks: PackageUpdateCache = new Map()) {
   const context = resourceContext(store, registry, agentDir);
   async function view(project: string | undefined): Promise<PluginsView> {
     const { resolved, revision, projectRevision, manager, settings } = await context.resolve(project);
@@ -209,10 +214,44 @@ export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agen
         return [{ scope, source, installed: !!path && existsSync(path), filtered: typeof pkg !== "string", filters }];
       });
     });
-    return { revision, ...(projectRevision ? { projectRevision } : {}), resources, packages };
+    const cached = checks.get(project ?? "");
+    const updateCheck = cached?.revision === revision && cached.projectRevision === projectRevision ? cached.result : undefined;
+    return { revision, ...(projectRevision ? { projectRevision } : {}), resources, packages, ...(updateCheck ? { updateCheck } : {}) };
   }
   return new Hono()
     .get("/", async c => c.json(await view(c.req.query("project"))))
+    .post("/updates", async c => {
+      z.object({}).strict().parse(await c.req.json());
+      const project = c.req.query("project");
+      const { manager, settings, revision, projectRevision } = await context.resolve(project);
+      if (project && !(new ProjectTrustStore(agentDir).getEntry(project)?.decision ?? settings.global.defaultProjectTrust === "always")) {
+        return c.json({ error: "Trust this project before checking its packages, or select global only." }, 403);
+      }
+      const key = project ?? "";
+      const previous = checks.get(key);
+      if (previous?.pending && previous.revision === revision && previous.projectRevision === projectRevision) {
+        return c.json(await previous.pending);
+      }
+      const entry: NonNullable<ReturnType<PackageUpdateCache["get"]>> = { revision, projectRevision };
+      // Bound the process-local history; listing never starts a check.
+      if (checks.size >= 30) checks.delete(checks.keys().next().value!);
+      checks.set(key, entry);
+      entry.pending = (async (): Promise<PackageUpdateCheck> => {
+        const offline = !!process.env.PI_OFFLINE;
+        // Public Pi API, not extension code. It uses npm view / git ls-remote, skips pins,
+        // deduplicates global/project sources and silently skips failed lookups.
+        const updates = await manager.checkForAvailableUpdates();
+        const result: PackageUpdateCheck = { revision, projectRevision, checkedAt: new Date().toISOString(), offline,
+          updates: updates.map(({ source, scope }) => ({ source, scope: scope === "user" ? "global" : "project" })) };
+        entry.result = result;
+        return result;
+      })();
+      try { return c.json(await entry.pending); }
+      catch {
+        if (checks.get(key) === entry) checks.delete(key);
+        return c.json({ error: "Could not check package updates. Check your connection and package sources, then try again." }, 502);
+      } finally { entry.pending = undefined; }
+    })
     .put("/packages", async c => {
       const project = c.req.query("project");
       const list = z.array(z.string().max(500)).max(200).nullable().optional();
