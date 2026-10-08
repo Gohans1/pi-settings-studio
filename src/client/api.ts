@@ -123,3 +123,4 @@ export const saveResourceFile = (body: { type: ResourceType; path: string; file:
   request<{ revision: string }>(withProject("/api/resource-files", project), "PUT", body);
 export const createResource = (body: { scope: "global" | "project"; type: ResourceType; name: string; description?: string }, project?: string) =>
   request<{ type: ResourceType; path: string }>(withProject("/api/resource-files", project), "POST", body);
+export const loadPi = () => request<{ bin: string; installed?: string; builtFor: string }>("/api/pi");

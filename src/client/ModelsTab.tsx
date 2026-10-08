@@ -5,6 +5,7 @@ import type { CustomProvidersView, ProvidersView, ProviderView } from "../shared
 import { loadModelsRaw, saveModelsRaw, addCustomProvider, editCustomProvider, loadCustomProviders, loadProviders, removeCustomProvider, removeProviderKey, restoreAuth, restoreCustomProviders, saveProviderKey } from "./api";
 import { CustomProviderForm } from "./CustomProviderForm";
 import { JobPanel, useJob } from "./JobPanel";
+import type { JobView } from "../shared/jobs";
 import { Button } from "./components/ui/button";
 import { ModelDefaults } from "./ModelDefaults";
 
@@ -28,12 +29,22 @@ function state(provider: ProviderView): string {
   return "";
 }
 
+const authTypes: Record<string, string> = { api_key: "API key", oauth: "sign-in" };
+/** pi auth check's result in words; reasons are Pi's codes made readable. */
+function verdict(check: NonNullable<JobView["check"]>): string {
+  if (check.status === "ready") return `Pi can use it: ${authTypes[check.authType ?? ""] ?? check.authType ?? "configured"}.`;
+  const reason = check.reason ? `: ${check.reason.replaceAll("_", " ")}` : "";
+  return check.status === "invalid" ? `Pi finds the credential invalid${reason}.` : `Pi cannot use it yet${reason}.`;
+}
+
 function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
   provider: ProviderView; busy: boolean; onSaveKey: (key: string) => Promise<boolean>; onRemove: () => void; onSignedIn: () => void;
 }) {
   const [key, setKey] = useState("");
   // Pi's own sign-in flow; its questions and links are shown here and Pi writes auth.json.
   const login = useJob(job => { if (job.status === "done") onSignedIn(); });
+  // pi auth check: Pi resolves the credential as a session would, environment included.
+  const check = useJob();
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (await onSaveKey(key)) setKey("");
@@ -45,12 +56,15 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
       <div><dt>Models</dt><dd>{provider.models}</dd></div>
       <div><dt>Authentication</dt><dd>{provider.auth.configured
         ? <>{sources[provider.auth.source ?? ""] ?? provider.auth.source ?? "Configured"}{provider.stored === "oauth" && " (signed in)"}</>
-        : <span className="muted">Not set up here. Environment variables are not checked by this app.</span>}</dd></div>
+        : <span className="muted">Not in auth.json or models.json. Check credential also looks at the environment of this app.</span>}</dd></div>
       {provider.oauth && <div><dt>Sign-in</dt><dd>{provider.oauth.name}{provider.oauth.subscription ? " (subscription)" : ""}</dd></div>}
     </dl>
-    {provider.oauth && <div className="actions detail-actions">
-      <Button variant="outline" disabled={busy || login.running} onClick={() => void login.start({ action: "provider-login", provider: provider.id })} aria-label={`Sign in to ${provider.name}`}>Sign in</Button>
-    </div>}
+    <div className="actions detail-actions">
+      {provider.oauth && <Button variant="outline" disabled={busy || login.running} onClick={() => void login.start({ action: "provider-login", provider: provider.id })} aria-label={`Sign in to ${provider.name}`}>Sign in</Button>}
+      <Button variant="outline" disabled={check.running} onClick={() => void check.start({ action: "provider-check", provider: provider.id })}>Check credential</Button>
+    </div>
+    {check.job?.check && <p className={check.job.check.status === "ready" ? "notice" : "field-error"} role="status">{verdict(check.job.check)}</p>}
+    {check.job && !check.job.check && <JobPanel job={check.job} error={check.error} onAnswer={() => {}} onCancel={() => void check.cancel()} onDismiss={check.dismiss} />}
     <JobPanel job={login.job} error={login.error} onAnswer={value => void login.answer(value)} onCancel={() => void login.cancel()} onDismiss={login.dismiss} />
     {provider.apiKey && <form className="key-form" onSubmit={event => void submit(event)}>
       <label>API key<input type="password" value={key} autoComplete="new-password" spellCheck={false}

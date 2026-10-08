@@ -149,3 +149,13 @@ test("models are listed from the endpoint and the chosen ones added to the form"
     expect(saved.models).toEqual([{ id: "llama-3" }, { id: "qwen3-coder", contextWindow: 65536 }]);
   } finally { endpoint.stop(true); }
 });
+
+test("Check credential shows Pi's verdict for a provider", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("searchbox", { name: "Search providers" }).fill("anthropic");
+  await page.getByRole("button", { name: /^Anthropic\b/ }).first().click();
+  const detail = page.getByRole("region", { name: "Anthropic" });
+  await detail.getByRole("button", { name: "Check credential" }).click();
+  await expect(detail.getByText("Pi can use it: API key.")).toBeVisible({ timeout: 30_000 });
+  expect(await page.content()).not.toContain("fixture-secret-anthropic");
+});

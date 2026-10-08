@@ -118,6 +118,9 @@ textarea { resize: vertical; }
 .server-form legend { padding: 0 4px; font-weight: 560; }
 .named-rows { display: grid; gap: 8px; justify-items: start; }
 .oauth-fields { display: grid; gap: 10px; }
+.pi-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 16px; }
+.pi-panel p { margin: 0; }
+.pi-panel .job-panel { flex-basis: 100%; }
 .log-tail { margin: 0; padding: 12px; max-height: 520px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.6 ui-monospace, monospace; background: var(--muted); border-radius: var(--radius); }
 .resource-editor { display: grid; gap: 12px; }
 .resource-editor label { display: grid; gap: 6px; font-weight: 560; }

@@ -171,3 +171,10 @@ test("the theme is chosen from Pi's themes: one theme, or a light and a dark one
   await expect(page.getByRole("status").first()).toContainText("Saved");
   expect(JSON.parse(await readFile(file, "utf8")).theme).toBe("light/ocean");
 });
+
+test("the installed Pi version is shown with an Update Pi action", async ({ page }) => {
+  const pi = page.getByRole("region", { name: "Pi" });
+  await expect(pi).toContainText(/Pi \d+\.\d+\.\d+ is installed/);
+  // Not clicked: it would update the real Pi on this machine.
+  await expect(pi.getByRole("button", { name: "Update Pi" })).toBeEnabled();
+});

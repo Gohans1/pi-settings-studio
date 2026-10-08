@@ -79,6 +79,8 @@ const body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("packages-update") }).strict(),
   z.object({ action: z.literal("models-refresh") }).strict(),
   z.object({ action: z.literal("provider-login"), provider: z.string().max(100) }).strict(),
+  z.object({ action: z.literal("provider-check"), provider: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/) }).strict(),
+  z.object({ action: z.literal("pi-update") }).strict(),
 ]);
 
 export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, command = piCommand()) {
@@ -114,7 +116,8 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
     void Promise.all([pump(child.stdout, true), pump(child.stderr, false), child.exited]).then(([, , code]) => {
       job.exitCode = code;
       after?.(job, stdout);
-      if (job.status === "running") job.status = code === 0 || (job.action === "mcp-test" && job.result) ? "done" : "failed";
+      // A test or check that reported its result is done, whatever it found.
+      if (job.status === "running") job.status = code === 0 || job.result || job.check ? "done" : "failed";
     }).catch(error => { if (job.status === "running") { job.status = "failed"; job.error = String(error); } });
   }
 
@@ -204,6 +207,18 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
         case "models-refresh": {
           const job = create(input.action, "Refresh model catalogs", secrets);
           runPi(job, ["update", "--models"], agentDir);
+          return c.json(view(job));
+        }
+        case "provider-check": {
+          const job = create(input.action, `Check the credential of ${input.provider}`, secrets);
+          runPi(job, ["auth", "check", "--provider", input.provider, "--json"], agentDir, (done, stdout) => {
+            try { done.check = JSON.parse(stdout); } catch { /* the output explains */ }
+          });
+          return c.json(view(job));
+        }
+        case "pi-update": {
+          const job = create(input.action, "Update Pi", secrets);
+          runPi(job, ["update", "--self"], agentDir);
           return c.json(view(job));
         }
         case "provider-login": {

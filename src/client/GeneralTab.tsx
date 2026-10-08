@@ -4,6 +4,7 @@ import { fields, sections, type SettingsChange, type SettingsView } from "../sha
 import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
+import { PiPanel } from "./PiPanel";
 import { RawJsonEditor } from "./RawJsonEditor";
 import { KeybindingsPanel } from "./KeybindingsPanel";
 
@@ -121,6 +122,7 @@ export function GeneralTab({ project }: { project?: string }) {
       <label><input type="radio" name="general-scope" checked={scope === "project"} disabled={busy || !!changes.length} onChange={() => setScopeChoice("project")} />This project</label>
     </fieldset>}
     {view && <div className="scope-info"><code>{view.path}</code></div>}
+    {scope === "global" && !needle && <PiPanel />}
     {!needle && <nav className="section-links" aria-label="Setting groups">{sections.map(section => <a key={section.id} href={"#group-" + section.id}
       onClick={event => { event.preventDefault(); document.getElementById("group-" + section.id)?.scrollIntoView({ behavior: "smooth" }); }}>{section.title}</a>)}
       {scope === "global" && <a href="#group-keybindings" onClick={event => { event.preventDefault(); document.getElementById("group-keybindings")?.scrollIntoView({ behavior: "smooth" }); }}>Keyboard shortcuts</a>}</nav>}

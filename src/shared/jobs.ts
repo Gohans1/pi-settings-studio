@@ -1,4 +1,4 @@
-export type JobAction = "mcp-test" | "mcp-login" | "mcp-logout" | "package-install" | "package-remove" | "package-update" | "packages-update" | "models-refresh" | "provider-login";
+export type JobAction = "mcp-test" | "mcp-login" | "mcp-logout" | "package-install" | "package-remove" | "package-update" | "packages-update" | "models-refresh" | "provider-login" | "provider-check" | "pi-update";
 
 export type JobEvent =
   | { type: "link"; url: string; label: string }
@@ -25,5 +25,7 @@ export type JobView = {
   exitCode?: number;
   error?: string;
   /** `pi mcp list --json` for mcp-test. */
+  /** `pi auth check --json` for provider-check. */
+  check?: { status: "ready" | "not_ready" | "invalid"; provider: string; reason?: string; authType?: string };
   result?: { servers: { name: string; scope?: string; enabled?: boolean; state: string; tools: string[]; transport?: string; error?: string }[]; errors: string[] };
 };
