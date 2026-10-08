@@ -5,7 +5,7 @@ import { createResource, loadResourceFile, saveResourceFile } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
-import { Field, FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Spinner } from "./components/ui/spinner";
@@ -109,6 +109,7 @@ export function NewResourceForm({ type, project, onCreated, onCancel }: {
   return <form className="detail server-form" aria-label={`New ${label}`} onSubmit={submit} onInput={clear} noValidate>
     <h2>New {label}</h2>
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not created</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    <FieldGroup>
     <Field data-invalid={!!errors[id + "name"] || undefined}><FieldLabel htmlFor={id + "name"}>Name</FieldLabel>
       <Input id={id + "name"} value={name} required autoComplete="off" spellCheck={false} {...describe(id + "name", id + "name-hint")} onChange={event => setName(event.target.value)} />
       <FieldError id={id + "name-error"}>{errors[id + "name"]}</FieldError>
@@ -120,6 +121,7 @@ export function NewResourceForm({ type, project, onCreated, onCancel }: {
     {project && <Field><FieldLabel htmlFor={id + "where"}>Where</FieldLabel>
       <OptionSelect id={id + "where"} className="w-full" value={scope} onChange={setScope}
         options={[{ value: "global", label: `Global: ~/.pi/agent/${type}/` }, { value: "project", label: `This project: .pi/${type}/` }] as const} /></Field>}
+    </FieldGroup>
     <div className="form-actions"><Button type="submit" disabled={busy}>Create {label}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;

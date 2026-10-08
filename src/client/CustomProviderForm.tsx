@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Card, CardContent } from "./components/ui/card";
 import { Checkbox } from "./components/ui/checkbox";
-import { Field, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { OptionSelect } from "./OptionSelect";
 import { useFieldErrors } from "./useFieldErrors";
@@ -70,6 +70,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
     <h2>{title}</h2>
     <p className="muted">An endpoint that speaks an API Pi supports (Ollama, LM Studio, vLLM, a proxy). Pi checks the entry before it is saved.</p>
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    <FieldGroup>
     {!provider && <Field data-invalid={!!errors[id + "id"] || undefined}><FieldLabel htmlFor={id + "id"}>Provider ID</FieldLabel>
       <Input id={id + "id"} value={providerId} required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" autoComplete="off" spellCheck={false} {...describe(id + "id", id + "id-help")} onChange={e => setProviderId(e.target.value)} />
       <FieldError id={id + "id-error"}>{errors[id + "id"]}</FieldError>
@@ -121,6 +122,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
       <FieldDescription>Other model fields (cost, compat, thinking maps) stay as they are in the file.</FieldDescription>
     </FieldSet>
     {provider && provider.otherKeys.length > 0 && <FieldDescription>Kept as they are: {provider.otherKeys.join(", ")}.</FieldDescription>}
+    </FieldGroup>
     <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save provider"}</Button>
       {onRemove && <Button type="button" variant="destructive" disabled={busy} onClick={onRemove} aria-label={`Remove ${provider?.id}`}>Remove</Button>}
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>

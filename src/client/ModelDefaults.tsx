@@ -5,7 +5,7 @@ import type { SettingsChange, SettingsView } from "../shared/settings";
 import { checkModelScope, loadModelIds, loadModels, loadSettings, saveSettings } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
-import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 import { Spinner } from "./components/ui/spinner";
@@ -148,6 +148,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
     {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global defaults" disabled={busy} onChange={setScopeChoice} />}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
+      <FieldGroup>
       <Field><FieldLabel htmlFor="default-provider">Default provider</FieldLabel>
         <Input id="default-provider" value={provider} list="default-provider-options" placeholder={String(inherited("defaultProvider") ?? "Automatic")} autoComplete="off" spellCheck={false}
           aria-describedby={providerWarning ? "provider-warning" : undefined} onChange={event => setProvider(event.target.value)} />
@@ -169,6 +170,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
         <OptionSelect id="default-thinking" className="w-full" options={LEVELS} value={thinking} onChange={setThinking} aria-describedby="default-thinking-help" />
         <FieldDescription id="default-thinking-help">Pi limits the level to what the model supports.</FieldDescription></Field>
       <EnabledModels patterns={enabled} scope={modelScope} ids={ids} inherited={inheritedEnabled} onChange={setEnabled} />
+      </FieldGroup>
       <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save defaults"}</Button></div>
     </form>}
   </section>;

@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Empty, EmptyDescription } from "./components/ui/empty";
-import { Field, FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Spinner } from "./components/ui/spinner";
@@ -36,6 +36,7 @@ function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
   return <form className="detail server-form" aria-label={title} onSubmit={submit} onInput={clear} noValidate>
     <h2>{title}</h2>
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    <FieldGroup>
     <Field data-invalid={!!errors[id + "name"] || undefined}><FieldLabel htmlFor={id + "name"}>Name</FieldLabel>
       <Input id={id + "name"} value={name} required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*" autoComplete="off" spellCheck={false} {...describe(id + "name")} onChange={e => setName(e.target.value)} />
       <FieldError id={id + "name-error"}>{errors[id + "name"]}</FieldError>
@@ -51,6 +52,7 @@ function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
     <Field><FieldLabel htmlFor={id + "prompt"}>System prompt</FieldLabel>
       <Textarea id={id + "prompt"} className="field-sizing-fixed" rows={12} value={prompt} onChange={e => setPrompt(e.target.value)} /></Field>
     {agent && agent.extraKeys.length > 0 && <FieldDescription>Kept as they are: {agent.extraKeys.join(", ")}.</FieldDescription>}
+    </FieldGroup>
     <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save profile"}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;

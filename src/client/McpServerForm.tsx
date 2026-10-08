@@ -5,7 +5,7 @@ import { loadProviders } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Checkbox } from "./components/ui/checkbox";
-import { Field, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Disclosure } from "./Disclosure";
@@ -153,6 +153,7 @@ export function McpServerForm({ server, busy, error, title: heading, scope = "gl
   return <form className="detail server-form" aria-label={title} onSubmit={submit} onInput={clear} noValidate>
     <h2>{title}</h2>
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    <FieldGroup>
     {!server && <Field data-invalid={!!errors[id + "name"] || undefined}><FieldLabel htmlFor={id + "name"}>Name</FieldLabel><Input id={id + "name"} value={draft.name} required pattern="[A-Za-z0-9_\-]+" autoComplete="off" spellCheck={false}
       {...describe(id + "name")} onChange={event => set({ name: event.target.value })} /><FieldError id={id + "name-error"}>{errors[id + "name"]}</FieldError></Field>}
     <Field><FieldLabel htmlFor={id + "transport"}>Transport</FieldLabel>
@@ -183,6 +184,7 @@ export function McpServerForm({ server, busy, error, title: heading, scope = "gl
     <FieldSet><FieldLegend variant="label">Tool exposure rules</FieldLegend><RuleRows rules={draft.rules} onChange={rules => set({ rules })} /></FieldSet>
     <Field><FieldLabel htmlFor={id + "description"}>Description</FieldLabel><Input id={id + "description"} value={draft.description} placeholder="What the server offers, in a sentence" onChange={event => set({ description: event.target.value })} /></Field>
     <Field data-invalid={!!errors[id + "timeout"] || undefined}><FieldLabel htmlFor={id + "timeout"}>Timeout (seconds)</FieldLabel><Input id={id + "timeout"} type="number" min={1} step="any" value={draft.timeout} placeholder="60" {...describe(id + "timeout")} onChange={event => set({ timeout: event.target.value })} /><FieldError id={id + "timeout-error"}>{errors[id + "timeout"]}</FieldError></Field>
+    </FieldGroup>
     <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save server"}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;

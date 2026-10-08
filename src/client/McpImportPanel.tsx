@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "./components/ui/card";
 import { Checkbox } from "./components/ui/checkbox";
-import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "./components/ui/field";
 import { Textarea } from "./components/ui/textarea";
 
 const summary = (server: McpServerView) => server.url ?? [server.command, ...(server.args ?? [])].filter(Boolean).join(" ");
@@ -41,6 +41,7 @@ export function McpImportPanel({ target, revision, onImported, onCancel }: {
   const toggle = (name: string, on: boolean) => setChosen(current => { const next = new Set(current); if (on) next.add(name); else next.delete(name); return next; });
   return <form className="detail server-form" aria-label="Import MCP servers" onSubmit={submit}>
     <h2>Import MCP servers{target.scope === "project" ? " to this project" : ""}</h2>
+    <FieldGroup>
     <Field><FieldLabel htmlFor={id}>Pasted configuration</FieldLabel>
       <Textarea id={id} className="field-sizing-fixed font-mono" rows={10} spellCheck={false} value={text} autoComplete="off" aria-describedby={id + "-hint"}
         placeholder={'{ "mcpServers": { … } }  or  [mcp_servers.name] …'} onChange={event => { setText(event.target.value); setPreview(undefined); }} />
@@ -62,6 +63,7 @@ export function McpImportPanel({ target, revision, onImported, onCancel }: {
           : <Alert role="note"><AlertDescription>Replaces the server of the same name in this file.</AlertDescription></Alert>}</CardContent>}
       </Card></li>)}</ul>
     </section>}
+    </FieldGroup>
     <div className="form-actions">
       {preview ? <Button type="submit" disabled={busy || !chosen.size}>Import {chosen.size} server{chosen.size === 1 ? "" : "s"}</Button>
         : <Button type="button" disabled={busy || !text.trim()} onClick={() => void check()}>Preview</Button>}
