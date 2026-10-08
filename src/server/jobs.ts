@@ -53,7 +53,7 @@ export async function knownSecrets(store: ConfigStore, projectStore?: ConfigStor
   const models = await read(store, "global", "models.json");
   if (isRecord(models.providers)) for (const provider of Object.values(models.providers)) if (isRecord(provider)) { strings(provider.apiKey); strings(provider.headers); }
   // "Bearer <token>": the token can also show up on its own.
-  for (const value of [...found]) { const token = /^\s*(?:Bearer|Basic|Token|Bot)\s+(\S+)\s*$/i.exec(value)?.[1]; if (token) found.push(token); }
+  found.push(...found.flatMap(value => /^\s*(?:Bearer|Basic|Token|Bot)\s+(\S+)\s*$/i.exec(value)?.slice(1) ?? []));
   return [...new Set(found.filter(value => value.length >= 6))].sort((a, b) => b.length - a.length);
 }
 
