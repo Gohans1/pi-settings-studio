@@ -18,7 +18,7 @@ export function projectRegistry(agentDir: string, extra: string[] = []) {
   async function load() {
     const seen = new Map<string, string | undefined>();
     for (const path of extra) seen.set(resolve(path), undefined);
-    for (const session of await listSessions(agentDir)) {
+    for (const session of await listSessions(agentDir, extra)) {
       if (session.cwd && !seen.has(session.cwd)) seen.set(session.cwd, session.modified.toISOString());
     }
     const entries = [...seen].map(([path, lastActive]) => ({ path, ...(lastActive ? { lastActive } : {}) }));
