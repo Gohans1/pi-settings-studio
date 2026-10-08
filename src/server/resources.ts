@@ -8,7 +8,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 import { Hono } from "hono";
 import { z } from "zod";
-import { DefaultPackageManager, parseFrontmatter, SettingsManager, type ResolvedResource } from "@earendil-works/pi-coding-agent";
+import { DefaultPackageManager, loadSkills, parseFrontmatter, SettingsManager, type ResolvedResource } from "@earendil-works/pi-coding-agent";
 import type { PackageView, PluginsView, ResourceType, ResourceView, SkillsView } from "../shared/resources.ts";
 import { isRecord } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
@@ -159,11 +159,27 @@ export function resourceContext(store: ConfigStore, registry: ProjectRegistry, a
 
 const toggleBody = { scope: z.enum(["global", "project"]).default("global"), revision: z.string().min(1).max(100), enabled: z.boolean() };
 
+/**
+ * Of two enabled skills with one name, Pi loads the first in resolver order: its own loader, called
+ * as its ResourceLoader calls it (it reads SKILL.md files only). Maps each skipped skill to the winner.
+ */
+export function skillCollisions(resolved: ResolvedResource[], agentDir: string, cwd: string): Map<string, string> {
+  const { diagnostics } = loadSkills({ cwd, agentDir, skillPaths: resolved.filter(item => item.enabled).map(item => item.path), includeDefaults: false });
+  return new Map(diagnostics.flatMap(diagnostic => diagnostic.collision ? [[diagnostic.collision.loserPath, diagnostic.collision.winnerPath] as const] : []));
+}
+
 export function skillRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
   const context = resourceContext(store, registry, agentDir);
   async function view(project: string | undefined): Promise<SkillsView> {
     const { resolved, revision, projectRevision } = await context.resolve(project);
-    return { revision, ...(projectRevision ? { projectRevision } : {}), skills: await Promise.all(resolved.skills.map(item => describe("skills", item, agentDir))) };
+    const dir = project === undefined ? undefined : await registry.require(project);
+    const winners = skillCollisions(resolved.skills, agentDir, dir ?? agentDir);
+    const skills = await Promise.all(resolved.skills.map(async item => {
+      const view = await describe("skills", item, agentDir);
+      const winner = item.enabled ? winners.get(item.path) : undefined;
+      return winner ? { ...view, shadowedBy: winner } : view;
+    }));
+    return { revision, ...(projectRevision ? { projectRevision } : {}), skills };
   }
   return new Hono()
     .get("/", async c => c.json(await view(c.req.query("project"))))

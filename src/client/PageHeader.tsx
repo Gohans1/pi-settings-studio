@@ -1,12 +1,13 @@
 import type { ReactNode, Ref } from "react";
-import { FileText } from "lucide-react";
+import { FileText, Folder } from "lucide-react";
 
 /** Home-relative paths, as a shell prints them. */
 export const home = (path: string) => path.replace(/^\/home\/[^/]+/, "~");
 
-/** A file this page reads or writes. */
-export function FilePath({ path }: { path: string }) {
-  return <span className="file-path" title={path}><FileText aria-hidden="true" /><code translate="no">{home(path)}</code></span>;
+/** A file (or folder) this page reads or writes. */
+export function FilePath({ path, folder = false }: { path: string; folder?: boolean }) {
+  const Icon = folder ? Folder : FileText;
+  return <span className="file-path" title={path}><Icon aria-hidden="true" /><code translate="no">{home(path)}</code></span>;
 }
 
 /** What the page edits, in which files, and the page's own actions. */

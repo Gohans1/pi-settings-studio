@@ -16,6 +16,7 @@ import { keybindingRoutes } from "./keybindings.ts";
 import { jobRoutes } from "./jobs.ts";
 import { themeRoutes } from "./themes.ts";
 import { resourceFileRoutes } from "./resource-files.ts";
+import { resourcePathRoutes } from "./resource-paths.ts";
 import { piRoutes } from "./pi-version.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
@@ -127,6 +128,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/jobs", jobRoutes(store, registry, agentDir));
   app.route("/api/themes", themeRoutes(store, registry, agentDir));
   app.route("/api/resource-files", resourceFileRoutes(store, registry, agentDir));
+  app.route("/api/resource-paths", resourcePathRoutes(store, registry, agentDir));
   app.route("/api/pi", piRoutes());
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));

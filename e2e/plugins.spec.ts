@@ -92,3 +92,17 @@ test("prompts and extensions are edited or viewed, and a new theme is created", 
   expect(JSON.parse(await readFile(join(agent, "themes/ocean.json"), "utf8")).name).toBe("ocean");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("extra folders of prompt templates are added from the Plugins tab", async ({ page }) => {
+  const shared = join(root, "shared-prompts");
+  await mkdir(shared, { recursive: true });
+  await writeFile(join(shared, "triage.md"), "---\ndescription: Triage an issue\n---\nTriage.\n");
+  await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: /^Folders/ }).click();
+  const prompts = page.getByRole("region", { name: "Prompt template folders" });
+  await prompts.getByLabel("Folder or file").fill(shared);
+  await prompts.getByRole("button", { name: "Add" }).click();
+  await expect(page.getByRole("status")).toContainText("Added");
+  await expect(page.getByRole("button", { name: /^triage/ })).toBeVisible();
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).prompts).toEqual([shared]);
+});

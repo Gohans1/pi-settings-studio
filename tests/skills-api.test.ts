@@ -86,3 +86,20 @@ test("a whole group is switched in one write", async (t) => {
   // Discovery order follows the filesystem (tmpfs lists newest first); the order of distinct exclusions does not matter to Pi.
   assert.deepEqual([...(await settings()).skills].sort(), ["-skills/alpha/SKILL.md", "-skills/beta/SKILL.md"]);
 });
+
+test("when two skills share a name, the copy Pi skips says which one Pi loads instead", async (t) => {
+  const { agent, request, skills } = await fixture(t);
+  const other = join(agent, "..", "other-tool", "skills");
+  await mkdir(join(other, "alpha"), { recursive: true });
+  await writeFile(join(other, "alpha", "SKILL.md"), skill("alpha", "Another alpha."));
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ packages: ["./pkgs/my-pack"], skills: [other] }));
+  const copies = (await skills()).skills.filter(entry => entry.name === "alpha");
+  assert.equal(copies.length, 2);
+  // Pi reads settings paths before its own folders, so the added folder's copy wins.
+  const winner = copies.find(entry => !entry.shadowedBy)!, loser = copies.find(entry => entry.shadowedBy)!;
+  assert.ok(String(winner.path).startsWith(other));
+  assert.equal(loser.shadowedBy, winner.path);
+  // A skill that is off takes no part: then the other copy loads.
+  await request("/api/skills", { method: "PATCH", headers: json, body: JSON.stringify({ revision: (await skills()).revision, paths: [winner.path], enabled: false }) });
+  assert.ok((await skills()).skills.filter(entry => entry.name === "alpha").every(entry => !entry.shadowedBy));
+});

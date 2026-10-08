@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Package, Plus, Puzzle } from "lucide-react";
+import { ChevronDown, FolderOpen, Package, Plus, Puzzle } from "lucide-react";
 import type { PluginsView, ResourceType, ResourceView } from "../shared/resources";
-import { loadPlugins, savePackageFilters, savePlugins } from "./api";
+import { loadPlugins, restoreSettings, savePackageFilters, savePlugins } from "./api";
 import { PackageFilterForm, type FilterPatch } from "./PackageFilterForm";
 import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Button } from "./components/ui/button";
@@ -12,6 +12,7 @@ import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
+import { ResourceFolders, type FolderChange } from "./ResourceFolders";
 
 const typeLabels: Record<string, string> = { extensions: "extension", prompts: "prompt", themes: "theme" };
 const newLabels = { prompts: "Prompt template", themes: "Theme", extensions: "Extension" } as const;
@@ -50,7 +51,10 @@ export function PluginsTab({ project }: { project?: string }) {
   const [filtering, setFiltering] = useState<string>();
   const [mode, setMode] = useState<"edit" | ResourceType>();
   const [installScope, setInstallScope] = useState<"global" | "project">("global");
-  const [packagesOpen, setPackagesOpen] = useState(false);
+  // A pinned entry of the list: Packages, or the folders Pi loads plugins from.
+  const [pinned, setPinned] = useState<"packages" | "folders">();
+  const [undo, setUndo] = useState<FolderChange["undo"]>();
+  const [folders, setFolders] = useState(0);
   // pi install / remove / update run on click; the list reloads when they finish.
   const job = useJob(() => void refresh());
 
@@ -59,7 +63,7 @@ export function PluginsTab({ project }: { project?: string }) {
     try { setView(await loadPlugins(project)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the plugins."); }
   }
-  useEffect(() => { setSelected(undefined); setMode(undefined); setPackagesOpen(false); void refresh(); }, [project]);
+  useEffect(() => { setSelected(undefined); setMode(undefined); setPinned(undefined); void refresh(); }, [project]);
 
   async function toggle(items: ResourceView[], enabled: boolean, label = items[0]?.name) {
     if (!view || !items.length) return;
@@ -89,8 +93,17 @@ export function PluginsTab({ project }: { project?: string }) {
   const visible = resources.filter(item => !needle || `${item.name} ${item.description ?? ""} ${item.group}`.toLowerCase().includes(needle));
   const groups = [...new Set(resources.map(item => item.group))].filter(group => visible.some(item => item.group === group));
   const current = resources.find(item => item.path === selected);
-  const open = packagesOpen || !!mode || !!current;
-  const back = () => { setSelected(undefined); setMode(undefined); setPackagesOpen(false); };
+  const open = !!pinned || !!mode || !!current;
+  const folderChanged = (change: FolderChange) => { setMessage(change.message); setUndo(change.undo); void refresh(); };
+  async function restore(target: NonNullable<FolderChange["undo"]>) {
+    setBusy(true);
+    try {
+      await restoreSettings(target.scope, target.revision, target.scope === "project" ? project : undefined);
+      setUndo(undefined); setMessage("Restored the previous settings.json."); setFolders(version => version + 1); await refresh();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not restore the file."); }
+    finally { setBusy(false); }
+  }
+  const back = () => { setSelected(undefined); setMode(undefined); setPinned(undefined); };
   const packages = view && <section className="detail packages" aria-labelledby="packages-title">
     <header><h2 id="packages-title">Packages</h2>
       <p className="muted">Installed with pi install in this environment. Packages can run code: install only sources you trust.</p></header>
@@ -120,14 +133,17 @@ export function PluginsTab({ project }: { project?: string }) {
       actions={<Menu>
         <MenuTrigger render={<Button variant="outline" />}><Plus aria-hidden="true" />New<ChevronDown aria-hidden="true" /></MenuTrigger>
         <MenuContent>{(["prompts", "themes", "extensions"] as const).map(type =>
-          <MenuItem key={type} onClick={() => { setMode(type); setSelected(undefined); setPackagesOpen(false); }}>{newLabels[type]}</MenuItem>)}</MenuContent>
+          <MenuItem key={type} onClick={() => { setMode(type); setSelected(undefined); setPinned(undefined); }}>{newLabels[type]}</MenuItem>)}</MenuContent>
       </Menu>} />
-    <Feedback message={message} onDismiss={() => setMessage("")} />
+    <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
+      action={undo && { label: "Undo", disabled: busy, onClick: () => void restore(undo) }} />
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <Workbench open={open} onBack={back} backLabel="All plugins" list={<section aria-label="Plugin list">
       <div className="list-search"><SearchField label="Search plugins" placeholder="Search plugins…" value={query} onChange={setQuery} /></div>
-      <ul className="item-list pinned"><li><button type="button" aria-pressed={packagesOpen} onClick={() => { setPackagesOpen(true); setSelected(undefined); setMode(undefined); }}>
-        <Package aria-hidden="true" /><span className="item-name">Packages</span><span className="item-state">{view.packages.length}</span></button></li></ul>
+      <ul className="item-list pinned"><li><button type="button" aria-pressed={pinned === "packages"} onClick={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }}>
+        <Package aria-hidden="true" /><span className="item-name">Packages</span><span className="item-state">{view.packages.length}</span></button></li>
+        <li><button type="button" aria-pressed={pinned === "folders"} onClick={() => { setPinned("folders"); setSelected(undefined); setMode(undefined); }}>
+          <FolderOpen aria-hidden="true" /><span className="item-name">Folders</span><span className="item-state">where Pi finds plugins</span></button></li></ul>
       {!visible.length && <p className="empty">{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</p>}
       {groups.map(group => {
         const members = visible.filter(item => item.group === group);
@@ -136,14 +152,19 @@ export function PluginsTab({ project }: { project?: string }) {
             <Switch aria-label={`Enable everything in ${group}`} checked={members.every(item => item.enabled)} disabled={busy}
               onCheckedChange={enabled => void toggle(members.filter(item => item.enabled !== enabled), enabled, `Everything in ${group}`)} /></div>
           <ul className="item-list">{members.map(item => <li key={item.type + item.path}>
-            <button type="button" aria-pressed={item.path === selected} onClick={() => { setSelected(item.path); setMode(undefined); setPackagesOpen(false); }}>
+            <button type="button" aria-pressed={item.path === selected} onClick={() => { setSelected(item.path); setMode(undefined); setPinned(undefined); }}>
               <span className="item-name">{item.name}</span><span className="item-state">{item.enabled ? typeLabels[item.type] : "off"}</span>
             </button>
             <Switch aria-label={`Enable ${item.name}`} checked={item.enabled} disabled={busy} onCheckedChange={enabled => void toggle([item], enabled)} />
           </li>)}</ul>
         </div>;
       })}
-    </section>} detail={packagesOpen ? packages
+    </section>} detail={pinned === "packages" ? packages
+      : pinned === "folders" ? <section className="detail plugin-folders" aria-labelledby="folders-title" key={folders}>
+        <header><h2 id="folders-title">Folders</h2>
+          <p className="muted">Pi finds extensions, prompt templates and themes in its own folders and in packages. Add other folders or files here.</p></header>
+        {(["extensions", "prompts", "themes"] as const).map(type => <ResourceFolders key={type} type={type} project={project} onChanged={folderChanged} />)}
+      </section>
       : mode && mode !== "edit" ? <NewResourceForm key={mode} type={mode} project={project} onCancel={() => setMode(undefined)}
           onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
       : current && mode === "edit" ? <ResourceEditor key={current.path} type={current.type} path={current.path} name={current.name} editable={current.origin === "top-level"}

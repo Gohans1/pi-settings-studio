@@ -208,6 +208,10 @@
   .item-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .item-state { font-size: var(--text-caption); color: var(--muted-foreground); white-space: nowrap; }
   .item-state[data-state=refused] { color: var(--destructive); }
+  .item-state[data-state=shadowed] { display: inline-flex; align-items: center; gap: --spacing(1); }
+  .item-state[data-state=shadowed] svg { width: --spacing(3.5); height: --spacing(3.5); color: var(--warning); }
+  .notice.callout-warning:has(> p) { display: grid; gap: --spacing(1.5); }
+  .notice > p { margin: 0; }
   .pinned { padding-bottom: --spacing(2); border-bottom: 1px solid var(--border); }
   .pinned .item-name { font-weight: var(--font-weight-semibold); }
 
@@ -333,6 +337,24 @@
   .package-filters label { display: grid; gap: --spacing(1); font-weight: var(--font-weight-semibold); }
   .filter-row { display: grid; gap: --spacing(1.5); }
 
+  /* Folders Pi loads resources from. */
+  .resource-folders { display: grid; gap: --spacing(4); }
+  .resource-folders > :is(h2, h3) { margin: 0; }
+  .plugin-folders { display: grid; gap: --spacing(8); }
+  .folder-block { display: grid; gap: --spacing(2); }
+  .folder-block > p { margin: 0; }
+  .folder-block-title { color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-semibold); }
+  .folder-list { list-style: none; margin: 0; padding: 0; display: grid; }
+  .folder-list > li { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(3); min-height: --spacing(9); padding: --spacing(1) 0; border-top: 1px solid var(--border); }
+  .folder-list > li:last-child { border-bottom: 1px solid var(--border); }
+  .folder-list .file-path { color: var(--foreground); }
+  .folder-list [data-slot=button] { margin-inline-start: auto; }
+  .folder-missing { display: inline-flex; align-items: center; gap: --spacing(1); color: var(--warning); font-size: var(--text-small); }
+  .folder-missing svg { width: --spacing(3.5); height: --spacing(3.5); }
+  .add-path { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2); }
+  .add-path label { display: grid; gap: --spacing(1.5); font-weight: var(--font-weight-semibold); }
+  .add-path label:first-child { flex: 1 1 18rem; }
+  .add-path > p { flex-basis: 100%; margin: 0; }
   /* Sub-agents and resources. */
   .prompt-preview { border: 1px solid var(--border); border-radius: var(--radius); padding: --spacing(2.5) --spacing(3.5); }
   .prompt-preview > summary { font-weight: var(--font-weight-semibold); }

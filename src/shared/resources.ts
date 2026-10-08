@@ -12,6 +12,8 @@ export type ResourceView = {
   /** Group label as `pi config` shows it. */
   group: string;
   disableModelInvocation?: boolean;
+  /** Pi skips this skill: another one of the same name comes first. The value is that one's path. */
+  shadowedBy?: string;
 };
 
 export type SkillsView = { revision: string; projectRevision?: string; skills: ResourceView[] };
@@ -22,3 +24,15 @@ export type PluginsView = { revision: string; projectRevision?: string; resource
 
 /** One file of a resource. `files` lists a skill's folder (relative paths); other resources have one. */
 export type ResourceFileView = { path: string; file: string; text: string; revision: string; editable: boolean; readOnly?: string; files: string[] };
+
+/** A path entry of the `skills`, `extensions`, `prompts` or `themes` setting: a folder or file Pi also loads from. */
+export type ResourcePathView = {
+  scope: "global" | "project"; entry: string; resolved: string; exists: boolean; kind?: "folder" | "file"; found: number;
+  /** Skills only: found skills that replace one of the same name elsewhere, and found skills Pi skips for one. */
+  replaces?: number; skipped?: number;
+};
+export type ResourcePathsView = {
+  type: ResourceType; revision: string; projectRevision?: string; paths: ResourcePathView[];
+  /** Where Pi looks without any setting. */
+  standard: { scope: "global" | "project"; path: string; exists: boolean }[];
+};

@@ -77,3 +77,46 @@ test("a skill and its files are edited, package skills are read-only, and a new 
   expect(await readFile(join(agent, "skills/delta/SKILL.md"), "utf8")).toBe('---\nname: delta\ndescription: "Delta: handles the fourth case."\n---\n\n');
   await expect(page.getByText("4 of 4 skills on")).toBeVisible();
 });
+
+test("a folder of skills from another tool is added, its skills appear, and removing it can be undone", async ({ page }) => {
+  const other = join(root, "other-tool", "skills");
+  await mkdir(join(other, "delta"), { recursive: true });
+  await writeFile(join(other, "delta", "SKILL.md"), skill("delta", "Delta from another tool."));
+  const settings = async () => JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^Folders/ }).click();
+  const folders = page.getByRole("region", { name: "Skill folders" });
+  await expect(folders).toContainText(join(agent, "skills").replace(/^\/home\/[^/]+/, "~"));
+  await folders.getByLabel("Folder or file").fill(other);
+  await folders.getByRole("button", { name: "Add" }).click();
+  await expect(page.getByRole("status")).toContainText("Added");
+  await expect(folders.getByRole("listitem").filter({ hasText: "other-tool" })).toContainText("1 skill");
+  await expect(page.getByRole("button", { name: /^delta/ })).toBeVisible();
+  expect((await settings()).skills).toEqual([other]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await folders.getByRole("button", { name: `Remove ${other}` }).click();
+  await expect(page.getByRole("status")).toContainText("Removed");
+  await expect(page.getByRole("button", { name: /^delta/ })).toBeHidden();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("status")).toContainText("Restored");
+  expect((await settings()).skills).toEqual([other]);
+  await expect(page.getByRole("button", { name: /^delta/ })).toBeVisible();
+});
+
+test("a skill Pi skips because another of the same name comes first says so and names the winner", async ({ page }) => {
+  const other = join(root, "other-tool", "skills");
+  await mkdir(join(other, "alpha"), { recursive: true });
+  await writeFile(join(other, "alpha", "SKILL.md"), skill("alpha", "Another alpha."));
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ packages: ["./pkgs/my-pack"], skills: [other] }));
+  await page.goto(server.url + "#skills");
+  const skipped = page.getByRole("button", { name: /^alpha.*not loaded/ });
+  await expect(skipped).toHaveCount(1);
+  await expect(page.getByText("4 of 4 skills on, 1 not loaded (same name)")).toBeVisible();
+  await page.getByRole("button", { name: /^Folders/ }).click();
+  await expect(page.getByRole("region", { name: "Skill folders" }).getByRole("listitem").filter({ hasText: "other-tool" })).toContainText("1 replaces a skill of the same name");
+  await skipped.click();
+  const detail = page.getByRole("region", { name: "alpha" });
+  await expect(detail).toContainText("Pi does not load this copy");
+  await expect(detail).toContainText(join(other, "alpha", "SKILL.md"));
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

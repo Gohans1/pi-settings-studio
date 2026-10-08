@@ -2,7 +2,7 @@ import type { SettingsView, SettingsChange } from "../shared/settings";
 import type { McpFileView, McpImportPreview, McpServerInput } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
-import type { PluginsView, ResourceFileView, ResourceType, SkillsView } from "../shared/resources";
+import type { PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
 import type { AgentInput, AgentsView } from "../shared/agents";
 import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
@@ -124,3 +124,6 @@ export const saveResourceFile = (body: { type: ResourceType; path: string; file:
 export const createResource = (body: { scope: "global" | "project"; type: ResourceType; name: string; description?: string }, project?: string) =>
   request<{ type: ResourceType; path: string }>(withProject("/api/resource-files", project), "POST", body);
 export const loadPi = () => request<{ bin: string; installed?: string; builtFor: string }>("/api/pi");
+export const loadResourcePaths = (type: ResourceType, project?: string) => request<ResourcePathsView>(withProject(`/api/resource-paths?type=${type}`, project));
+export const changeResourcePath = (method: "POST" | "DELETE", body: { type: ResourceType; scope: Scope; revision: string; path: string }, project?: string) =>
+  request<ResourcePathsView>(withProject("/api/resource-paths", project), method, body);
