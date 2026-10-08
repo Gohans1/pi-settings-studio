@@ -63,14 +63,14 @@ test("keyboard disclosure and escape stay instant even after using the pointer",
   await expect(page.getByRole("button", { name: "File", exact: true })).toBeFocused();
 });
 
-test("pointer menu transitions from its trigger and can close before its entrance finishes", async ({ page }) => {
+test("pointer menu zooms in from its trigger as shadcn ships it and can close before its entrance finishes", async ({ page }) => {
   await page.goto(server.url);
   const trigger = page.getByRole("button", { name: "File", exact: true });
   await trigger.click();
   const menu = page.getByRole("menu");
-  await expect.poll(() => page.evaluate(() => window.motionEvents.filter(event => event.slot === "dropdown-menu-content").map(event => event.property)), { timeout: 3000 }).toEqual(expect.arrayContaining(["transform", "opacity"]));
-  await expect(menu).toHaveCSS("animation-name", "none");
-  await expect(menu).toHaveCSS("transition-duration", "0.18s, 0.18s");
+  // tw-animate-css's enter keyframes, 100ms in base-nova.
+  await expect(menu).toHaveCSS("animation-name", "enter");
+  await expect(menu).toHaveCSS("animation-duration", "0.1s");
   expect(await menu.evaluate(element => getComputedStyle(element).getPropertyValue("--transform-origin"))).not.toBe("");
   await trigger.click();
   await expect(menu).toBeHidden();
@@ -103,23 +103,16 @@ test("buttons compress only during a pointer press, without moving surrounding l
   await expect(page.getByRole("heading", { name: "Add MCP server", exact: true })).toBeVisible();
 });
 
-test("reduced motion menu fades without scaling and pointer buttons do not compress", async ({ page }) => {
+test("reduced motion settles a menu at once", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(server.url);
   await page.getByRole("button", { name: "File", exact: true }).click();
   const menu = page.getByRole("menu");
-  await expect(menu).toHaveCSS("animation-name", "none");
-  await expect(menu).toHaveCSS("transition-property", "opacity");
-  await expect(menu).toHaveCSS("transition-duration", "0.125s");
-  await expect(menu).toHaveCSS("transform", "none");
+  await expect(menu).toHaveCSS("animation-name", "enter");
+  // styles.css shortens every animation to 0.01ms, so end events still fire.
+  await expect(menu).toHaveCSS("animation-duration", "1e-05s");
   await page.keyboard.press("Escape");
-  await page.getByRole("tab", { name: "MCP", exact: true }).click();
-  const button = page.getByRole("button", { name: "Add server", exact: true });
-  await button.hover();
-  await page.mouse.down();
-  await expect(button).toHaveCSS("transform", "none");
-  await expect(button).toHaveCSS("translate", "none");
-  await page.mouse.up();
+  await expect(menu).toBeHidden();
 });
 
 test("reduced motion keeps only a short opacity fade on disclosures", async ({ page }) => {
