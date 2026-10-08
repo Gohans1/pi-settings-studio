@@ -21,9 +21,9 @@ const misses = {
   "no-match": "No model matches",
 };
 
-/** A value Pi may not accept: the icon carries the tone, the text stays readable. */
+/** A value Pi may not accept: the icon carries the tone. */
 function Warning({ id, children }: { id: string; children: React.ReactNode }) {
-  return <FieldDescription id={id} className="flex gap-2 text-foreground"><TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" /><span>{children}</span></FieldDescription>;
+  return <FieldDescription id={id}><TriangleAlert aria-hidden="true" className="me-1.5 inline size-4 align-text-bottom text-warning" />{children}</FieldDescription>;
 }
 
 /** enabledModels as rows: what each pattern selects among the providers that are set up, and an adder. */
@@ -39,7 +39,7 @@ function EnabledModels({ patterns, scope, ids, inherited, onChange }: {
   // Enter adds the pattern here instead of submitting the whole form.
   const onKey = (event: KeyboardEvent) => { if (event.key === "Enter") { event.preventDefault(); add(); } };
   const matched = (pattern: string) => scope?.patterns.find(entry => entry.pattern === pattern);
-  return <FieldSet className="gap-3">
+  return <FieldSet>
     <FieldLegend variant="label">Enabled models</FieldLegend>
     {patterns.length ? <ul className="pattern-list">{patterns.map(pattern => {
       const match = matched(pattern);
@@ -144,7 +144,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
   return <section className="detail server-form" aria-labelledby="defaults-title">
     <header><h2 id="defaults-title">Defaults</h2>
       <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p></header>
-    {project && <ScopeChoice value={scope} globalLabel="Global defaults" disabled={busy} onChange={setScopeChoice} />}
+    {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global defaults" disabled={busy} onChange={setScopeChoice} />}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
       <Field><FieldLabel htmlFor="default-provider">Default provider</FieldLabel>

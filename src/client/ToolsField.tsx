@@ -21,14 +21,14 @@ export function ToolsField({ label, list, global, scope, disabled, onChange }: {
   ];
   const changed = (name: string) => active.includes(name) === inherited.includes(name) ? ""
     : `${active.includes(name) ? "On" : "Off"} here; ${scope === "project" ? "the global settings have it" : "Pi's default is"} ${inherited.includes(name) ? "on" : "off"}.`;
-  return <FieldSet className="tool-field grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-x-8 gap-y-4" aria-label={label} disabled={disabled}>
+  return <FieldSet className="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]" aria-label={label} disabled={disabled}>
     {groups.map(group => <div key={group.title} className="tool-group">
       <p className="tool-group-title">{group.title}</p>
-      {group.tools.map(({ name, help }) => <Field key={name} orientation="horizontal" className="tool-option" data-changed={!!changed(name) || undefined}>
+      {group.tools.map(({ name, help }) => <Field key={name} orientation="horizontal">
         <Checkbox id={`tool-${name}`} checked={active.includes(name)} disabled={disabled} aria-describedby={`tool-${name}-help`}
           onCheckedChange={checked => onChange(toggleTool(list, name, checked, resolve))} />
         <FieldContent>
-          <FieldLabel htmlFor={`tool-${name}`}><code translate="no">{name}</code></FieldLabel>
+          <FieldLabel htmlFor={`tool-${name}`}><code translate="no" className="tool-name" data-changed={!!changed(name) || undefined}>{name}</code></FieldLabel>
           <FieldDescription id={`tool-${name}-help`}>{help}{changed(name) && <><br /><span className="tool-changed">{changed(name)}</span></>}</FieldDescription>
         </FieldContent>
       </Field>)}

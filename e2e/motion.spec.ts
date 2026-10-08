@@ -24,23 +24,22 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
-test("pointer disclosure expands and collapses continuously, including a quick reversal", async ({ page }) => {
+test("a disclosure opens at once, as shadcn's Collapsible ships, and settles after quick clicks", async ({ page }) => {
   await page.goto(server.url);
   const trigger = page.getByRole("button", { name: "Not editable here" });
   const panel = page.locator(".not-here [data-slot=collapsible-content]");
   await trigger.click();
-  await expect.poll(() => page.evaluate(() => window.motionEvents.filter(event => event.slot === "collapsible-content").map(event => event.property)), { timeout: 3000 }).toContain("height");
   await expect(panel).toBeVisible();
-  await expect.poll(() => panel.evaluate(element => Math.abs(element.clientHeight - element.scrollHeight))).toBeLessThanOrEqual(1);
+  await expect(panel).toHaveCSS("transition-duration", "0s");
   await trigger.click();
   await expect(panel).toBeHidden();
-  // Raw pointer clicks do not wait for animation stability between toggles.
+  // Raw pointer clicks do not wait for anything between toggles.
   const box = (await trigger.boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await expect.poll(() => panel.evaluate(element => Math.abs(element.clientHeight - element.scrollHeight))).toBeLessThanOrEqual(1);
+  await expect(panel).toBeVisible();
 });
 
 test("keyboard disclosure and escape stay instant even after using the pointer", async ({ page }) => {
@@ -94,17 +93,4 @@ test("reduced motion settles a menu at once", async ({ page }) => {
   await expect(menu).toHaveCSS("animation-duration", "1e-05s");
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
-});
-
-test("reduced motion keeps only a short opacity fade on disclosures", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(server.url);
-  const trigger = page.getByRole("button", { name: "Not editable here" });
-  await trigger.click();
-  const panel = page.locator(".not-here [data-slot=collapsible-content]");
-  await expect.poll(() => page.evaluate(() => window.motionEvents.filter(event => event.slot === "collapsible-content").map(event => event.property)), { timeout: 3000 }).toEqual(["opacity"]);
-  await expect(panel).toHaveCSS("transition-duration", "0.125s");
-  await expect(panel).toHaveCSS("transform", "none");
-  await trigger.click();
-  await expect(panel).toBeHidden();
 });

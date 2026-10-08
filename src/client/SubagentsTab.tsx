@@ -67,7 +67,7 @@ function AgentDetail({ agent, busy, onEdit, onRemove }: { agent: AgentView; busy
       {agent.extraKeys.length > 0 && <div><dt>Other keys</dt><dd className="flex flex-wrap items-center gap-1.5">{agent.extraKeys.map(key => <Badge key={key} variant="outline" render={<code />}>{key}</Badge>)}<span className="muted">kept as they are</span></dd></div>}
       <div><dt>File</dt><dd><code>{agent.file}</code><span className="muted"> · {agent.scope === "project" ? "this project's .pi/agents" : "global"}</span></dd></div>
     </dl>
-    <Disclosure label="System prompt" className="prompt-preview"><pre>{agent.prompt || "(empty)"}</pre></Disclosure>
+    <div className="prompt-preview"><Disclosure label="System prompt"><pre>{agent.prompt || "(empty)"}</pre></Disclosure></div>
   </section>;
 }
 
@@ -109,7 +109,7 @@ export function SubagentsTab({ project }: { project?: string }) {
   return <>
     <PageHeader title="Sub-agents" description="Profiles in the format of Pi's example subagent extension." files={[view?.dir]}
       actions={<Button variant="outline" disabled={busy} onClick={() => add("user")}><Plus aria-hidden="true" />Add profile</Button>} />
-    {view && !view.readerInstalled && <Alert role="note" className="page-notice"><TriangleAlert aria-hidden="true" /><AlertDescription>No installed extension reads these profiles yet. Pi has no built-in sub-agents: install Pi's example subagent extension (or another that reads this folder) for them to take effect. T3Code's own sub-agents are separate.</AlertDescription></Alert>}
+    {view && !view.readerInstalled && <Alert role="note" className="mb-4"><TriangleAlert aria-hidden="true" /><AlertDescription>No installed extension reads these profiles yet. Pi has no built-in sub-agents: install Pi's example subagent extension (or another that reads this folder) for them to take effect. T3Code's own sub-agents are separate.</AlertDescription></Alert>}
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => { const target = undo; void run(() => restoreAgent(target.scope, target.file, project), `Restored ${target.file}.`, () => setSelected(target)); } }} />
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}

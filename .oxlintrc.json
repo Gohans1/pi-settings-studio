@@ -9,6 +9,22 @@
       {
         "allow": [
           "layout"
+        ],
+        "contracts": [
+          {
+            "pattern": "^(Textarea|Input)$",
+            "allow": [
+              "layout",
+              "font-family"
+            ]
+          },
+          {
+            "pattern": "^Item$",
+            "allow": [
+              "layout",
+              "color"
+            ]
+          }
         ]
       }
     ],

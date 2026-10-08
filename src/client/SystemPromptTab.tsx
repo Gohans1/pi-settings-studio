@@ -51,7 +51,7 @@ export function SystemPromptTab({ project }: { project?: string }) {
       : !project ? <Alert role="note"><AlertDescription>Choose a project at the top to see its sessions.</AlertDescription></Alert>
       : !projectSessions.length ? <Empty><EmptyDescription>This project has no Pi sessions yet. Start a thread in T3Code, then come back.</EmptyDescription></Empty>
       : <>
-        <Field className="prompt-pickers"><FieldLabel htmlFor="prompt-session">Session</FieldLabel>
+        <Field className="mb-5 max-w-180"><FieldLabel htmlFor="prompt-session">Session</FieldLabel>
           <OptionSelect id="prompt-session" className="w-full" value={sessionId} onChange={setSessionId}
             options={projectSessions.map(session => ({ value: session.id, label: `${new Date(session.modified).toLocaleString()} — ${session.title}` }))} /></Field>
         {!prompt ? !error && sessionId && <div className="loading" aria-busy="true">Reading the session…</div>

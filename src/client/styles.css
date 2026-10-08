@@ -139,7 +139,6 @@
   .loading { padding: --spacing(8) 0; color: var(--muted-foreground); }
   @media (prefers-reduced-motion: no-preference) { .loading { animation: appear 160ms var(--ease-out) 300ms backwards; } }
   .actions { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2); }
-  .page-notice { margin-bottom: --spacing(4); }
 
   /* Workbench: a list and the chosen item's details, side by side; each pane scrolls on its own. */
   .workbench { flex: 1 1 0; min-height: 28rem; display: grid; grid-template-columns: var(--list-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); border: 1px solid var(--border); border-radius: var(--radius-frame); overflow: hidden; }
@@ -193,8 +192,6 @@
   .named-rows { display: grid; gap: --spacing(2); justify-items: start; }
   .named-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: --spacing(2); width: 100%; }
   .oauth-fields { display: grid; gap: --spacing(3); }
-  .scope-choice { margin-bottom: --spacing(5); }
-  .codemode .scope-choice { margin-bottom: 0; }
   .switch-row { display: flex; gap: --spacing(3); align-items: center; font-weight: var(--font-weight-normal); }
 
   /* File contents, prompts and logs. */
@@ -223,7 +220,7 @@
   .key-form { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2) --spacing(3); margin-top: --spacing(5); }
   .key-setup { margin: --spacing(2) 0 0; }
   .detail > .key-setup + .job { margin-top: --spacing(3); }
-  .detail > :is(.check-result, .remove-credential) { margin-top: --spacing(4); }
+  .detail > .remove-credential { margin-top: --spacing(4); }
   .model-rows { display: grid; gap: --spacing(2); }
   .model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); align-items: center; }
   .found-models { display: grid; gap: --spacing(2); padding: --spacing(3); border: 1px solid var(--border); border-radius: var(--radius); }
@@ -288,7 +285,6 @@
   .list-note { margin: 0; padding: --spacing(1) --spacing(2.5); }
 
   /* System prompt. */
-  .prompt-pickers { max-width: 45rem; margin-bottom: --spacing(5); }
   .prompt { display: grid; gap: --spacing(2); }
   .prompt-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); padding-bottom: --spacing(1); color: var(--muted-foreground); font-size: var(--text-small); font-variant-numeric: tabular-nums; }
   .prompt [data-slot=accordion-trigger] .muted { margin-inline-start: --spacing(1); font-weight: var(--font-weight-normal); font-variant-numeric: tabular-nums; }
@@ -333,12 +329,12 @@
   .keybinding-row > div:first-child { display: grid; gap: --spacing(0.5); align-content: start; }
   .keybinding-control { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(2); }
   /* Startup tools: a checklist that takes the whole row. */
-  .setting-row:has(.tool-field) { grid-template-columns: minmax(0, 1fr); }
+  .setting-row:has(.tool-name) { grid-template-columns: minmax(0, 1fr); }
   .tool-group { display: grid; gap: --spacing(2.5); align-content: start; }
   .tool-group-title { margin: 0; color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-semibold); }
-  .tool-option code { font-size: var(--text-small); font-weight: var(--font-weight-semibold); }
+  .tool-name { font-size: var(--text-small); font-weight: var(--font-weight-semibold); }
   .tool-changed { color: var(--foreground); }
-  .tool-option[data-changed] code::after { content: ""; display: inline-block; width: --spacing(1.5); height: --spacing(1.5); margin-inline-start: --spacing(1.5); vertical-align: middle; border-radius: calc(infinity * 1px); background: var(--primary); }
+  .tool-name[data-changed]::after { content: ""; display: inline-block; width: --spacing(1.5); height: --spacing(1.5); margin-inline-start: --spacing(1.5); vertical-align: middle; border-radius: calc(infinity * 1px); background: var(--primary); }
 }
 
 @keyframes appear { from { opacity: 0; } }
@@ -351,7 +347,6 @@
   .workbench { display: block; flex: none; min-height: 0; border: 0; overflow: visible; }
   .workbench-list, .workbench-detail { overflow: visible; padding: 0; background: none; border: 0; }
   .workbench[data-open] .workbench-list, .workbench:not([data-open]) .workbench-detail { display: none; }
-  .workbench-back { margin: 0 0 --spacing(3) calc(--spacing(2) * -1); }
   .list-search { position: static; margin: 0 0 --spacing(2); padding: 0; }
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: --spacing(4); }
   /* One scrolling row of groups; the faded edge says there are more. */
@@ -377,8 +372,6 @@
 @media (prefers-reduced-motion: reduce) {
   /* Unlayered policy wins over component/utility layers without specificity escalation. */
   *, *::before, *::after { animation-duration: 0.01ms; animation-iteration-count: 1; transition-duration: 0.01ms; scroll-behavior: auto; }
-  /* Keep a gentle fade, but never interpolate the panel height. */
-  [data-slot=collapsible-content] { transition: opacity 125ms var(--ease-out); }
 }
 /* No delay on keyboard navigation, form edits or Escape, including portalled surfaces and pseudo-elements. */
 html[data-motion-input=keyboard] *, html[data-motion-input=keyboard] *::before, html[data-motion-input=keyboard] *::after {

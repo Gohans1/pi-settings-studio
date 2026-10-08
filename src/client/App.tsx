@@ -71,7 +71,7 @@ export function App() {
     history.replaceState(null, "", "#" + id);
     setActive(id);
   }
-  return <TooltipProvider><Tabs className="app grid gap-0" value={active} onValueChange={value => select(String(value))}>
+  return <TooltipProvider><Tabs value={active} onValueChange={value => select(String(value))}><div className="app">
     <a className="skip-link" href="#main">Skip to content</a>
     <header>
       <div className="topbar">
@@ -89,5 +89,5 @@ export function App() {
       {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id} className="flex flex-col"><Panel project={project} loadsInProject={current?.trust.loadsInT3Code} /></TabsContent>)}
     </main>
     <Toaster />
-  </Tabs></TooltipProvider>;
+  </div></Tabs></TooltipProvider>;
 }

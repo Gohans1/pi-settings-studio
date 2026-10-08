@@ -182,10 +182,10 @@ export function GeneralTab({ project }: { project?: string }) {
         </DropdownMenuContent>
       </DropdownMenu>
     </>} />
-    {project && <ScopeChoice value={scope} globalLabel="Global settings" disabled={busy || !!changes.length} onChange={setScopeChoice} />}
+    {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global settings" disabled={busy || !!changes.length} onChange={setScopeChoice} />}
     {scope === "global" && !needle && <PiPanel />}
     <Feedback message={message} onDismiss={() => setMessage("")} />
-    {error && <Alert variant="destructive" className="page-notice"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription>
+    {error && <Alert variant="destructive" className="mb-4"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription>
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>
         <Button variant="outline" size="sm" disabled={busy || !!changes.length} onClick={openRaw}>Edit as JSON</Button></div></Alert>}
     {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && (restore
@@ -206,7 +206,7 @@ export function GeneralTab({ project }: { project?: string }) {
           </a>;
         })}</nav>
         <div className="settings-content">
-          <div className="settings-groups">
+          <div>
             {sections.map(group => {
               const items = results.filter(field => field.section === group.id);
               // A search shows every match; otherwise the advanced rows wait behind the group's toggle,
@@ -216,11 +216,11 @@ export function GeneralTab({ project }: { project?: string }) {
                 <h2 id={"group-" + group.id + "-title"}>{group.title}</h2>
                 {"note" in group && <Alert role="note"><AlertDescription>{group.note}</AlertDescription></Alert>}
                 {items.filter(field => !advanced.includes(field)).map(row)}
-                {advanced.length > 0 && <Disclosure label={`${advanced.length} advanced ${advanced.length === 1 ? "setting" : "settings"}`} className="settings-advanced" hiddenUntilFound
+                {advanced.length > 0 && <div className="settings-advanced"><Disclosure label={`${advanced.length} advanced ${advanced.length === 1 ? "setting" : "settings"}`} hiddenUntilFound
                   open={advancedOpen[group.id] ?? advanced.some(field => Object.hasOwn(view.values, field.key))}
                   onOpenChange={open => setAdvancedOpen(current => ({ ...current, [group.id]: open }))}>
                   {advanced.map(row)}
-                </Disclosure>}
+                </Disclosure></div>}
               </section>;
             })}
             {!results.length && <Empty><EmptyDescription>No settings match “{query.trim()}”. Try a label such as “model” or “budget”, or a key.</EmptyDescription></Empty>}

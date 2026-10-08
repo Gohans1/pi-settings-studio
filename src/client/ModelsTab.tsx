@@ -64,7 +64,7 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
   }
   return <section className="detail" aria-labelledby="provider-title" aria-describedby="provider-status">
     <header className="detail-header"><div className="detail-title"><h2 id="provider-title">{provider.name}</h2>
-      <Badge id="provider-status" variant="outline" className={provider.auth.configured ? undefined : "text-muted-foreground"}>
+      <Badge id="provider-status" variant={provider.auth.configured ? "outline" : "secondary"}>
         {provider.auth.configured ? <><CircleCheck aria-hidden="true" className="text-success" />{state(provider)}</> : state(provider) || "not set up"}</Badge></div>
       <div className="actions">
         {provider.oauth && <Button variant="outline" disabled={busy || login.running} onClick={() => void login.start({ action: "provider-login", provider: provider.id })} aria-label={`Sign in to ${provider.name}`}>Sign in</Button>}
@@ -78,7 +78,7 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
         : <span className="muted">Not in auth.json or models.json. Check credential also looks at the environment of this app.</span>}</dd></div>
       {provider.oauth && <div><dt>Sign-in</dt><dd>{provider.oauth.name}{provider.oauth.subscription ? " (subscription)" : ""}</dd></div>}
     </dl>
-    {check.job?.check && <Alert role="status" variant={check.job.check.status === "ready" ? "default" : "destructive"} className="check-result">
+    {check.job?.check && <Alert role="status" variant={check.job.check.status === "ready" ? "default" : "destructive"} className="mt-4">
       {check.job.check.status === "ready" ? <CircleCheck aria-hidden="true" /> : <CircleAlert aria-hidden="true" />}<AlertTitle>{verdict(check.job.check)}</AlertTitle></Alert>}
     {check.job && !check.job.check && <JobPanel job={check.job} error={check.error} onAnswer={() => {}} onCancel={() => void check.cancel()} onDismiss={check.dismiss} />}
     <JobPanel job={login.job} error={login.error} onAnswer={value => void login.answer(value)} onCancel={() => void login.cancel()} onDismiss={login.dismiss} />
@@ -90,7 +90,7 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
       {provider.stored === "oauth" && <FieldDescription className="basis-full">Saving a key replaces the stored sign-in.</FieldDescription>}
     </form>}
     {provider.keySetup && <p className="muted key-setup">Needs more than a key, such as an account ID, a region or a profile?{" "}
-      <Button variant="link" size="xs" className="px-0" disabled={busy || setup.running} onClick={() => void setup.start({ action: "provider-setup", provider: provider.id })}>Set up with Pi's questions</Button></p>}
+      <Button variant="link" size="xs" disabled={busy || setup.running} onClick={() => void setup.start({ action: "provider-setup", provider: provider.id })}>Set up with Pi's questions</Button></p>}
     <JobPanel job={setup.job} error={setup.error} onAnswer={value => void setup.answer(value)} onCancel={() => void setup.cancel()} onDismiss={setup.dismiss} />
     {provider.stored && <div className="actions remove-credential">
       <Button variant="destructive" disabled={busy} onClick={onRemove}>Remove credential</Button></div>}

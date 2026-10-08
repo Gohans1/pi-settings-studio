@@ -53,7 +53,7 @@ function ServerTools({ server, tools, busy, onTest, onToolExposure }: {
   return <section className="server-tools" aria-labelledby="server-tools-title">
     <h3 id="server-tools-title">Tools</h3>
     {tools === undefined ? <p className="muted">Test connections to list this server's tools and choose how each one reaches the model.{" "}
-      <Button variant="link" size="xs" className="px-0" onClick={onTest}>Test now</Button></p>
+      <Button variant="link" size="xs" onClick={onTest}>Test now</Button></p>
       : !tools.length ? <p className="muted">The last test listed no tools{server.enabled ? "" : "; turn the server on and test again"}.</p>
       : <ul className="tool-exposures">{tools.map(tool => {
         const { [tool]: own, ...others } = server.toolExposure;

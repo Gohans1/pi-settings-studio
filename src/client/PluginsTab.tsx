@@ -173,7 +173,7 @@ export function PluginsTab({ project }: { project?: string }) {
       <span className="actions">
         <Button variant="ghost" size="xs" disabled={busy} aria-label={`Filters for ${pkg.source}`} onClick={() => setFiltering(pkg.scope + pkg.source)}>Filters</Button>
         <Button variant="ghost" size="xs" disabled={job.running || checking} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Update</Button>
-        <Button variant="ghost" size="xs" className="text-destructive" disabled={job.running || checking} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Remove</Button>
+        <Button variant="destructive" size="xs" disabled={job.running || checking} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Remove</Button>
       </span>
       {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
         onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}

@@ -98,7 +98,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
         {found.length ? <ul>{found.map(model => <li key={model.id}><Field orientation="horizontal" className="flex-wrap">
           <Checkbox id={`${id}found-${model.id}`} checked={known.has(model.id) || picked.has(model.id)} disabled={known.has(model.id)}
             onCheckedChange={checked => setPicked(current => { const next = new Set(current); if (checked) next.add(model.id); else next.delete(model.id); return next; })} />
-          <FieldLabel htmlFor={`${id}found-${model.id}`} className="flex-wrap font-normal"><code>{model.id}</code>{model.name && <span className="muted">{model.name}</span>}
+          <FieldLabel htmlFor={`${id}found-${model.id}`} className="flex-wrap"><code>{model.id}</code>{model.name && <span className="muted">{model.name}</span>}
             {model.contextWindow && <span className="muted">{model.contextWindow.toLocaleString("en")} context</span>}
             {known.has(model.id) && <span className="muted">in the list</span>}</FieldLabel>
         </Field></li>)}</ul> : <FieldDescription>The endpoint lists no models.</FieldDescription>}

@@ -42,13 +42,13 @@ export function KeybindingsPanel({ onMessage }: { onMessage: (text: string) => v
   }
   const needle = query.trim().toLowerCase();
   const visible = (view?.actions ?? []).filter(action => !needle || `${action.id} ${action.description}`.toLowerCase().includes(needle));
-  return <section className="settings-group keybindings" id="group-keybindings" aria-labelledby="keybindings-title">
+  return <section className="settings-group" id="group-keybindings" aria-labelledby="keybindings-title">
     <h2 id="keybindings-title">Keyboard shortcuts</h2>
     <Alert role="note"><AlertDescription>Only affects Pi in a terminal. No effect in T3Code. A set value replaces the defaults; separate several keys with commas.</AlertDescription></Alert>
     {view && <FilePath path={view.path} />}
     {(error || view?.error) && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>keybindings.json</AlertTitle><AlertDescription>{error || view?.error}</AlertDescription></Alert>}
     <SearchField label="Search shortcuts" placeholder="Search shortcuts…" value={query} onChange={setQuery} shortcut={false} className="my-3 w-72 max-w-full" />
-    {view && <div className="keybinding-list">{visible.map(action => {
+    {view && <div>{visible.map(action => {
       const keys = current(action);
       const text = texts[action.id] ?? (keys ?? []).join(", ");
       const bad = invalid.includes(action.id);
