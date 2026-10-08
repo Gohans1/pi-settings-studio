@@ -24,7 +24,8 @@ test.afterEach(async () => { await server?.close(); await rm(root, { recursive: 
 
 test("a project is picked, trusted, and its own settings.json edited", async ({ page }) => {
   await page.goto(server.url + "#general");
-  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: project, exact: true }).click();
   const trust = page.getByRole("region", { name: "Project trust" });
   await expect(trust).toContainText("T3Code ignores this project's .pi folder");
   await trust.getByRole("button", { name: "Trust this project" }).click();
@@ -41,13 +42,14 @@ test("a project is picked, trusted, and its own settings.json edited", async ({ 
   expect(JSON.parse(await readFile(join(project, ".pi", "settings.json"), "utf8"))).toEqual({ retry: { maxRetries: 5 } });
   expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8"))).toEqual({ retry: { maxRetries: 3 } });
   await page.reload();
-  await expect(page.getByLabel("Project", { exact: true })).toHaveValue(project);
+  await expect(page.getByRole("combobox", { name: "Project", exact: true })).toContainText(project);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
 test("project model defaults and raw JSON write the project's settings.json", async ({ page }) => {
   await page.goto(server.url + "#models");
-  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: project, exact: true }).click();
   await page.getByRole("button", { name: /^Defaults/ }).click();
   const panel = page.getByRole("region", { name: "Defaults" });
   await panel.getByRole("radio", { name: "This project" }).check();

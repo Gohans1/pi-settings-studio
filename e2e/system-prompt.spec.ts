@@ -38,9 +38,11 @@ test.afterEach(async () => { await server?.close(); await rm(root, { recursive: 
 test("shows the recorded system prompt of a chosen project and session", async ({ page }) => {
   await page.goto(server.url + "#system-prompt");
   await expect(page.getByText("Choose a project at the top")).toBeVisible();
-  await page.getByLabel("Project", { exact: true }).selectOption(projB);
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: projB, exact: true }).click();
   await expect(page.getByText("This session has no recorded system prompt")).toBeVisible();
-  await page.getByLabel("Project", { exact: true }).selectOption(projA);
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: projA, exact: true }).click();
   await expect(page.getByLabel("Session")).toContainText("Fix the login bug");
   const rules = page.getByRole("group", { name: /rules/ });
   await expect(rules).toContainText("Rule two.");

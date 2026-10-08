@@ -27,7 +27,8 @@ test("instruction files are edited, created and removed with undo", async ({ pag
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved AGENTS.md");
   expect(await readFile(join(agent, "AGENTS.md"), "utf8")).toBe("# Global rules\n- Be brief.\n");
 
-  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: project, exact: true }).click();
   await page.getByRole("button", { name: /^\.pi\/SYSTEM\.md/ }).click();
   await expect(page.getByText("Not created yet")).toBeVisible();
   await page.getByLabel("Contents of SYSTEM.md").fill("You review code.\n");

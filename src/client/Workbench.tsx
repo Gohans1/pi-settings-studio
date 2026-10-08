@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { ChevronLeft, Ellipsis, type LucideIcon } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./components/ui/empty";
 
 /**
  * A list and the chosen item's details. Wide screens show both panes, each scrolling on its own;
@@ -40,9 +41,11 @@ export function MoreMenu({ label, children }: { label: string; children: ReactNo
 
 /** The detail pane before anything is chosen: what goes here, and how to fill it. */
 export function EmptyDetail({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children?: ReactNode }) {
-  return <div className="detail detail-empty">
-    <Icon aria-hidden="true" />
-    <strong>{title}</strong>
-    {children && <p>{children}</p>}
-  </div>;
+  return <Empty className="min-h-full">
+    <EmptyHeader>
+      <EmptyMedia variant="icon"><Icon aria-hidden="true" /></EmptyMedia>
+      <EmptyTitle>{title}</EmptyTitle>
+      {children && <EmptyDescription>{children}</EmptyDescription>}
+    </EmptyHeader>
+  </Empty>;
 }

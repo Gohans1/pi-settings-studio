@@ -62,7 +62,8 @@ test("a project profile is added in the project's .pi/agents and replaces a glob
   await server.close();
   server = await startServer({ agentDir: join(root, "agent"), projectDir: project, port: 0, staticDir: resolve("dist/client") });
   await page.goto(server.url + "#subagents");
-  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: project, exact: true }).click();
   await page.getByRole("button", { name: "Add profile to project" }).click();
   const form = page.getByRole("form", { name: "Add profile to this project" });
   await form.getByLabel("Name").fill("scout");

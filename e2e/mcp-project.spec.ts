@@ -20,7 +20,8 @@ test.afterEach(async () => { await server?.close(); await rm(root, { recursive: 
 test("a global server is switched off for one project, then a project server is added", async ({ page }) => {
   const projectFile = async () => JSON.parse(await readFile(join(project, ".pi", "mcp.json"), "utf8"));
   await page.goto(server.url + "#mcp");
-  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: project, exact: true }).click();
   await expect(page.getByText("No servers in this project's .pi/mcp.json yet.")).toBeVisible();
 
   await page.getByRole("button", { name: /^docs/ }).first().click();
@@ -65,7 +66,8 @@ test("mcp.json is edited as raw JSON with secrets shown as placeholders", async 
 test("Code mode is set for one project, then back to the global choice", async ({ page }) => {
   const settings = join(project, ".pi", "settings.json");
   await page.goto(server.url + "#mcp");
-  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: project, exact: true }).click();
   await page.getByRole("button", { name: /^Code mode/ }).click();
   const panel = page.getByRole("region", { name: "Code mode" });
   await panel.getByRole("radio", { name: "This project" }).check();

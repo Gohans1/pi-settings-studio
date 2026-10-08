@@ -152,7 +152,7 @@ export function GeneralTab({ project }: { project?: string }) {
   </>;
   return <>
     <PageHeader title="General" titleRef={title} description={description} files={[view?.path]} actions={<>
-      <SearchField label="Search settings" placeholder="Search settings or keys…" value={query} onChange={setQuery} />
+      <SearchField label="Search settings" placeholder="Search settings or keys…" value={query} onChange={setQuery} className="w-72 max-sm:w-auto max-sm:min-w-0 max-sm:flex-1" />
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button variant="outline" />}><FileJson aria-hidden="true" />File<ChevronDown aria-hidden="true" /></DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto">

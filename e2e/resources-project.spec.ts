@@ -26,7 +26,8 @@ test("project skills and prompts switch in the project's .pi/settings.json", asy
   const projectSettings = async () => JSON.parse(await readFile(join(project, ".pi", "settings.json"), "utf8"));
   await page.goto(server.url + "#skills");
   await expect(page.getByRole("button", { name: /^delta/ })).toHaveCount(0);
-  await page.getByLabel("Project", { exact: true }).selectOption(project);
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: project, exact: true }).click();
   await page.getByRole("switch", { name: "Enable delta" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("delta turned off");
   expect(await projectSettings()).toEqual({ skills: ["-skills/delta/SKILL.md"] });

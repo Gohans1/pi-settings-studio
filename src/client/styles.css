@@ -140,7 +140,6 @@
   .brand svg { width: --spacing(5); height: --spacing(5); }
   .project-picker { margin-inline-start: auto; display: flex; align-items: center; gap: --spacing(2); min-width: 0; color: var(--muted-foreground); font-size: var(--text-small); }
   .project-picker svg { width: --spacing(4); height: --spacing(4); }
-  .project-picker select { min-height: --spacing(8); width: 18rem; max-width: 100%; min-width: 0; padding-block: --spacing(1); font-size: var(--text-small); }
   /* The tab list scrolls sideways on a narrow screen; tabs past the edge fade out to say there is more. */
   .tabbar { display: flex; align-items: end; min-height: var(--tabbar-height); overflow-x: auto; scrollbar-width: none; padding-inline: calc(var(--gutter) - --spacing(1));
     background: var(--sidebar); border-bottom: 1px solid var(--border);
@@ -159,12 +158,6 @@
   .file-paths { display: flex; flex-wrap: wrap; gap: --spacing(1) --spacing(4); margin-top: --spacing(2); }
   .file-path { display: inline-flex; align-items: center; gap: --spacing(1.5); min-width: 0; color: var(--muted-foreground); }
   .file-path svg { width: --spacing(3.5); height: --spacing(3.5); }
-  .search { position: relative; display: flex; align-items: center; width: 18rem; max-width: 100%; }
-  .search svg { position: absolute; inset-inline-start: --spacing(2.5); width: --spacing(4); height: --spacing(4); color: var(--muted-foreground); pointer-events: none; }
-  .search input { width: 100%; padding-inline-start: --spacing(8.5); }
-  .search:has(kbd) input { padding-inline-end: --spacing(8); }
-  .search kbd { position: absolute; inset-inline-end: --spacing(2.5); min-width: --spacing(5); padding: 0 --spacing(1); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--muted-foreground); font: var(--text-caption)/var(--leading-normal) var(--font-mono); text-align: center; pointer-events: none; }
-  .search input:is(:focus, :not(:placeholder-shown)) + kbd { display: none; }
 
   /* Callouts: information (muted), warning, error. Text stays in the foreground; the tone colours the surface and title. */
   .notice { margin: 0; padding: --spacing(2.5) --spacing(3.5); border-radius: var(--radius); background: var(--muted); color: var(--foreground); }
@@ -185,11 +178,6 @@
   .actions { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2); }
   .chip { display: inline-block; margin: 0 --spacing(1.5) --spacing(1) 0; padding: 0 --spacing(1.5); border: 1px solid var(--border); border-radius: var(--radius-sm); }
   .page-notice { margin-bottom: --spacing(4); }
-  .trust { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(2) --spacing(4); margin-bottom: --spacing(5); }
-  .trust p { margin: 0; flex: 1 1 32rem; display: flex; gap: --spacing(2.5); align-items: baseline; }
-  .trust p > svg { align-self: center; width: --spacing(4); height: --spacing(4); color: var(--success); }
-  .trust.callout-warning p > svg { color: var(--warning); }
-  .trust .field-error { flex-basis: 100%; }
 
   /* Workbench: a list and the chosen item's details, side by side; each pane scrolls on its own. */
   .workbench { flex: 1 1 0; min-height: 28rem; display: grid; grid-template-columns: var(--list-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); border: 1px solid var(--border); border-radius: var(--radius-frame); overflow: hidden; }
@@ -197,7 +185,6 @@
   .workbench-detail { overflow: auto; overscroll-behavior: contain; padding: --spacing(5) --spacing(7) 0; }
   .workbench-detail > :last-child { padding-bottom: --spacing(7); }
   .list-search { position: sticky; top: calc(--spacing(2) * -1); z-index: 1; margin: calc(--spacing(2) * -1) calc(--spacing(2) * -1) 0; padding: --spacing(2); background: var(--sidebar); }
-  .list-search .search { width: 100%; }
   .list-count { margin: 0; padding: --spacing(2) --spacing(2) 0; color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
   .item-group { margin-top: --spacing(4); }
   .list-header { display: flex; align-items: center; gap: --spacing(2); min-height: --spacing(8); padding-inline: --spacing(2); }
@@ -237,10 +224,6 @@
   .detail-list dd select { min-width: 12rem; }
   .detail-list dd p { margin: --spacing(1.5) 0 0; }
   .detail-list dd > p:first-child { margin-top: 0; }
-  .detail-empty { display: grid; justify-items: center; align-content: center; gap: --spacing(1); min-height: 100%; padding: --spacing(10) --spacing(4); text-align: center; color: var(--muted-foreground); }
-  .detail-empty > svg { width: --spacing(6); height: --spacing(6); margin-bottom: --spacing(2); }
-  .detail-empty strong { color: var(--foreground); font-weight: var(--font-weight-semibold); }
-  .detail-empty p { margin: 0; max-width: 36ch; font-size: var(--text-small); }
   .detail > .job, .detail > .prompt-preview, .detail > .in-project { margin-top: --spacing(4); }
 
   /* Forms: fields stack with their hints; groups separate by twice the field gap. */
@@ -336,12 +319,8 @@
   .job p { margin: 0; }
   .job-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: --spacing(3); }
   .job-header [role=status] { color: var(--muted-foreground); font-size: var(--text-small); }
-  .job pre { margin: --spacing(2) 0 0; max-height: 20rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .job pre { margin: 0; max-height: 20rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .job-prompt { display: grid; gap: --spacing(2); }
-  .job-prompt fieldset { display: grid; gap: --spacing(1); margin: 0; padding: 0; border: 0; }
-  .job-prompt :is(legend, label) { font-weight: var(--font-weight-semibold); }
-  .job-prompt label input { display: block; width: 100%; margin-top: --spacing(1.5); }
-  .job-prompt .choice input { display: inline; width: auto; margin-top: --spacing(0.5); }
   .job-results { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); }
   .job-results li { display: flex; flex-wrap: wrap; gap: --spacing(1) --spacing(3); }
 
@@ -431,11 +410,9 @@
   .pi-panel > p { margin: 0; }
   .pi-panel code { color: var(--muted-foreground); }
   .pi-panel .notice, .pi-panel .job, .pi-panel > .error { flex-basis: 100%; }
-  .not-here { margin-top: --spacing(10); padding: --spacing(3) --spacing(4); border: 1px solid var(--border); border-radius: var(--radius); }
-  .not-here summary { font-weight: var(--font-weight-semibold); }
-  .not-here ul { margin: --spacing(3) 0 0; padding-inline-start: --spacing(5); display: grid; gap: --spacing(2); color: var(--muted-foreground); }
+  .not-here { margin-top: --spacing(10); }
+  .not-here ul { margin: --spacing(2) 0 0; padding-inline-start: --spacing(5); display: grid; gap: --spacing(2); color: var(--muted-foreground); }
   .scope-footnote { margin-top: --spacing(6); color: var(--muted-foreground); font-size: var(--text-small); }
-  .keybindings > .search { margin: --spacing(3) 0; }
   .keybinding-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 1fr); gap: --spacing(1.5) --spacing(6); padding: --spacing(2.5) 0; border-top: 1px solid var(--border); }
   .keybinding-row > div:first-child { display: grid; gap: --spacing(0.5); align-content: start; }
   .keybinding-control { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(2); }
@@ -478,9 +455,7 @@
 @media (width < 40rem) {
   :root { --gutter: --spacing(4); }
   .brand span { display: none; }
-  .project-picker select { width: auto; }
   .page-actions { width: 100%; flex-wrap: nowrap; }
-  .page-actions .search { flex: 1 1 auto; width: auto; min-width: 0; }
   .detail-list > div, .keybinding-row { grid-template-columns: minmax(0, 1fr); gap: --spacing(1); }
   .model-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .save-bar .actions { width: 100%; }

@@ -43,7 +43,7 @@ export function KeybindingsPanel({ onMessage }: { onMessage: (text: string) => v
     <p className="notice">Only affects Pi in a terminal. No effect in T3Code. A set value replaces the defaults; separate several keys with commas.</p>
     {view && <FilePath path={view.path} />}
     {(error || view?.error) && <div role="alert" className="error"><strong>keybindings.json</strong><p>{error || view?.error}</p></div>}
-    <SearchField label="Search shortcuts" placeholder="Search shortcuts…" value={query} onChange={setQuery} shortcut={false} />
+    <SearchField label="Search shortcuts" placeholder="Search shortcuts…" value={query} onChange={setQuery} shortcut={false} className="my-3 w-72 max-w-full" />
     {view && <div className="keybinding-list">{visible.map(action => {
       const keys = current(action);
       const text = texts[action.id] ?? (keys ?? []).join(", ");
