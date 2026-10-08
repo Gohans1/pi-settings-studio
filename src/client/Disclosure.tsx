@@ -11,6 +11,7 @@ export function Disclosure({ label, defaultOpen, open, onOpenChange, hiddenUntil
     <CollapsibleTrigger render={<Button variant="ghost" size="sm" className="-ms-2" />}>
       <ChevronRight aria-hidden="true" className="transition-transform duration-200 ease-out group-data-panel-open/button:rotate-90" />{label}
     </CollapsibleTrigger>
-    <CollapsibleContent hiddenUntilFound={hiddenUntilFound}>{children}</CollapsibleContent>
+    {/* The panel clips its overflow to animate its height; the inset keeps room for focus rings. */}
+    <CollapsibleContent hiddenUntilFound={hiddenUntilFound} className="-m-1 p-1">{children}</CollapsibleContent>
   </Collapsible>;
 }
