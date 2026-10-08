@@ -53,6 +53,10 @@
   --text-heading: 1.125rem;
   --text-display: 1.75rem;
 }
+/* Motion: a strong ease-out (Emil Kowalski's) for press feedback, which starts fast and settles. */
+@theme {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
 body { background: var(--background); color: var(--foreground); font-size: var(--text-body); }
 ::selection { background: var(--primary); color: var(--primary-foreground); }
 :focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
@@ -72,7 +76,7 @@ svg { width: 18px; height: 18px; flex-shrink: 0; stroke-width: 1.7; }
 .app { display: block; min-height: 100svh; }
 .app-header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; column-gap: --spacing(6); padding: 0 --spacing(10); min-height: var(--header-height); background: var(--sidebar); border-bottom: 1px solid var(--border); }
 .identity { font-weight: var(--font-weight-semibold); font-size: var(--text-heading); }
-.tab-bar { height: var(--header-height) !important; gap: --spacing(1); max-width: 100%; overflow-x: auto; justify-content: flex-start !important; }
+.tab-bar { height: var(--header-height); gap: --spacing(1); max-width: 100%; overflow-x: auto; justify-content: flex-start; }
 .tab-bar [data-slot=tabs-trigger] { height: 100%; padding-inline: --spacing(2.5); font-size: var(--text-small); }
 .tab-bar [data-slot=tabs-trigger]::after { bottom: 0; }
 .tab-bar [data-slot=tabs-trigger]:not([data-active]) { color: var(--muted-foreground); }
@@ -100,7 +104,7 @@ details[open] summary { margin-bottom: --spacing(2); }
 textarea { resize: vertical; }
 .field-meta { display: flex; align-items: center; justify-content: space-between; min-height: 32px; gap: --spacing(2); font-size: var(--text-caption); color: var(--muted-foreground); }
 .field-error { color: var(--destructive); font-size: var(--text-caption); }
-[aria-invalid=true] { border-color: var(--destructive) !important; }
+:is(input, select, textarea)[aria-invalid=true] { border-color: var(--destructive); }
 .actions { display: flex; flex-wrap: wrap; gap: --spacing(3); }
 .actions [data-slot=button] { min-height: var(--control-height); padding-inline: --spacing(4); }
 .save-bar { display: flex; align-items: center; justify-content: space-between; gap: --spacing(4); padding: --spacing(6) 0; }

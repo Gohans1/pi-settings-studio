@@ -145,3 +145,16 @@ describe("space and shape", () => {
     expect(rules.filter((d) => /(?<![\d.])(128|148|60)px/.test(d.value))).toEqual([]);
   });
 });
+
+describe("cascade and motion", () => {
+  test("only the reduced-motion override uses !important", () => {
+    const outsideReducedMotion = styles.replace(/@media \(prefers-reduced-motion: reduce\) \{[^\n]*\}\s*\}/, "");
+    expect(outsideReducedMotion.split("\n").filter((line) => line.includes("!important"))).toEqual([]);
+  });
+
+  test("transitions name the properties they animate", () => {
+    expect(components.match(/\btransition-all\b/g)).toBeNull();
+    expect(declarations(styles).filter((d) => /^transition(-property)?$/.test(d.property) && /\ball\b/.test(d.value))).toEqual([]);
+  });
+});
+
