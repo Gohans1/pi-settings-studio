@@ -1,28 +1,41 @@
 @import "tailwindcss";
-@custom-variant dark (&:is(.dark *));
+@import "./flexoki.css";
 /* From shadcn@4.21.4 dist/tailwind.css (MIT): Base UI marks orientation with data-orientation. */
 @custom-variant data-horizontal { &:where([data-orientation="horizontal"]) { @slot; } }
 @custom-variant data-vertical { &:where([data-orientation="vertical"]) { @slot; } }
+/* Semantic tokens, the only colours components use. light-dark() picks the light or dark Flexoki value
+   from the OS colour scheme, the same signal Tailwind's dark: variant reads.
+   Roles follow Flexoki's mapping (bg, bg-2, ui, ui-2, tx) with three measured exceptions, each one step
+   stronger than upstream to reach WCAG AA: muted text (tx-2 is 4.47:1 on bg-2 in light), dark destructive
+   (red-400 is 4.42:1 on black) and input borders (3:1 for a control boundary). tests/design-tokens.test.ts
+   checks every pair. */
 :root {
-  --background: #fbfbf9; --foreground: #222822; --muted: #f0f2ed;
-  --muted-foreground: #60695e; --border: #d5dbd1; --input: #c4ccbf;
-  --primary: #31563c; --primary-foreground: #fff; --ring: #557d53;
-  --secondary: #e9eee5; --secondary-foreground: #283c2a; --destructive: #a42c2a;
-  --sidebar: #f0f2ed; --control: #fff; --radius: .375rem;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --background: #171b18; --foreground: #e2e8df; --muted: #252d27;
-    --muted-foreground: #acb8a7; --border: #3e493e; --input: #5b6c56; --primary: #b1d3a4;
-    --primary-foreground: #172b1a; --ring: #b1d3a4; --secondary: #2a392d;
-    --secondary-foreground: #d6e5d0; --destructive: #ffb3ae; --sidebar: #1e241f; --control: #1d241f; }
+  color-scheme: light dark;
+  --background: light-dark(var(--flexoki-paper), var(--flexoki-black));
+  --foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
+  --sidebar: light-dark(var(--flexoki-base-50), var(--flexoki-base-950));
+  --muted: light-dark(var(--flexoki-base-50), var(--flexoki-base-950));
+  --muted-foreground: light-dark(var(--flexoki-base-700), var(--flexoki-base-400));
+  --control: light-dark(var(--flexoki-paper), var(--flexoki-base-950));
+  --border: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
+  --input: light-dark(var(--flexoki-base-500), var(--flexoki-base-600));
+  --primary: light-dark(var(--flexoki-blue-600), var(--flexoki-blue-400));
+  --primary-hover: light-dark(var(--flexoki-blue-700), var(--flexoki-blue-300));
+  --primary-foreground: light-dark(var(--flexoki-paper), var(--flexoki-black));
+  --ring: light-dark(var(--flexoki-blue-600), var(--flexoki-blue-400));
+  --secondary: light-dark(var(--flexoki-base-100), var(--flexoki-base-900));
+  --secondary-hover: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
+  --secondary-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
+  --destructive: light-dark(var(--flexoki-red-600), var(--flexoki-red-300));
+  --warning: light-dark(var(--flexoki-orange-600), var(--flexoki-orange-400));
+  --radius: .375rem;
 }
 @theme inline {
   --color-background: var(--background); --color-foreground: var(--foreground);
   --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border); --color-input: var(--input);
-  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
+  --color-primary: var(--primary); --color-primary-hover: var(--primary-hover); --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary); --color-secondary-hover: var(--secondary-hover); --color-secondary-foreground: var(--secondary-foreground);
   --color-ring: var(--ring); --color-destructive: var(--destructive); --radius-lg: var(--radius);
 }
 * { box-sizing: border-box; }
@@ -193,7 +206,7 @@ textarea { resize: vertical; }
 .project-picker select { min-height: 32px; padding: 4px 8px; width: 280px; max-width: 100%; font-size: 13px; }
 .trust { margin-bottom: 24px; padding: 12px 16px; border-radius: var(--radius); border: 1px solid var(--border); display: grid; gap: 10px; }
 .trust-ok { background: var(--secondary); color: var(--secondary-foreground); }
-.trust-warn { border-color: var(--destructive); }
+.trust-warn { border-color: var(--warning); }
 .scope-choice { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 16px; border: 0; padding: 0; }
 .scope-choice legend { font-weight: 560; margin-bottom: 6px; }
 .scope-choice label { display: flex; gap: 8px; align-items: center; cursor: pointer; }

@@ -34,4 +34,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## Flexoki
+
+`src/client/flexoki.css` copies colour values from [Flexoki](https://stephango.com/flexoki) (palette 2.0, `github.com/kepano/flexoki`). License: MIT, Copyright (c) 2023 Steph Ango.
+
 Other dependencies retain their own licenses.
