@@ -12,6 +12,7 @@ import { isRecord } from "./mcp-config.ts";
 import { withValues } from "./mcp-api.ts";
 import { maskJson, modelsSecrets, unmaskJson } from "./json-secrets.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
+import { discoverModels, resolveValue } from "./model-discovery.ts";
 
 type Json = Record<string, unknown>;
 const PROVIDER_KEYS = ["name", "baseUrl", "api", "apiKey", "headers", "authHeader", "models"];
@@ -138,7 +139,23 @@ export function customProviderRoutes(store: ConfigStore) {
     if (!isRecord(value)) throw new ConfigError("models.json must contain a JSON object.");
     return { path: path(), revision, text: maskJson(value, modelsSecrets(value)) };
   }
+  const discoverInput = z.object({
+    provider: PROVIDER_ID.optional(), baseUrl: z.string().max(2000), api: z.string().max(100), apiKey: z.string().max(10_000).optional(),
+    headers: z.array(z.object({ name: z.string().min(1).max(200), value: z.string().max(10_000).optional() }).strict()).max(50).optional(), authHeader: z.boolean().optional(),
+  }).strict();
   return new Hono()
+    .post("/discover", async c => {
+      const input = discoverInput.parse(await c.req.json());
+      const file = input.provider ? (await store.read("global", "models.json")).value : {};
+      const stored = isRecord(file.providers) && isRecord(file.providers[input.provider!]) ? file.providers[input.provider!] as Json : undefined;
+      // Stored credentials only go to the URL they were saved with.
+      const same = stored?.baseUrl === input.baseUrl;
+      const storedHeaders = same && isRecord(stored?.headers) ? stored.headers : {};
+      const raw = input.headers ? withValues(input.headers, storedHeaders) ?? {} : storedHeaders as Record<string, string>;
+      const headers = Object.fromEntries(Object.entries(raw).map(([name, value]) => [name, resolveValue(String(value), `${name} header`)]));
+      const key = input.apiKey || (same && typeof stored?.apiKey === "string" ? stored.apiKey : "");
+      return c.json(await discoverModels(input.api, input.baseUrl, key ? resolveValue(key, "API key") : "", headers, input.authHeader ?? stored?.authHeader === true));
+    })
     .get("/raw", async c => c.json(await raw()))
     .put("/raw", async c => {
       const body = z.object({ revision, text: z.string().max(200_000) }).strict().parse(await c.req.json());

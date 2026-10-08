@@ -126,3 +126,26 @@ test("models.json is edited as raw JSON; keys stay hidden and a file Pi rejects 
   expect([saved.apiKey, saved.modelOverrides]).toEqual(["fixture-raw-key", { "x/y": { name: "Y" } }]);
   expect(await page.content()).not.toContain("fixture-raw-key");
 });
+
+test("models are listed from the endpoint and the chosen ones added to the form", async ({ page }) => {
+  const endpoint = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch: request => new URL(request.url).pathname === "/v1/models"
+    ? Response.json({ data: [{ id: "llama-3" }, { id: "qwen3-coder", context_length: 65536 }, { id: "phi-4" }] }) : new Response("nope", { status: 404 }) });
+  try {
+    const base = `http://127.0.0.1:${endpoint.port}/v1`;
+    await writeFile(join(agent, "models.json"), JSON.stringify({ providers: { ollama: { baseUrl: base, api: "openai-completions", apiKey: "ollama", models: [{ id: "llama-3" }] } } }));
+    await page.goto(server.url + "#models");
+    await page.getByRole("region", { name: "Custom providers" }).getByRole("button", { name: /^ollama/ }).click();
+    const form = page.getByRole("form", { name: "Edit ollama" });
+    await form.getByRole("button", { name: "List models from the endpoint" }).click();
+    const found = form.getByRole("group", { name: "Models the endpoint offers" });
+    await expect(found.getByRole("checkbox", { name: "llama-3" })).toBeDisabled();
+    await found.getByRole("checkbox", { name: "qwen3-coder" }).check();
+    await found.getByRole("button", { name: "Add 1 model" }).click();
+    await expect(form.getByLabel("Model ID 2")).toHaveValue("qwen3-coder");
+    await expect(form.getByLabel("Context window 2")).toHaveValue("65536");
+    await form.getByRole("button", { name: "Save provider" }).click();
+    await expect(page.getByRole("status")).toContainText("ollama saved");
+    const saved = JSON.parse(await readFile(join(agent, "models.json"), "utf8")).providers.ollama;
+    expect(saved.models).toEqual([{ id: "llama-3" }, { id: "qwen3-coder", contextWindow: 65536 }]);
+  } finally { endpoint.stop(true); }
+});

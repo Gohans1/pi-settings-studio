@@ -4,7 +4,7 @@ import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PluginsView, SkillsView } from "../shared/resources";
 import type { AgentInput, AgentsView } from "../shared/agents";
-import type { CustomProviderInput, CustomProvidersView, ModelSummary, ProvidersView } from "../shared/models";
+import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
 import type { InstructionsView } from "../shared/instructions";
 import type { KeybindingsView } from "../shared/keybindings";
@@ -94,6 +94,8 @@ export const deleteInstruction = (id: string, revision: string, project?: string
 export const restoreInstruction = (id: string, project?: string) =>
   request<InstructionsView>(withProject(`/api/instructions/${id}/restore`, project), "POST", {});
 export const loadCustomProviders = () => request<CustomProvidersView>("/api/models/custom");
+export const discoverCustomModels = (body: { provider?: string; baseUrl: string; api: string; apiKey?: string; headers?: { name: string; value?: string }[]; authHeader?: boolean }) =>
+  request<CustomModel[]>("/api/models/custom/discover", "POST", body);
 export const addCustomProvider = (revision: string, id: string, provider: CustomProviderInput) =>
   request<CustomProvidersView>("/api/models/custom", "POST", { revision, id, provider });
 export const editCustomProvider = (id: string, revision: string, provider: CustomProviderInput) =>

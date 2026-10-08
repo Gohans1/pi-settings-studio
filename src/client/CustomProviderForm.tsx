@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import type { CustomModel, CustomProviderInput, CustomProviderView } from "../shared/models";
 import { Button } from "./components/ui/button";
 import { NamedRows } from "./McpServerForm";
+import { discoverCustomModels } from "./api";
 
 // pi-ai's KnownApi values (Pi 1.0.3); models.json also accepts APIs that extensions register.
 const APIS = ["openai-completions", "openai-responses", "anthropic-messages", "google-generative-ai", "google-vertex",
@@ -26,7 +27,21 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
   const [headers, setHeaders] = useState((provider?.headers ?? []).map(header => ({ name: header, value: "", stored: true })));
   const [authHeader, setAuthHeader] = useState(!!provider?.authHeader);
   const [models, setModels] = useState<ModelRow[]>((provider?.models ?? []).map(toRow));
+  const [found, setFound] = useState<CustomModel[]>();
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [listing, setListing] = useState(false);
+  const [listError, setListError] = useState("");
   const title = provider ? `Edit ${provider.id}` : "Add custom provider";
+  const headerInput = () => headers.filter(row => row.name.trim()).map(row => ({ name: row.name.trim(), ...(row.value ? { value: row.value } : {}) }));
+  async function listModels() {
+    setListing(true); setListError("");
+    try {
+      setFound(await discoverCustomModels({ ...(provider ? { provider: provider.id } : {}), baseUrl: baseUrl.trim(), api, ...(apiKey ? { apiKey } : {}), headers: headerInput(), authHeader }));
+      setPicked(new Set());
+    } catch (cause) { setFound(undefined); setListError(cause instanceof Error ? cause.message : "Could not list the models."); }
+    finally { setListing(false); }
+  }
+  const known = new Set(models.map(row => row.id.trim()));
   const update = (index: number, patch: Partial<ModelRow>) => setModels(rows => rows.map((row, i) => i === index ? { ...row, ...patch } : row));
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -34,7 +49,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
     onSave(id.trim(), {
       ...(name.trim() ? { name: name.trim() } : {}), ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}), ...(api ? { api } : {}),
       ...(apiKey ? { apiKey } : {}), ...(clearKey ? { clearApiKey: true } : {}),
-      headers: headers.filter(row => row.name.trim()).map(row => ({ name: row.name.trim(), ...(row.value ? { value: row.value } : {}) })),
+      headers: headerInput(),
       ...(authHeader ? { authHeader: true } : {}),
       models: models.filter(row => row.id.trim()).map(row => ({ id: row.id.trim(), ...(row.name.trim() ? { name: row.name.trim() } : {}),
         ...(row.reasoning ? { reasoning: true } : {}), ...(row.image ? { image: true } : {}),
@@ -68,7 +83,28 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
         <label className="checkbox"><input type="checkbox" checked={row.image} onChange={e => update(index, { image: e.target.checked })} />Images</label>
         <Button type="button" variant="ghost" size="icon" aria-label={`Remove model ${row.id || index + 1}`} onClick={() => setModels(rows => rows.filter((_, i) => i !== index))}><X aria-hidden="true" /></Button>
       </div>)}</div>
-      <Button type="button" variant="outline" size="sm" onClick={() => setModels(rows => [...rows, toRow()])}>Add model</Button>
+      <div className="actions">
+        <Button type="button" variant="outline" size="sm" onClick={() => setModels(rows => [...rows, toRow()])}>Add model</Button>
+        <Button type="button" variant="outline" size="sm" disabled={listing || !baseUrl.trim() || !api} onClick={() => void listModels()}>{listing ? "Listing…" : "List models from the endpoint"}</Button>
+      </div>
+      {listError && <p role="alert" className="field-error">{listError}</p>}
+      {found && <div role="group" aria-label="Models the endpoint offers" className="found-models">
+        {found.length ? <ul>{found.map(model => <li key={model.id}><label className="checkbox">
+          <input type="checkbox" aria-label={model.id} checked={known.has(model.id) || picked.has(model.id)} disabled={known.has(model.id)}
+            onChange={e => setPicked(current => { const next = new Set(current); if (e.target.checked) next.add(model.id); else next.delete(model.id); return next; })} />
+          <code>{model.id}</code>{model.name && <span className="muted">{model.name}</span>}
+          {model.contextWindow && <span className="muted">{model.contextWindow.toLocaleString("en")} context</span>}
+          {known.has(model.id) && <span className="muted">in the list</span>}
+        </label></li>)}</ul> : <p className="muted">The endpoint lists no models.</p>}
+        <div className="actions">
+          <Button type="button" size="sm" disabled={!picked.size} onClick={() => {
+            setModels(rows => [...rows.filter(row => row.id.trim()), ...found.filter(model => picked.has(model.id)).map(toRow)]);
+            setFound(undefined);
+          }}>Add {picked.size} model{picked.size === 1 ? "" : "s"}</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setFound(undefined)}>Close</Button>
+        </div>
+        <p className="muted">Uses the stored key and headers only while the base URL is unchanged. A key that is a command is not run.</p>
+      </div>}
       <p className="muted">Other model fields (cost, compat, thinking maps) stay as they are in the file.</p>
     </fieldset>
     {provider && provider.otherKeys.length > 0 && <p className="muted">Kept as they are: {provider.otherKeys.join(", ")}.</p>}
