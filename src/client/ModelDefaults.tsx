@@ -1,12 +1,57 @@
-import { useEffect, useState, type FormEvent } from "react";
-import type { ModelSummary, ProviderView } from "../shared/models";
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { TriangleAlert, X } from "lucide-react";
+import type { ModelScopeView, ModelSummary, ProviderView } from "../shared/models";
 import type { SettingsChange, SettingsView } from "../shared/settings";
-import { loadModels, loadSettings, saveSettings } from "./api";
+import { checkModelScope, loadModelIds, loadModels, loadSettings, saveSettings } from "./api";
 import { Button } from "./components/ui/button";
 
 const LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
+const hasGlob = (text: string) => /[*?[]/.test(text);
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+const misses = {
+  "no-credential": "No credential for this provider here, so Pi skips it",
+  "unknown-provider": "Not in the catalog this app reads; an extension may provide it",
+  "no-match": "No model matches",
+};
 
-/** Startup provider, model, thinking level and model cycling, chosen from Pi's catalog. */
+function Warning({ id, children }: { id: string; children: React.ReactNode }) {
+  return <p id={id} className="field-warning"><TriangleAlert aria-hidden="true" /><span>{children}</span></p>;
+}
+
+/** enabledModels as rows: what each pattern selects among the providers that are set up, and an adder. */
+function EnabledModels({ patterns, scope, ids, inherited, onChange }: {
+  patterns: string[]; scope?: ModelScopeView; ids: string[]; inherited?: string[]; onChange: (patterns: string[]) => void;
+}) {
+  const [text, setText] = useState("");
+  function add() {
+    const pattern = text.trim();
+    if (pattern && !patterns.includes(pattern)) onChange([...patterns, pattern]);
+    setText("");
+  }
+  // Enter adds the pattern here instead of submitting the whole form.
+  const onKey = (event: KeyboardEvent) => { if (event.key === "Enter") { event.preventDefault(); add(); } };
+  const matched = (pattern: string) => scope?.patterns.find(entry => entry.pattern === pattern);
+  return <fieldset className="enabled-models">
+    <legend>Enabled models</legend>
+    {patterns.length ? <ul className="pattern-list">{patterns.map(pattern => {
+      const match = matched(pattern);
+      return <li key={pattern}>
+        <code translate="no">{pattern}</code>
+        <span className="muted" title={match?.examples.join(", ") || undefined}>{match && (match.matches ? plural(match.matches, "model", "models") : misses[match.reason ?? "no-match"])}</span>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove ${pattern}`} title="Remove" onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></Button>
+      </li>;
+    })}</ul> : <p className="muted">{inherited?.length ? `None here, so the global list applies: ${inherited.join(", ")}.` : "None: every model that has a credential."}</p>}
+    <div className="pattern-add">
+      <input aria-label="Model or pattern" list="enabled-model-options" value={text} placeholder="anthropic/* or provider/model" autoComplete="off" spellCheck={false}
+        onChange={event => setText(event.target.value)} onKeyDown={onKey} />
+      <Button type="button" variant="outline" onClick={add}>Add</Button>
+      <datalist id="enabled-model-options">{ids.map(id => <option key={id} value={id} />)}</datalist>
+    </div>
+    <p className="muted">Models for startup selection and Ctrl+P cycling. A pattern such as anthropic/* or *sonnet* selects several; add :high for a thinking level.</p>
+  </fieldset>;
+}
+
+/** Startup provider, model, thinking level and model cycling. Pi's catalog suggests; any name can be typed. */
 export function ModelDefaults({ providers, project, onSaved }: { providers: ProviderView[]; project?: string; onSaved: (message: string) => void }) {
   const [scopeChoice, setScopeChoice] = useState<"global" | "project">("global");
   const scope = project ? scopeChoice : "global";
@@ -15,8 +60,10 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
   const [thinking, setThinking] = useState("");
-  const [enabled, setEnabled] = useState("");
+  const [enabled, setEnabled] = useState<string[]>([]);
   const [models, setModels] = useState<ModelSummary[]>([]);
+  const [ids, setIds] = useState<string[]>([]);
+  const [modelScope, setModelScope] = useState<ModelScopeView>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -25,32 +72,64 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
     setProvider(String(next.values.defaultProvider ?? ""));
     setModel(String(next.values.defaultModel ?? ""));
     setThinking(String(next.values.defaultThinkingLevel ?? ""));
-    setEnabled(Array.isArray(next.values.enabledModels) ? next.values.enabledModels.join("\n") : "");
+    setEnabled(Array.isArray(next.values.enabledModels) ? next.values.enabledModels.map(String) : []);
   }
   useEffect(() => { setView(undefined); loadSettings(scope, target).then(fill).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read settings.json.")); }, [scope, target]);
+  useEffect(() => { loadModelIds().then(setIds).catch(() => setIds([])); }, []);
+  const catalogued = providers.find(entry => entry.id === provider.trim());
   useEffect(() => {
     setModels([]);
-    if (provider) loadModels(provider).then(setModels).catch(() => setModels([]));
-  }, [provider]);
+    if (catalogued) loadModels(catalogued.id).then(setModels).catch(() => setModels([]));
+  }, [catalogued?.id]);
+
+  // In a project, an empty field inherits the global value; Pi starts with what is in effect.
+  const inherited = (key: string) => scope === "project" ? view?.inherited[key] : undefined;
+  const inheritedEnabled = Array.isArray(inherited("enabledModels")) ? (inherited("enabledModels") as unknown[]).map(String) : undefined;
+  const effectiveEnabled = enabled.length ? enabled : inheritedEnabled ?? [];
+  const effectiveProvider = provider.trim() || String(inherited("defaultProvider") ?? "");
+  const effectiveModel = model.trim() || String(inherited("defaultModel") ?? "");
+  const reference = effectiveProvider && effectiveModel ? `${effectiveProvider}/${effectiveModel}` : undefined;
+  useEffect(() => {
+    if (!view) return;
+    const timer = setTimeout(() => {
+      checkModelScope(effectiveEnabled, reference).then(setModelScope).catch(() => setModelScope(undefined));
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [view, effectiveEnabled.join("\n"), reference]);
+
+  // Pi keeps a saved default inside a non-empty scope (AgentSession._addPersistedDefaultToNonEmptyScope);
+  // outside it, new sessions start with the scope's first model.
+  const outOfScope = modelScope?.defaultInScope === false && !!modelScope.first;
+  const addToScope = outOfScope && enabled.length > 0 && !!provider.trim() && !!model.trim();
 
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!view) return;
+    const ref = `${provider.trim()}/${model.trim()}`;
+    const patterns = addToScope && !enabled.some(pattern => pattern.toLowerCase() === ref.toLowerCase()) ? [...enabled, ref] : enabled;
     const wanted: Record<string, unknown> = {
-      defaultProvider: provider || undefined, defaultModel: model || undefined, defaultThinkingLevel: thinking || undefined,
-      enabledModels: enabled.trim() ? enabled.split("\n").map(line => line.trim()).filter(Boolean) : undefined,
+      defaultProvider: provider.trim() || undefined, defaultModel: model.trim() || undefined, defaultThinkingLevel: thinking || undefined,
+      enabledModels: patterns.length ? patterns : undefined,
     };
     const changes: SettingsChange[] = Object.entries(wanted).flatMap(([key, value]): SettingsChange[] =>
       value === undefined ? (Object.hasOwn(view.values, key) ? [{ key, remove: true }] : [])
         : JSON.stringify(value) === JSON.stringify(view.values[key]) ? [] : [{ key, value }]);
     if (!changes.length) { onSaved("Defaults are unchanged."); return; }
     setBusy(true); setError("");
-    try { fill(await saveSettings(scope, view.revision, changes, target)); onSaved("Defaults saved. Applies to new T3Code threads, or after /reload."); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Not saved."); }
+    try {
+      fill(await saveSettings(scope, view.revision, changes, target));
+      onSaved(`Defaults saved${patterns !== enabled ? `; ${ref} added to Enabled models, as Pi does` : ""}. Applies to new T3Code threads, or after /reload.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Not saved."); }
     finally { setBusy(false); }
   }
 
-  const known = models.some(entry => entry.id === model);
+  // Suggestions: Pi's catalog, plus provider and model names the Enabled models list mentions.
+  const named = effectiveEnabled.map(pattern => pattern.split(":")[0]!).filter(pattern => pattern.includes("/"));
+  const extraProviders = [...new Set(named.map(pattern => pattern.split("/")[0]!).filter(name => name && !hasGlob(name) && !providers.some(entry => entry.id === name)))];
+  const extraModels = named.filter(pattern => pattern.startsWith(provider.trim() + "/")).map(pattern => pattern.slice(provider.trim().length + 1))
+    .filter(id => id && !hasGlob(id) && !models.some(entry => entry.id === id));
+  const providerWarning = !!provider.trim() && !catalogued;
+  const modelWarning = !!catalogued && !!model.trim() && models.length > 0 && !models.some(entry => entry.id === model.trim());
   return <section className="detail server-form" aria-labelledby="defaults-title">
     <header><h2 id="defaults-title">Defaults</h2>
       <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p></header>
@@ -60,22 +139,26 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
     </fieldset>}
     {error && <div role="alert" className="error"><strong>Not saved</strong><p>{error}</p></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
-      <label>Default provider<select value={provider} onChange={event => { setProvider(event.target.value); setModel(""); }}>
-        <option value="">Automatic</option>
-        {provider && !providers.some(entry => entry.id === provider) && <option value={provider}>{provider} (not in Pi's catalog)</option>}
-        {providers.map(entry => <option key={entry.id} value={entry.id}>{entry.name}{entry.auth.configured ? "" : " (not set up)"}</option>)}
-      </select></label>
-      <label>Default model<select value={model} disabled={!provider} onChange={event => setModel(event.target.value)}>
-        <option value="">Automatic</option>
-        {model && !known && <option value={model}>{model}</option>}
-        {models.map(entry => <option key={entry.id} value={entry.id}>{entry.name === entry.id ? entry.id : `${entry.name} (${entry.id})`}</option>)}
-      </select></label>
+      <label>Default provider<input value={provider} list="default-provider-options" placeholder={String(inherited("defaultProvider") ?? "Automatic")} autoComplete="off" spellCheck={false}
+        aria-describedby={providerWarning ? "provider-warning" : undefined} onChange={event => setProvider(event.target.value)} /></label>
+      <datalist id="default-provider-options">
+        {providers.map(entry => <option key={entry.id} value={entry.id} label={`${entry.name}${entry.auth.configured ? "" : " (not set up)"}`} />)}
+        {extraProviders.map(name => <option key={name} value={name} label="From Enabled models" />)}
+      </datalist>
+      {providerWarning && <Warning id="provider-warning">{provider.trim()} is not in the catalog this app reads. An extension or package may provide it; this app does not run them, so it cannot check the name. If Pi cannot find it, new sessions start with another available model.</Warning>}
+      <label>Default model<input value={model} list="default-model-options" placeholder={String(inherited("defaultModel") ?? "Automatic")} autoComplete="off" spellCheck={false}
+        aria-describedby={[modelWarning && "model-warning", outOfScope && "scope-warning"].filter(Boolean).join(" ") || undefined} onChange={event => setModel(event.target.value)} /></label>
+      <datalist id="default-model-options">
+        {models.map(entry => <option key={entry.id} value={entry.id} label={entry.name === entry.id ? undefined : entry.name} />)}
+        {extraModels.map(id => <option key={id} value={id} label="From Enabled models" />)}
+      </datalist>
+      {modelWarning && <Warning id="model-warning">{catalogued!.name} has no model {model.trim()} in the catalog this app reads. Check the ID, or refresh the model catalogs. If Pi cannot find it, new sessions start with another available model.</Warning>}
+      {outOfScope && <Warning id="scope-warning">Not in Enabled models, so new sessions start with {modelScope!.first} instead. {addToScope ? "Saving adds it to Enabled models, as Pi does when you save a default with Ctrl+S." : "Add it to Enabled models to start with it."}</Warning>}
       <label>Thinking level<select value={thinking} onChange={event => setThinking(event.target.value)}>
         <option value="">Pi's default (medium)</option>
         {LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
       </select><span className="muted">Pi limits the level to what the model supports.</span></label>
-      <label>Enabled models<textarea rows={4} value={enabled} placeholder="All available models" spellCheck={false} onChange={event => setEnabled(event.target.value)} />
-        <span className="muted">One pattern per line, in Pi's --models format, for startup selection and Ctrl+P cycling.</span></label>
+      <EnabledModels patterns={enabled} scope={modelScope} ids={ids} inherited={inheritedEnabled} onChange={setEnabled} />
       <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save defaults"}</Button></div>
     </form>}
   </section>;

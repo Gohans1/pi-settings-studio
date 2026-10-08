@@ -173,6 +173,9 @@
   .error .actions { margin-top: --spacing(3); }
   :is(.notice, .error, .job) + :is(.notice, .error, .job) { margin-top: --spacing(3); }
   .field-error { margin: 0; color: var(--destructive); font-size: var(--text-small); }
+  /* A value Pi may not accept: the icon carries the tone, the text stays readable. */
+  .field-warning { display: flex; gap: --spacing(2); margin: 0; font-size: var(--text-small); font-weight: var(--font-weight-normal); }
+  .field-warning svg { flex: none; width: --spacing(4); height: --spacing(4); margin-top: --spacing(0.5); color: var(--warning); }
   .muted { color: var(--muted-foreground); font-size: var(--text-small); }
   .loading { padding: --spacing(8) 0; color: var(--muted-foreground); }
   @media (prefers-reduced-motion: no-preference) { .loading { animation: appear 160ms var(--ease-out) 300ms backwards; } }
@@ -294,6 +297,14 @@
   .found-models { display: grid; gap: --spacing(2); padding: --spacing(3); border: 1px solid var(--border); border-radius: var(--radius); }
   .found-models ul { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); max-height: 20rem; overflow: auto; }
   .found-models label { flex-wrap: wrap; gap: --spacing(2); }
+  .enabled-models { display: grid; gap: --spacing(3); }
+  .enabled-models > p { margin: 0; }
+  .pattern-list { list-style: none; margin: 0; padding: 0; display: grid; }
+  .pattern-list > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: --spacing(3); min-height: --spacing(9); padding-block: --spacing(1); border-top: 1px solid var(--border); }
+  .pattern-list > li:last-child { border-bottom: 1px solid var(--border); }
+  .pattern-list code { font-size: var(--text-small); }
+  .pattern-add { display: flex; gap: --spacing(2); }
+  .pattern-add input { flex: 1; min-width: 0; }
   .model-map { display: grid; gap: --spacing(2); justify-items: start; margin: 0; padding: 0; border: 0; }
   .model-map-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: --spacing(1.5); width: 100%; }
   .model-map-row input[type=number] { width: 7rem; }

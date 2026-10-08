@@ -43,13 +43,18 @@ test("defaults are chosen from Pi's catalog and saved to settings.json", async (
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: /^Defaults/ }).click();
   const panel = page.getByRole("region", { name: "Defaults" });
-  await panel.getByLabel("Default provider").selectOption("anthropic");
-  const model = panel.getByLabel("Default model");
-  await expect(model.locator("option")).not.toHaveCount(1);
-  const chosen = await model.locator("option").nth(1).getAttribute("value");
-  await model.selectOption(chosen!);
+  await panel.getByLabel("Default provider").fill("anthropic");
+  // Suggestions come from Pi's catalog for the chosen provider.
+  const suggestions = panel.locator("datalist#default-model-options option");
+  await expect(suggestions).not.toHaveCount(0);
+  const chosen = await suggestions.first().getAttribute("value");
+  await panel.getByLabel("Default model").fill(chosen!);
+  await expect(panel).not.toContainText("not in the catalog");
   await panel.getByLabel("Thinking level").selectOption("high");
-  await panel.getByLabel("Enabled models").fill("anthropic/*");
+  const enabled = panel.getByRole("group", { name: "Enabled models" });
+  await enabled.getByLabel("Model or pattern").fill("anthropic/*");
+  await enabled.getByRole("button", { name: "Add" }).click();
+  await expect(enabled.getByRole("listitem").filter({ hasText: "anthropic/*" })).toContainText(/\d+ models/);
   await panel.getByRole("button", { name: "Save defaults" }).click();
   await expect(page.getByRole("status")).toContainText("Defaults saved");
   const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
@@ -159,4 +164,34 @@ test("Check credential shows Pi's verdict for a provider", async ({ page }) => {
   await detail.getByRole("button", { name: "Check credential" }).click();
   await expect(detail.getByText("Pi can use it: API key.")).toBeVisible({ timeout: 30_000 });
   expect(await page.content()).not.toContain("fixture-secret-anthropic");
+});
+
+test("a provider Pi's catalog does not list, such as one from an extension, is typed in with a warning", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  await panel.getByLabel("Default provider").fill("claude-bridge");
+  await panel.getByLabel("Default model").fill("opus");
+  await expect(panel.getByLabel("Default provider")).toHaveAccessibleDescription(/not in the catalog this app reads/);
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("status")).toContainText("Defaults saved");
+  const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  expect([settings.defaultProvider, settings.defaultModel]).toEqual(["claude-bridge", "opus"]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a default model outside the enabled models is added to them on save, as Pi does", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ enabledModels: ["anthropic/claude-sonnet-4-5"] }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  await panel.getByLabel("Default provider").fill("anthropic");
+  const other = await panel.locator("datalist#default-model-options option").evaluateAll(options =>
+    options.map(option => option.getAttribute("value")).find(id => id !== "claude-sonnet-4-5"));
+  await panel.getByLabel("Default model").fill(other!);
+  await expect(panel).toContainText("Not in Enabled models");
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("status")).toContainText("added to Enabled models");
+  const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  expect(settings.enabledModels).toEqual(["anthropic/claude-sonnet-4-5", `anthropic/${other}`]);
 });

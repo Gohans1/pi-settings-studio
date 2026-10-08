@@ -3,7 +3,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { Credential, CredentialInfo, CredentialStore } from "@earendil-works/pi-ai";
-import type { ProvidersView, ProviderView } from "../shared/models.ts";
+import type { ModelScopeView, ProvidersView, ProviderView } from "../shared/models.ts";
+import { resolveModelScope } from "./model-scope.ts";
 import { isRecord } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 import { customProviderRoutes } from "./models-json.ts";
@@ -64,6 +65,17 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
     return { revision, providers, ...(error ? { error } : {}) };
   }
 
+  /**
+   * Models of providers that are set up: stored in auth.json or configured per Pi's status, which
+   * runs no credential command. Pi's own startup also counts environment keys this app cannot see.
+   */
+  async function readyModels() {
+    const auth = credentialsOf((await store.read("global", "auth.json")).value);
+    const runtime = await runtimeFor(agentDir, auth);
+    const all = runtime.getProviders(), ready = all.filter(provider => auth[provider.id] || runtime.getProviderAuthStatus(provider.id).configured);
+    return { models: ready.flatMap(provider => runtime.getModels(provider.id)), providers: { all: all.map(provider => provider.id), ready: ready.map(provider => provider.id) } };
+  }
+
   async function knownProvider(id: string, credentials: Record<string, Credential>) {
     const provider = (await runtimeFor(agentDir, credentials)).getProvider(id);
     if (!provider) throw new ConfigError(`Pi has no provider named "${id}".`);
@@ -84,12 +96,23 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
       }, "auth.json");
       return c.json(await view());
     })
-    .get("/ids", async c => {
-      // Suggestions for per-model settings: models of providers that are set up.
-      const auth = credentialsOf((await store.read("global", "auth.json")).value);
-      const runtime = await runtimeFor(agentDir, auth);
-      const ready = runtime.getProviders().filter(provider => auth[provider.id] || runtime.getProviderAuthStatus(provider.id).configured);
-      return c.json(ready.flatMap(provider => runtime.getModels(provider.id).map(model => `${provider.id}/${model.id}`)));
+    .get("/ids", async c => c.json((await readyModels()).models.map(model => `${model.provider}/${model.id}`)))
+    .post("/scope", async c => {
+      const { patterns, default: chosen } = z.object({ patterns: z.array(z.string().max(300)).max(200), default: z.string().max(400).optional() }).strict().parse(await c.req.json());
+      const { models, providers } = await readyModels();
+      const ref = (model: { provider: string; id: string }) => `${model.provider}/${model.id}`;
+      const each = patterns.map(pattern => {
+        const matched = resolveModelScope([pattern], models).scopedModels.map(scoped => ref(scoped.model));
+        // A "provider/…" pattern names its provider; say why it selects nothing.
+        const named = /^([^/*?[]+)\//.exec(pattern)?.[1];
+        const reason = matched.length ? undefined : !named ? "no-match" as const
+          : !providers.all.includes(named) ? "unknown-provider" as const : !providers.ready.includes(named) ? "no-credential" as const : "no-match" as const;
+        return { pattern, matches: matched.length, examples: matched.slice(0, 3), ...(reason ? { reason } : {}) };
+      });
+      const scoped = resolveModelScope(patterns, models).scopedModels.map(scoped => ref(scoped.model));
+      const known = chosen !== undefined && models.some(model => ref(model) === chosen);
+      const view: ModelScopeView = { patterns: each, ...(scoped[0] ? { first: scoped[0] } : {}), ...(known ? { defaultInScope: scoped.includes(chosen!) } : {}) };
+      return c.json(view);
     })
     .get("/providers/:id/models", async c => {
       const runtime = await runtimeFor(agentDir, credentialsOf((await store.read("global", "auth.json")).value));

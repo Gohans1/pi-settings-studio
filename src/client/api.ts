@@ -4,7 +4,7 @@ import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
 import type { AgentInput, AgentsView } from "../shared/agents";
-import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelSummary, ProvidersView } from "../shared/models";
+import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelScopeView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
 import type { InstructionsView } from "../shared/instructions";
 import type { KeybindingsView } from "../shared/keybindings";
@@ -114,6 +114,8 @@ export const cancelJob = (id: string) => request<JobView>(`/api/jobs/${id}/cance
 export const loadModelsRaw = () => request<RawSettings>("/api/models/custom/raw");
 export const saveModelsRaw = (revision: string, text: string) => request<RawSettings>("/api/models/custom/raw", "PUT", { revision, text });
 export const loadModelIds = () => request<string[]>("/api/models/ids");
+export const checkModelScope = (patterns: string[], model?: string) =>
+  request<ModelScopeView>("/api/models/scope", "POST", { patterns, ...(model ? { default: model } : {}) });
 export const savePackageFilters = (scope: Scope, revision: string, source: string, filters: Record<string, unknown>, project?: string) =>
   request<PluginsView>(withProject("/api/plugins/packages", project), "PUT", { scope, revision, source, filters });
 export const loadThemes = (project?: string) => request<ThemeView[]>(withProject("/api/themes", project));

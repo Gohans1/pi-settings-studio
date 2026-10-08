@@ -18,6 +18,16 @@ export type ProvidersView = { revision: string; providers: ProviderView[]; error
 
 export type ModelSummary = { id: string; name: string; reasoning: boolean };
 
+/** What `enabledModels` selects, matched as Pi matches it over the providers that are set up here. */
+export type ModelScopeView = {
+  /** reason says why a pattern selects nothing: its provider has no credential here, is not in the catalog, or no model matches. */
+  patterns: { pattern: string; matches: number; examples: string[]; reason?: "no-credential" | "unknown-provider" | "no-match" }[];
+  /** New sessions start with this model when the default is not in the scope. */
+  first?: string;
+  /** Whether the default model is in the scope; absent when it is not in the catalog this app reads. */
+  defaultInScope?: boolean;
+};
+
 /** The model fields the custom-provider form edits; other keys of a model are kept. */
 export type CustomModel = { id: string; name?: string; reasoning?: boolean; image?: boolean; contextWindow?: number; maxTokens?: number };
 

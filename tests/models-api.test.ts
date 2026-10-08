@@ -87,3 +87,26 @@ test("model ids for suggestions list models of providers that are set up", async
   assert.ok(ids.some(id => id.startsWith("anthropic/")));
   assert.equal(ids.some(id => id.startsWith("openai/")), false);
 });
+
+test("enabled model patterns are matched as Pi matches them, over providers that are set up, and no key command runs", async (t) => {
+  const { agent, request } = await fixture(t);
+  const marker = join(agent, "..", "command-ran");
+  await writeFile(join(agent, "models.json"), JSON.stringify({ providers: { ollama: {
+    baseUrl: "http://localhost:11434/v1", api: "openai-completions", apiKey: `!touch ${marker}`, models: [{ id: "qwen" }, { id: "llama" }],
+  } } }));
+  const scope = async (body: object) => (await request("/api/models/scope", { method: "POST", headers: json, body: JSON.stringify(body) })).json();
+  const view = await scope({ patterns: ["ollama/*", "claude-bridge/*", "anthropic/*"], default: "ollama/llama" });
+  assert.deepEqual(view.patterns.map((entry: { pattern: string; matches: number }) => [entry.pattern, entry.matches > 0]),
+    [["ollama/*", true], ["claude-bridge/*", false], ["anthropic/*", true]]);
+  assert.equal(view.patterns[0].matches, 2);
+  assert.equal(view.first, "ollama/qwen");
+  assert.equal(view.defaultInScope, true);
+  assert.equal((await scope({ patterns: ["anthropic/*"], default: "ollama/llama" })).defaultInScope, false);
+  // A model outside the catalog (from an extension, say) cannot be checked.
+  assert.equal((await scope({ patterns: ["anthropic/*"], default: "claude-bridge/opus" })).defaultInScope, undefined);
+  // openai has no credential here, so Pi would not scope its models either; each miss says why.
+  const misses = await scope({ patterns: ["openai/*", "claude-bridge/*", "anthropic/no-such-model"] });
+  assert.deepEqual(misses.patterns.map((entry: { matches: number; reason?: string }) => [entry.matches, entry.reason]),
+    [[0, "no-credential"], [0, "unknown-provider"], [0, "no-match"]]);
+  await assert.rejects(stat(marker));
+});
