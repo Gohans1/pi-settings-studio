@@ -317,6 +317,7 @@
   .settings-group + .settings-group { margin-top: --spacing(10); }
   .settings-group > h2 { margin: 0 0 --spacing(2); }
   .settings-group > [data-slot=alert] { margin-bottom: --spacing(3); }
+  .settings-advanced { padding-top: --spacing(2); border-top: 1px solid var(--border); }
   .setting-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 22rem); gap: --spacing(2) --spacing(8); padding: --spacing(4) 0; border-top: 1px solid var(--border); }
   .setting-label { display: grid; gap: --spacing(1); align-content: start; justify-items: start; }
   .setting-key { color: var(--muted-foreground); }

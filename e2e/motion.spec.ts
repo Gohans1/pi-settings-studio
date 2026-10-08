@@ -27,7 +27,7 @@ test.afterEach(async () => { await server?.close(); await rm(root, { recursive: 
 test("pointer disclosure expands and collapses continuously, including a quick reversal", async ({ page }) => {
   await page.goto(server.url);
   const trigger = page.getByRole("button", { name: "Not editable here" });
-  const panel = page.locator("[data-slot=collapsible-content]");
+  const panel = page.locator(".not-here [data-slot=collapsible-content]");
   await trigger.click();
   await expect.poll(() => page.evaluate(() => window.motionEvents.filter(event => event.slot === "collapsible-content").map(event => event.property)), { timeout: 3000 }).toContain("height");
   await expect(panel).toBeVisible();
@@ -49,7 +49,7 @@ test("keyboard disclosure and escape stay instant even after using the pointer",
   await trigger.click();
   await trigger.press("Enter");
   await trigger.press("Enter");
-  const panel = page.locator("[data-slot=collapsible-content]");
+  const panel = page.locator(".not-here [data-slot=collapsible-content]");
   await expect(panel).toBeVisible();
   expect(await panel.evaluate(element => element.getAnimations().length)).toBe(0);
   await page.getByRole("button", { name: "File", exact: true }).focus();
@@ -127,7 +127,7 @@ test("reduced motion keeps only a short opacity fade on disclosures", async ({ p
   await page.goto(server.url);
   const trigger = page.getByRole("button", { name: "Not editable here" });
   await trigger.click();
-  const panel = page.locator("[data-slot=collapsible-content]");
+  const panel = page.locator(".not-here [data-slot=collapsible-content]");
   await expect.poll(() => page.evaluate(() => window.motionEvents.filter(event => event.slot === "collapsible-content").map(event => event.property)), { timeout: 3000 }).toEqual(["opacity"]);
   await expect(panel).toHaveCSS("transition-duration", "0.125s");
   await expect(panel).toHaveCSS("transform", "none");

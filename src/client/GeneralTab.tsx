@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { ChevronDown, CircleAlert, FileJson, History, RotateCcw } from "lucide-react";
-import { fields, sections, type SettingsChange, type SettingsView } from "../shared/settings";
+import { fields, sections, type Field, type SettingsChange, type SettingsView } from "../shared/settings";
 import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { PiPanel } from "./PiPanel";
@@ -56,6 +58,8 @@ export function GeneralTab({ project }: { project?: string }) {
   const [restore, setRestore] = useState(false);
   const [raw, setRaw] = useState(false);
   const [modelIds, setModelIds] = useState<string[]>([]);
+  // Groups whose advanced toggle the reader opened or closed; the rest follow the file.
+  const [advancedOpen, setAdvancedOpen] = useState<Record<string, boolean>>({});
   useEffect(() => { loadModelIds().then(setModelIds).catch(() => setModelIds([])); }, []);
   const title = useRef<HTMLHeadingElement>(null);
   const changes = Object.values(draft).map(change => {
@@ -69,7 +73,7 @@ export function GeneralTab({ project }: { project?: string }) {
   useEffect(() => {
     let active = true;
     setLoading(true); setError(""); setMessage(""); setView(undefined);
-    setDraft({});
+    setDraft({}); setAdvancedOpen({});
     void loadSettings(scope, target).then(data => {
       if (active) setView(data);
     }).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
@@ -104,6 +108,9 @@ export function GeneralTab({ project }: { project?: string }) {
     if (!view) return;
     // Pi would refuse the file: take the reader to the first value to fix, and write nothing.
     if (invalidKeys.length) {
+      // A folded group would leave focus nowhere: open it first.
+      const field = fields.find(f => f.key === invalidKeys[0]);
+      if (field?.advanced) flushSync(() => setAdvancedOpen(open => ({ ...open, [field.section]: true })));
       document.getElementById("row-" + invalidKeys[0])?.querySelector<HTMLElement>("[data-slot=input], [data-slot=textarea], [data-slot=select-trigger], [data-slot=switch]")?.focus();
       return;
     }
@@ -148,6 +155,16 @@ export function GeneralTab({ project }: { project?: string }) {
     finally { setLoading(false); }
   }
   const openRaw = () => { setRaw(true); setMessage(""); };
+  const row = (field: Field) => {
+    if (!view) return null;
+    const edit = draft[field.key];
+    const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
+    const value = edit ? "value" in edit ? edit.value : view.inherited[field.key] : view.values[field.key] ?? view.inherited[field.key];
+    return <SettingField key={field.key} field={field} value={value} inherited={view.inherited[field.key]} overridden={overridden} scope={scope} project={project}
+      disabled={scope === "project" && !!field.globalOnly}
+      invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
+      onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;
+  };
   const description = scope === "project" ? "Settings for this project only. They override the global ones while the project is trusted." : "Pi core settings shared by every project.";
   if (raw) return <>
     <PageHeader title="General" description={description} />
@@ -192,18 +209,18 @@ export function GeneralTab({ project }: { project?: string }) {
           <div className="settings-groups">
             {sections.map(group => {
               const items = results.filter(field => field.section === group.id);
+              // A search shows every match; otherwise the advanced rows wait behind the group's toggle,
+              // which starts open when the file sets one of them.
+              const advanced = needle ? [] : items.filter(field => field.advanced);
               return items.length > 0 && <section key={group.id} id={"group-" + group.id} className="settings-group" aria-labelledby={"group-" + group.id + "-title"}>
                 <h2 id={"group-" + group.id + "-title"}>{group.title}</h2>
                 {"note" in group && <Alert role="note"><AlertDescription>{group.note}</AlertDescription></Alert>}
-                {items.map(field => {
-                  const edit = draft[field.key];
-                  const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
-                  const value = edit ? "value" in edit ? edit.value : view.inherited[field.key] : view.values[field.key] ?? view.inherited[field.key];
-                  return <SettingField key={field.key} field={field} value={value} inherited={view.inherited[field.key]} overridden={overridden} scope={scope} project={project}
-                    disabled={scope === "project" && !!field.globalOnly}
-                    invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
-                    onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;
-                })}
+                {items.filter(field => !advanced.includes(field)).map(row)}
+                {advanced.length > 0 && <Disclosure label={`${advanced.length} advanced ${advanced.length === 1 ? "setting" : "settings"}`} className="settings-advanced" hiddenUntilFound
+                  open={advancedOpen[group.id] ?? advanced.some(field => Object.hasOwn(view.values, field.key))}
+                  onOpenChange={open => setAdvancedOpen(current => ({ ...current, [group.id]: open }))}>
+                  {advanced.map(row)}
+                </Disclosure>}
               </section>;
             })}
             {!results.length && <Empty><EmptyDescription>No settings match “{query.trim()}”. Try a label such as “model” or “budget”, or a key.</EmptyDescription></Empty>}
