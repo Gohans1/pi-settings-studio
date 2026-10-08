@@ -43,10 +43,18 @@ type Project = { dir: string; settings: Settings };
  * loads them). Missing packages are skipped, never installed: nothing runs to display configuration.
  */
 function packageManager(agentDir: string, global: Settings, project?: Project) {
-  const texts = { global: JSON.stringify(global), project: project && JSON.stringify(project.settings) };
+  // Listing must run nothing. Pi looks for packages installed globally by old versions with
+  // `<npmCommand> root -g`, and npmCommand can come from an untrusted project's settings. So the
+  // command is dropped and that lookup is turned off on this instance (a private Pi method;
+  // tests/resources-safety.test.ts fails if Pi renames it and a command runs again).
+  const { npmCommand: _global, ...globalSettings } = global;
+  const { npmCommand: _project, ...projectSettings } = project?.settings ?? {};
+  const texts = { global: JSON.stringify(globalSettings), project: project && JSON.stringify(projectSettings) };
   const storage: Parameters<typeof SettingsManager.fromStorage>[0] = { withLock: (scope, read) => { read(texts[scope]); } };
   const settingsManager = SettingsManager.fromStorage(storage, { projectTrusted: !!project });
-  return new DefaultPackageManager({ cwd: project?.dir ?? agentDir, agentDir, settingsManager, builtinExtensions: BUILTIN_EXTENSIONS });
+  const manager = new DefaultPackageManager({ cwd: project?.dir ?? agentDir, agentDir, settingsManager, builtinExtensions: BUILTIN_EXTENSIONS });
+  Object.defineProperty(manager, "getLegacyGlobalNpmInstallPath", { value: () => undefined });
+  return manager;
 }
 
 export async function resolveResources(agentDir: string, global: Settings, project?: Project) {
