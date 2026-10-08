@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Spinner } from "./components/ui/spinner";
+import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group";
 import { Disclosure } from "./Disclosure";
 
 const states: Record<PluginToolsView["tools"][number]["visibility"], string> = {
@@ -45,10 +46,12 @@ export function PluginTools({ path, project }: { path: string; project?: string 
           {view.issues.map((issue, index) => <p key={index} className="break-words">{issue}</p>)}
         </AlertDescription></Alert>}
       {!view.enabled && <p className="muted">Loaded only to inspect its catalogue. It remains off in your settings.</p>}
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter tools">
-        <Button variant={modelOnly ? "outline" : "secondary"} size="sm" aria-pressed={!modelOnly} onClick={() => setModelOnly(false)}>All tools ({view.tools.length}{view.complete ? "" : " found"})</Button>
-        <Button variant={modelOnly ? "secondary" : "outline"} size="sm" aria-pressed={modelOnly} onClick={() => setModelOnly(true)}>Model sees ({view.complete ? declared.length : "unverified"})</Button>
-      </div>
+      {/* One choice at a time: pressing the chosen one leaves it chosen. */}
+      <ToggleGroup aria-label="Filter tools" variant="outline" size="sm" value={[modelOnly ? "declared" : "all"]}
+        onValueChange={next => { if (next.length) setModelOnly(next[0] === "declared"); }}>
+        <ToggleGroupItem value="all">All tools ({view.tools.length}{view.complete ? "" : " found"})</ToggleGroupItem>
+        <ToggleGroupItem value="declared">Model sees ({view.complete ? declared.length : "unverified"})</ToggleGroupItem>
+      </ToggleGroup>
       <p className="muted">“Model sees” counts direct declarations. Indirect tools can also be listed inside codemode.</p>
       {!tools.length ? <p role="status" className="muted">{!view.complete ? "No verified tools in this view."
         : modelOnly ? "No direct tool declarations for this extension in this preview." : "No tools registered at startup."}</p>

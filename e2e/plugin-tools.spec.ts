@@ -25,6 +25,27 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+test("the tool filter is one choice at a time: the chosen one stays chosen, and arrow keys move between them", async ({ page }) => {
+  await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: /^tools\.ts/ }).click();
+  const tools = page.getByRole("region", { name: "Extension tools" });
+  const filter = tools.getByRole("group", { name: "Filter tools" });
+  const all = filter.getByRole("button", { name: "All tools (5)", exact: true });
+  const declared = filter.getByRole("button", { name: "Model sees (2)", exact: true });
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+  await all.click();
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+  await expect(tools.getByRole("list", { name: "Tools" }).getByRole("listitem")).toHaveCount(5);
+  // One tab stop for the group; arrows move between its choices.
+  await all.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(declared).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(declared).toHaveAttribute("aria-pressed", "true");
+  await expect(all).toHaveAttribute("aria-pressed", "false");
+  await expect(tools.getByRole("listitem")).toHaveCount(2);
+});
+
 test("tools load automatically, filter model declarations, and remain catalogued when the extension is off", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
