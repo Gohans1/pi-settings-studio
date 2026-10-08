@@ -37,7 +37,7 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 - **Models**: providers, keys, sign-in, credential check, defaults, custom providers in `models.json` with model lists from their endpoint.
 - **Skills**: switches, a file editor for each skill folder, new skills.
 - **Sub-agents**: profiles in Pi's example format.
-- **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (install, update, remove, filters). Select an extension to inspect all registered tools and direct model declarations for the chosen project. Installed extensions are trusted and run automatically for this preview; see [Extension tools](docs/plugin-tools.md).
+- **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (check for updates, update notices, install, update, remove, filters). Select an extension to inspect all registered tools and direct model declarations for the chosen project. Installed extensions are trusted and run automatically for this preview; see [Extension tools](docs/plugin-tools.md).
 - **MCP**: servers with exposure rules, OAuth and provider sign-in, Code mode, import from other clients, connection test, sign-in state, `mcp.log`.
 - **Instructions**: `AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`.
 - **System prompt**: what Pi recorded in a session.
@@ -45,6 +45,14 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 The project picker adds each project's `.pi` files and trust. Changes apply to new T3Code threads, or after `/reload`.
 
 Buttons that run something use the `pi` command on `PATH` (or `~/.local/bin/pi`) with `PI_CODING_AGENT_DIR` set to the app's agent directory.
+
+## Package update notices
+
+Open **Plugins → Packages → Check for updates**. Pi's public checker reports which installed npm/Git packages have updates; matching rows say **Update available**, and the Packages entry shows the count. Checking does not install anything. **Update** and **Update all** still require a separate click.
+
+Checks are on demand, not a background timer. The last result and timestamp survive navigation/reloads while the server runs. Settings changes and package operations invalidate those notices; check again after updating. Select and trust a project to include its packages. Updates run from that project's directory when selected, following Pi's global/project rules.
+
+The checker uses system `npm` and `git` (not `npmCommand` from settings), and Pi's existing version/range, pin and project-precedence rules. It skips local paths, exact npm pins, pinned Git refs, missing installations and failed lookups. `PI_OFFLINE` skips networking. **“No updates reported” does not mean all packages are current:** Pi's API does not distinguish network/authentication failures or expose target version numbers. No extensions are loaded to perform the check.
 
 ## Test
 

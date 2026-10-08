@@ -1,3 +1,29 @@
+# Merge readiness — package update notices, 2026-10-08
+
+Integrated main's project-trust banner fix (`1645d4f`) into the feature before deployment. The combined tree passed **252 unit/integration tests and 70 Playwright tests**, typecheck, lint and production build. No package versions or lockfile entries changed.
+
+**Dependency audit triage:** `bun audit` reports one High, [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), in `braces@3.0.3` (deeply nested brace patterns can exhaust the call stack). `bun pm why braces` places it only under the development CLI `shadcn → fast-glob → micromatch` (including shadcn's registry/ts-morph branches). Application code, Vite configuration, test and deploy commands do not invoke that CLI; the app imports only its static Tailwind CSS. No runtime/build/test/deploy call path to the vulnerable parser was found. The official GitHub advisory API reports no patched version as of this review. Deferred as non-blocking for this deployment; **review by 2026-10-15**, or before running the shadcn CLI on untrusted input. This is a documented deferral, not a clean audit; no forced upgrade or audit suppression was applied.
+
+---
+
+# Verification — package update notices, 2026-10-08
+
+Scope: explicit package update checks, per-package badges and a Packages count, historical check timestamp, offline/error states, scoped results and project-aware update jobs. Native Pi `DefaultPackageManager.checkForAvailableUpdates()`; no new dependency or port.
+
+| Check | Result |
+|---|---|
+| `bun test` | 252 passed (42 files), up from 245. Tests use real Pi checking and system npm against a loopback metadata fixture: outdated/current/pinned/missing/local packages, rechecks, revision invalidation, project precedence and trust, registry failure, offline mode, HTTP boundaries, and a trap proving configured npmCommand never executes |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; existing >500 kB client-chunk warning remains |
+| `bun run test:e2e` | 66 passed. Three new flows: keyboard check/reload/recheck with axe, recoverable failure, and a delayed global response after selecting a project |
+| Manual T3 preview | Before/after on a temporary agent and loopback registry, desktop light (1280×800), dark at 390 and 320 CSS px; no horizontal document overflow at 320px |
+
+No real package was installed/updated, no real agent settings or running service were changed. Update commands were tested with a recorder executable, never a real installation. UI checks used the accessibility/layout/writing/typography/colors/UI owner skills in that order and the existing shadcn components.
+
+Limits: checks are on demand, not background reminders; results live in server memory only. Pi suppresses individual lookup failures and exposes no target versions, so the UI deliberately says “No updates reported by Pi”, never “Everything is up to date”. Git remote checking is delegated unchanged to Pi; live private registries/SSH remotes, actual upgrade downloads, a screen reader, forced colors and Windows/desktop 200% zoom were not verified.
+
+---
+
 # Verification — shadcn components throughout, 2026-10-08
 
 Scope: every control, callout, list row, disclosure and confirmation on shadcn (Base UI, base-nova) components installed with the shadcn CLI; Flexoki reaches them only through tokens. Set up as shadcn's install guide asks: `tw-animate-css`, `shadcn/tailwind.css` and the `cn` package (docs-mcp `shadcn-ui`: Theming, CLI, Manual installation, Changelog).

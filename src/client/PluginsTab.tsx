@@ -1,10 +1,11 @@
-import { useEffect, useId, useState } from "react";
-import { ChevronDown, CircleAlert, FolderOpen, Package, Plus, Puzzle } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { ArrowUp, ChevronDown, CircleAlert, FolderOpen, LoaderCircle, Package, Plus, Puzzle } from "lucide-react";
 import type { PluginsView, ResourceType, ResourceView } from "../shared/resources";
-import { loadPlugins, restoreSettings, savePackageFilters, savePlugins } from "./api";
+import { checkPackageUpdates, loadPlugins, restoreSettings, savePackageFilters, savePlugins } from "./api";
 import { PackageFilterForm, type FilterPatch } from "./PackageFilterForm";
 import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Empty, EmptyDescription } from "./components/ui/empty";
 import { Field, FieldLabel } from "./components/ui/field";
@@ -62,16 +63,41 @@ export function PluginsTab({ project }: { project?: string }) {
   const [pinned, setPinned] = useState<"packages" | "folders">();
   const [undo, setUndo] = useState<FolderChange["undo"]>();
   const [folders, setFolders] = useState(0);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState("");
+  const generation = useRef(0);
   // pi install / remove / update run on click; the list reloads when they finish.
   const job = useJob(() => void refresh());
   const id = useId();
 
   async function refresh() {
+    const request = generation.current;
     setError("");
-    try { setView(await loadPlugins(project)); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the plugins."); }
+    try {
+      const next = await loadPlugins(project);
+      if (generation.current === request) setView(next);
+    } catch (cause) {
+      if (generation.current === request) setError(cause instanceof Error ? cause.message : "Could not read the plugins.");
+    }
   }
-  useEffect(() => { setSelected(undefined); setMode(undefined); setPinned(undefined); void refresh(); }, [project]);
+  useEffect(() => {
+    setSelected(undefined); setMode(undefined); setPinned(undefined); setView(undefined);
+    setChecking(false); setCheckError(""); void refresh();
+    return () => { generation.current++; };
+  }, [project]);
+
+  async function checkUpdates() {
+    const request = generation.current;
+    setChecking(true); setCheckError("");
+    try {
+      await checkPackageUpdates(project);
+      if (generation.current === request) await refresh();
+    } catch (cause) {
+      if (generation.current === request) setCheckError(cause instanceof Error ? cause.message : "Could not check updates. Try again.");
+    } finally {
+      if (generation.current === request) setChecking(false);
+    }
+  }
 
   async function toggle(items: ResourceView[], enabled: boolean, label = items[0]?.name) {
     if (!view || !items.length) return;
@@ -112,6 +138,8 @@ export function PluginsTab({ project }: { project?: string }) {
     finally { setBusy(false); }
   }
   const back = () => { setSelected(undefined); setMode(undefined); setPinned(undefined); };
+  const lastCheck = view?.updateCheck;
+  const updateCount = lastCheck?.updates.length ?? 0;
   const packages = view && <section className="detail packages" aria-labelledby="packages-title">
     <header><h2 id="packages-title">Packages</h2>
       <p className="muted">Installed with pi install in this environment. Packages can run code: install only sources you trust.</p></header>
@@ -121,18 +149,31 @@ export function PluginsTab({ project }: { project?: string }) {
       {project && <Field className="w-auto"><FieldLabel htmlFor={id + "for"}>For</FieldLabel>
         <OptionSelect id={id + "for"} value={installScope} onChange={setInstallScope}
           options={[{ value: "global", label: "Every project" }, { value: "project", label: "This project only" }] as const} /></Field>}
-      <Button type="submit" disabled={job.running || !source.trim()}>Install</Button>
+      <Button type="submit" disabled={job.running || checking || !source.trim()}>Install</Button>
     </form>
     <JobPanel job={job.job} error={job.error} onAnswer={value => void job.answer(value)} onCancel={() => void job.cancel()} onDismiss={job.dismiss} />
-    <div className="list-header package-list-header"><h3>In settings.json</h3><span>{view.packages.length}</span>
-      <Button variant="ghost" size="sm" disabled={job.running || !view.packages.length} onClick={() => void job.start({ action: "packages-update" })}>Update all</Button></div>
+    <div className="list-header package-list-header flex-wrap"><h3>In settings.json</h3><span>{view.packages.length}</span>
+      <Button variant="outline" size="sm" disabled={checking || job.running || !view.packages.length} onClick={() => void checkUpdates()}>
+        {checking && <LoaderCircle aria-hidden="true" className="animate-spin motion-reduce:animate-none" />}Check for updates</Button>
+      <Button variant="ghost" size="sm" disabled={job.running || checking || !view.packages.length} onClick={() => void job.start({ action: "packages-update", ...(project ? { project } : {}) })}>Update all</Button></div>
+    <div className="my-4 space-y-2">
+      <p role="status" aria-live="polite" className="m-0">{checking ? "Checking for package updates…"
+        : !lastCheck ? "Not checked yet. Check for updates to find newer packages."
+        : lastCheck.offline ? "Check skipped: Pi is in offline mode."
+        : updateCount ? `${updateCount} package ${updateCount === 1 ? "update" : "updates"} found.`
+        : "No updates reported by Pi."}</p>
+      {lastCheck && <p className="muted m-0">Last checked <time dateTime={lastCheck.checkedAt}>{new Date(lastCheck.checkedAt).toLocaleString()}</time></p>}
+      <p className="muted m-0">Checks use npm and Git without installing anything. Pi skips local paths, pinned versions and failed lookups; no reported update is not a guarantee that every package is current.</p>
+      {checkError && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not check updates</AlertTitle><AlertDescription>{checkError}</AlertDescription></Alert>}
+    </div>
     {view.packages.length ? <ul className="package-list">{view.packages.map(pkg => <li key={pkg.scope + pkg.source}>
-      <code translate="no">{pkg.source}</code>
+      <code translate="no" className="break-all">{pkg.source}</code>
       <span className="muted">{pkg.scope === "project" ? "This project · " : ""}{pkg.installed ? "Installed" : "Not installed"}{pkg.filtered ? " · has resource filters" : ""}</span>
+      {lastCheck?.updates.some(update => update.source === pkg.source && update.scope === pkg.scope) && <Badge variant="secondary"><ArrowUp aria-hidden="true" data-icon="inline-start" />Update available</Badge>}
       <span className="actions">
         <Button variant="ghost" size="xs" disabled={busy} aria-label={`Filters for ${pkg.source}`} onClick={() => setFiltering(pkg.scope + pkg.source)}>Filters</Button>
-        <Button variant="ghost" size="xs" disabled={job.running} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source })}>Update</Button>
-        <Button variant="ghost" size="xs" className="text-destructive" disabled={job.running} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Remove</Button>
+        <Button variant="ghost" size="xs" disabled={job.running || checking} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Update</Button>
+        <Button variant="ghost" size="xs" className="text-destructive" disabled={job.running || checking} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Remove</Button>
       </span>
       {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
         onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}
@@ -152,7 +193,7 @@ export function PluginsTab({ project }: { project?: string }) {
     {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <Workbench open={open} onBack={back} backLabel="All plugins" list={<section aria-label="Plugin list">
       <div className="list-search"><SearchField label="Search plugins" placeholder="Search plugins…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned">
-        <li><ListItem selected={pinned === "packages"} onSelect={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }} icon={Package} name="Packages" state={view.packages.length} /></li>
+        <li><ListItem selected={pinned === "packages"} onSelect={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }} icon={Package} name="Packages" state={updateCount ? `${updateCount} ${updateCount === 1 ? "update" : "updates"}` : view.packages.length} /></li>
         <li><ListItem selected={pinned === "folders"} onSelect={() => { setPinned("folders"); setSelected(undefined); setMode(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds plugins" /></li></ul>
       {!visible.length && <Empty><EmptyDescription>{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</EmptyDescription></Empty>}
       {groups.map(group => {

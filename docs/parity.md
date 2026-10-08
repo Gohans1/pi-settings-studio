@@ -17,7 +17,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 | `AGENTS.md` / `CLAUDE.md` (context files) | Done | Done | Pi's candidate order, parent-folder files listed read-only |
 | `SYSTEM.md`, `APPEND_SYSTEM.md` | Done | Done | |
 | `extensions/`, `skills/`, `prompts/`, `themes/` | Done | Done | Switches, create, edit (a skill's whole folder); extra folders added to and removed from the settings paths; a skill Pi skips for a duplicate name is marked, with the winner (Pi's own `loadSkills`); the model-invocation switch of a skill; package files, built-ins and symbolic links read-only |
-| Packages | Done | Done | Install, update, remove through `pi`; resource filters per package |
+| Packages | Done | Done | Install, update, remove through `pi`; resource filters; on-demand update checks via Pi’s public `checkForAvailableUpdates`, per-package badges and last-check timestamp. No automatic polling; Pi silently skips pins/local paths/failed lookups, so an empty result is not a guarantee that everything is current |
 | Trust (`trust.json`) | n/a | Done | Pi's ProjectTrustStore; says whether T3Code loads `.pi` |
 | Sub-agent profiles (`agents/`) | Done | Done | Pi's example extension format |
 | Sessions | System prompt view | | Read-only; a custom `sessionDir` is followed (absolute paths for discovery, relative ones per known project) |

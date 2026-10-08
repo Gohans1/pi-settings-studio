@@ -20,7 +20,12 @@ export type SkillsView = { revision: string; projectRevision?: string; skills: R
 
 export type PackageFilters = { autoload?: boolean; extensions?: string[]; skills?: string[]; prompts?: string[]; themes?: string[] };
 export type PackageView = { scope: "global" | "project"; source: string; installed: boolean; filtered: boolean; filters: PackageFilters };
-export type PluginsView = { revision: string; projectRevision?: string; resources: ResourceView[]; packages: PackageView[] };
+/** Pi reports positive matches only; an empty result does not prove every source was reachable. */
+export type PackageUpdateCheck = {
+  revision: string; projectRevision?: string; checkedAt: string; offline: boolean;
+  updates: { source: string; scope: "global" | "project" }[];
+};
+export type PluginsView = { revision: string; projectRevision?: string; resources: ResourceView[]; packages: PackageView[]; updateCheck?: PackageUpdateCheck };
 
 /** One file of a resource. `files` lists a skill's folder (relative paths); other resources have one. */
 export type ResourceFileView = { path: string; file: string; text: string; revision: string; editable: boolean; readOnly?: string; files: string[] };
