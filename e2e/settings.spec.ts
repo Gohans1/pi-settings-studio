@@ -92,6 +92,7 @@ test("desktop and narrow layouts are accessible, keyboard usable and error-free"
 
 test("a switch and a typed choice save with their JSON types", async ({ page }) => {
   await page.getByRole("switch", { name: "Automatic compaction" }).click();
+  await page.getByRole("region", { name: "Terminal UI" }).getByRole("button", { name: /advanced settings/ }).click();
   await page.getByRole("combobox", { name: "Image protocol" }).click();
   await page.getByRole("option", { name: "false", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -149,6 +150,7 @@ test("per-model thinking levels and compaction overrides are edited as rows", as
   await thinking.getByLabel("Model 1", { exact: true }).fill("anthropic/claude-sonnet");
   await thinking.getByRole("combobox", { name: "Thinking level for model 1" }).click();
   await page.getByRole("option", { name: "high", exact: true }).click();
+  await page.getByRole("region", { name: "Sessions & context" }).getByRole("button", { name: /advanced settings/ }).click();
   const compaction = page.getByRole("group", { name: "Compaction per model" });
   await compaction.getByRole("button", { name: "Add model" }).click();
   await compaction.getByLabel("Model 1", { exact: true }).fill("openai/gpt");
@@ -212,6 +214,7 @@ test("the section index jumps to a group and marks where the reader is", async (
 });
 
 test("emptying a number field returns it to Pi's default", async ({ page }) => {
+  await page.getByRole("region", { name: "Models & thinking" }).getByRole("button", { name: /advanced settings/ }).click();
   const budget = page.getByLabel("Thinking budget: minimal", { exact: true });
   await budget.fill("500");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -226,7 +229,7 @@ test("emptying a number field returns it to Pi's default", async ({ page }) => {
 test("the section index counts the settings each group sets and marks unsaved edits", async ({ page }) => {
   const index = page.getByRole("navigation", { name: "Setting groups" });
   await expect(index.getByRole("link", { name: "Shell & packages (1 set)" })).toBeVisible();
-  await page.getByLabel("Thinking budget: low", { exact: true }).fill("2048");
+  await page.getByRole("switch", { name: "Cache notices" }).click();
   await expect(index.getByRole("link", { name: "Models & thinking (unsaved changes)" })).toBeVisible();
 });
 
@@ -254,4 +257,42 @@ test("startup tools are a checklist that saves modifiers against Pi's defaults",
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   expect(JSON.parse(await readFile(file, "utf8")).defaultTools).toBeUndefined();
   expect((await new AxeBuilder({ page }).include("#row-defaultTools").analyze()).violations).toEqual([]);
+});
+
+test("the page opens on everyday groups, with the terminal-only ones last", async ({ page }) => {
+  const index = page.getByRole("navigation", { name: "Setting groups" });
+  await expect(index.getByRole("link")).toHaveText([/^Tools/, /^Messages & interaction/, /^Models & thinking/, /^Sessions & context/, /^Shell & packages/,
+    /^Images/, /^Updates, telemetry & warnings/, /^Network & retries/, /^Terminal UI/, /^Keyboard shortcuts/]);
+});
+
+test("advanced settings wait behind their group's toggle", async ({ page }) => {
+  const models = page.getByRole("region", { name: "Models & thinking" });
+  await expect(models.getByRole("group", { name: "Thinking level per model" })).toBeVisible();
+  await expect(models.getByLabel("Thinking budget: minimal", { exact: true })).toBeHidden();
+  await models.getByRole("button", { name: "5 advanced settings" }).click();
+  await expect(models.getByLabel("Thinking budget: minimal", { exact: true })).toBeVisible();
+});
+
+test("a group's advanced settings start open when the file sets one of them", async ({ page }) => {
+  // The fixture sets shellCommandPrefix; nothing in Network & retries.
+  await expect(page.getByLabel("Shell command prefix", { exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Transport" })).toBeHidden();
+});
+
+test("search reaches advanced settings without opening their group", async ({ page }) => {
+  await page.getByRole("searchbox", { name: "Search settings" }).fill("budget");
+  await expect(page.getByLabel("Thinking budget: minimal", { exact: true })).toBeVisible();
+});
+
+test("save opens a folded group to reach a value Pi would refuse", async ({ page }) => {
+  const models = page.getByRole("region", { name: "Models & thinking" });
+  const toggle = models.getByRole("button", { name: "5 advanced settings" });
+  const budget = models.getByLabel("Thinking budget: minimal", { exact: true });
+  await toggle.click();
+  await budget.fill("-1");
+  await toggle.click();
+  await expect(budget).toBeHidden();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(budget).toBeFocused();
+  expect(JSON.parse(await readFile(file, "utf8")).thinkingBudgets).toBeUndefined();
 });
