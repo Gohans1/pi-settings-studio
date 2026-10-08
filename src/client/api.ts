@@ -127,8 +127,9 @@ export const loadResourceFile = (type: ResourceType, path: string, file?: string
   request<ResourceFileView>(withProject(`/api/resource-files?type=${type}&path=${encodeURIComponent(path)}${file ? `&file=${encodeURIComponent(file)}` : ""}`, project));
 export const saveResourceFile = (body: { type: ResourceType; path: string; file: string; revision: string; text: string }, project?: string) =>
   request<{ revision: string }>(withProject("/api/resource-files", project), "PUT", body);
-export const setModelInvocation = (path: string, modelInvocation: boolean, project?: string) =>
-  request<{ revision: string }>(withProject("/api/resource-files/invocation", project), "PATCH", { path, modelInvocation });
+/** All or none: the paths of the files that changed come back, so the change can be reverted exactly. */
+export const setModelInvocation = (paths: string[], modelInvocation: boolean, project?: string) =>
+  request<{ changed: string[] }>(withProject("/api/resource-files/invocation", project), "PATCH", { paths, modelInvocation });
 export const createResource = (body: { scope: "global" | "project"; type: ResourceType; name: string; description?: string }, project?: string) =>
   request<{ type: ResourceType; path: string }>(withProject("/api/resource-files", project), "POST", body);
 export const loadPi = () => request<{ bin: string; installed?: string; builtFor: string }>("/api/pi");

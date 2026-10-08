@@ -148,13 +148,28 @@ export function resourceFileRoutes(store: ConfigStore, registry: ProjectRegistry
       return c.json({ revision: (await store.readPath(opened)).revision });
     })
     .patch("/invocation", async c => {
-      const { path, modelInvocation } = z.object({ path: z.string().min(1).max(4096), modelInvocation: z.boolean() }).strict().parse(await c.req.json());
-      const item = await find(c.req.query("project"), "skills", path);
-      const readOnly = readOnlyReason(item);
-      if (readOnly) throw new ConfigError(readOnly, 422);
-      const { revision } = await store.readPath(item.path);
-      await store.writePath(item.path, revision, setModelInvocation(await readText(item.path), modelInvocation));
-      return c.json({ revision: (await store.readPath(item.path)).revision });
+      const { paths, modelInvocation } = z.object({ paths: z.array(z.string().min(1).max(4096)).min(1).max(1000), modelInvocation: z.boolean() }).strict().parse(await c.req.json());
+      const { resolved } = await context.resolve(c.req.query("project"));
+      // Every file is checked before any is written, so a skill that cannot change leaves all of them as they were.
+      const edits: { path: string; revision: string; text: string }[] = [];
+      for (const path of paths) {
+        const item = resolved.skills.find(entry => entry.path === path);
+        if (!item) throw new ConfigError("Pi does not discover this skill. Reload the list.", 404);
+        const name = basename(folderOf("skills", path) ?? path);
+        const readOnly = readOnlyReason(item);
+        if (readOnly) throw new ConfigError(`${name}: ${readOnly}`, 422);
+        const { text, revision } = await store.readPath(path);
+        if (text === undefined) throw new ConfigError(`${name}: SKILL.md is gone. Reload the list.`, 404);
+        try {
+          // Already as asked: the file is left alone and not reported as changed.
+          if ((parseFrontmatter<Record<string, unknown>>(text).frontmatter["disable-model-invocation"] === true) !== modelInvocation) continue;
+          edits.push({ path, revision, text: setModelInvocation(text, modelInvocation) });
+        } catch (error) {
+          throw new ConfigError(`${name}: ${error instanceof ConfigError ? error.message : "Pi cannot read its frontmatter. Fix it in the file editor."}`, 422);
+        }
+      }
+      for (const edit of edits) await store.writePath(edit.path, edit.revision, edit.text);
+      return c.json({ changed: edits.map(edit => edit.path) });
     })
     .post("/", async c => {
       const body = z.object({ scope: z.enum(["global", "project"]), type: z.enum(TYPES), name: z.string(), description: z.string().max(1024).optional() }).strict().parse(await c.req.json());

@@ -110,7 +110,7 @@ test("whether the model may load a skill is one frontmatter line, and nothing el
   const before = await readFile(file, "utf8");
   const set = async (name: string, modelInvocation: boolean) => {
     const target = (await skills()).skills.find(entry => entry.name === name)!;
-    return request("/api/resource-files/invocation", { method: "PATCH", headers: json, body: JSON.stringify({ path: target.path, modelInvocation }) });
+    return request("/api/resource-files/invocation", { method: "PATCH", headers: json, body: JSON.stringify({ paths: [target.path], modelInvocation }) });
   };
   assert.equal((await set("alpha", false)).status, 200);
   assert.equal(await readFile(file, "utf8"), before.replace("---\n# alpha", "disable-model-invocation: true\n---\n# alpha"));
@@ -124,4 +124,46 @@ test("whether the model may load a skill is one frontmatter line, and nothing el
   const gamma = join(agent, "pkgs/my-pack/skills/gamma/SKILL.md"), packaged = await readFile(gamma, "utf8");
   assert.equal((await set("gamma", false)).status, 422);
   assert.equal(await readFile(gamma, "utf8"), packaged);
+});
+
+test("many skills change how the model reaches them in one request, which names the files it changed", async (t) => {
+  const { agent, request, skills } = await fixture(t);
+  await mkdir(join(agent, "skills/delta"), { recursive: true });
+  await writeFile(join(agent, "skills/delta/SKILL.md"), skill("delta", "Delta does more."));
+  const read = (name: string) => readFile(join(agent, "skills", name, "SKILL.md"), "utf8");
+  const before = { alpha: await read("alpha"), beta: await read("beta"), delta: await read("delta") };
+  const paths = (await skills()).skills.filter(entry => entry.origin === "top-level").map(entry => String(entry.path));
+  const set = (list: string[], modelInvocation: boolean) =>
+    request("/api/resource-files/invocation", { method: "PATCH", headers: json, body: JSON.stringify({ paths: list, modelInvocation }) });
+
+  const response = await set(paths, false);
+  assert.equal(response.status, 200);
+  const { changed } = await response.json() as { changed: string[] };
+  // beta was command-only already: its file is not touched, and it is not named.
+  assert.deepEqual([...changed].sort(), [join(agent, "skills/alpha/SKILL.md"), join(agent, "skills/delta/SKILL.md")]);
+  assert.equal(await read("beta"), before.beta);
+  assert.ok((await skills()).skills.filter(entry => entry.origin === "top-level").every(entry => entry.disableModelInvocation === true));
+  // Sending the named files back restores exactly the earlier state.
+  assert.equal((await set(changed, true)).status, 200);
+  assert.deepEqual({ alpha: await read("alpha"), beta: await read("beta"), delta: await read("delta") }, before);
+});
+
+test("one skill that cannot change stops the whole batch before any file is written", async (t) => {
+  const { agent, request, skills } = await fixture(t);
+  const alpha = join(agent, "skills/alpha/SKILL.md"), original = await readFile(alpha, "utf8");
+  const view = await skills();
+  const path = (name: string) => String(view.skills.find(entry => entry.name === name)!.path);
+  const set = (paths: string[]) => request("/api/resource-files/invocation", { method: "PATCH", headers: json, body: JSON.stringify({ paths, modelInvocation: false }) });
+  // A package skill, a file Pi does not discover, a SKILL.md without frontmatter.
+  const refused = await set([path("alpha"), path("gamma")]);
+  assert.equal(refused.status, 422);
+  assert.match((await refused.json() as { error: string }).error, /gamma/);
+  assert.equal((await set([path("alpha"), "/etc/passwd"])).status, 404);
+  await mkdir(join(agent, "skills/plain"), { recursive: true });
+  await writeFile(join(agent, "skills/plain/SKILL.md"), "# No frontmatter\n");
+  const plain = String((await skills()).skills.find(entry => String(entry.path).includes("plain"))!.path);
+  const bare = await set([path("alpha"), plain]);
+  assert.equal(bare.status, 422);
+  assert.match((await bare.json() as { error: string }).error, /plain/);
+  assert.equal(await readFile(alpha, "utf8"), original);
 });

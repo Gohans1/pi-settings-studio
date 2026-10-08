@@ -84,7 +84,7 @@ export function SkillsTab({ project }: { project?: string }) {
   async function invocation(skill: ResourceView, allowed: boolean) {
     setBusy(true); setError(""); setMessage(""); setUndo(undefined);
     try {
-      await setModelInvocation(skill.path, allowed, project);
+      await setModelInvocation([skill.path], allowed, project);
       await refresh();
       setMessage(`${allowed ? `The model may load ${skill.name} again when a task matches` : `Only /skill:${skill.name} loads ${skill.name} now`}. Applies to new T3Code threads, or after /reload.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not change SKILL.md."); }
