@@ -7,7 +7,7 @@ import { cn } from "../src/client/lib/utils.ts";
 const read = (path: string) => readFileSync(resolve(import.meta.dir, "..", path), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 const palette = read("src/client/flexoki.css");
 const styles = read("src/client/styles.css");
-const components = ["button", "switch", "tabs"].map((name) => read(`src/client/components/ui/${name}.tsx`)).join("\n");
+const components = ["button", "switch", "tabs", "menu"].map((name) => read(`src/client/components/ui/${name}.tsx`)).join("\n");
 
 type Declaration = { selector: string; property: string; value: string };
 // Innermost `selector { declarations }` blocks; an enclosing @media prelude never reaches the selector.
@@ -89,6 +89,15 @@ describe("colour system", () => {
     ["--destructive", "--background", 4.5], ["--destructive", "--secondary", 4.5],
     ["--ring", "--background", 3], ["--ring", "--sidebar", 3],
     ["--input", "--control", 3], ["--warning", "--background", 3],
+    // The selected list row and floating layers (menus) keep body and muted text readable.
+    ["--foreground", "--selected", 4.5], ["--muted-foreground", "--selected", 4.5],
+    ["--foreground", "--popover", 4.5], ["--muted-foreground", "--popover", 4.5],
+    // Callouts: body text in the foreground, tone colours on their own surface.
+    ["--foreground", "--secondary", 4.5], ["--foreground", "--destructive-surface", 4.5], ["--destructive", "--destructive-surface", 4.5],
+    ["--foreground", "--warning-surface", 4.5], ["--warning", "--warning-surface", 3],
+    ["--foreground", "--success-surface", 4.5], ["--success", "--success-surface", 3], ["--success", "--background", 3],
+    // The toast: ink on paper, inverted from the page.
+    ["--inverse-foreground", "--inverse", 4.5], ["--inverse-muted-foreground", "--inverse", 4.5], ["--inverse-foreground", "--inverse-hover", 4.5],
   ];
   for (const scheme of ["light", "dark"] as const) {
     test.each(pairs)(`${scheme}: %s on %s meets %d:1`, (fg, bg, minimum) => {
