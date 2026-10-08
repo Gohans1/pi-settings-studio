@@ -1,3 +1,21 @@
+# Verification — General: everyday settings first, 2026-10-08
+
+Scope: the order of General's groups and rows, and one "N advanced settings" Disclosure per group for tuning most people never change: thinking budgets and prompt cache warming; session directory, compaction and branch-summary token counts, compaction per model; shell command prefix; transport, timeouts, retry delays and provider retries; 16 terminal internals. What each setting writes did not change.
+
+| Check | Result |
+|---|---|
+| `bun test` | 262 passed (43 files) |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; existing >500 kB client-chunk warning remains |
+| `bun run test:e2e` | Full run: 82 passed, 3 failed in motion.spec: its `[data-slot=collapsible-content]` locator now also matched General's folded panels. Scoped to `.not-here`, motion.spec passed 6 of 6 |
+| RED/GREEN | settings.spec: 7 of 23 failed before the change, 23 of 23 after. Five new flows: group order; advanced rows behind the toggle; the toggle starts open when the file sets one of its keys; search reaches advanced rows; Save opens a folded group to focus a value Pi would refuse. The last one first passed without the `flushSync` that opens the group, because the panel was still animating shut; it now waits for the row to hide and fails without that line ("inactive") |
+| Manual T3 preview | Running service, navigation only, nothing saved: light at 1440 CSS px, dark at 390; no horizontal overflow. Found and fixed: the panel's overflow clip cut the right side of an input's focus ring (input and panel both ended at 1360 px). Disclosure insets its panel by 4 px; rows stay aligned |
+| Impeccable detector | No findings on GeneralTab.tsx, Disclosure.tsx and styles.css |
+
+Limits: the order reflects what each setting does and how Pi is used through T3Code, not usage data. Find-in-page revealing a folded row comes from Base UI's `hiddenUntilFound` and has no test here.
+
+---
+
 # Merge readiness — package update notices, 2026-10-08
 
 Integrated main's project-trust banner fix (`1645d4f`) into the feature before deployment. The combined tree passed **252 unit/integration tests and 70 Playwright tests**, typecheck, lint and production build. No package versions or lockfile entries changed.
