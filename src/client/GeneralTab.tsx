@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { ChevronDown, CircleAlert, FileJson, History, RotateCcw } from "lucide-react";
 import { fields, sections, type Field, type SettingsChange, type SettingsView } from "../shared/settings";
@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { FieldGroup, FieldSeparator } from "./components/ui/field";
 import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -167,6 +168,7 @@ export function GeneralTab({ project }: { project?: string }) {
       invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
       onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;
   };
+  const rows = (list: Field[]) => <FieldGroup>{list.map((field, index) => <Fragment key={field.key}>{index > 0 && <FieldSeparator />}{row(field)}</Fragment>)}</FieldGroup>;
   const description = scope === "project" ? "Settings for this project only. They override the global ones while the project is trusted." : "Pi core settings shared by every project.";
   if (raw) return <>
     <PageHeader title="General" description={description} />
@@ -215,11 +217,11 @@ export function GeneralTab({ project }: { project?: string }) {
               return items.length > 0 && <section key={group.id} id={"group-" + group.id} className="settings-group" aria-labelledby={"group-" + group.id + "-title"}>
                 <h2 id={"group-" + group.id + "-title"}>{group.title}</h2>
                 {"note" in group && <Alert role="note"><AlertDescription>{group.note}</AlertDescription></Alert>}
-                {items.filter(field => !advanced.includes(field)).map(row)}
+                {rows(items.filter(field => !advanced.includes(field)))}
                 {advanced.length > 0 && <div className="settings-advanced"><Disclosure label={`${advanced.length} advanced ${advanced.length === 1 ? "setting" : "settings"}`} hiddenUntilFound
                   open={advancedOpen[group.id] ?? advanced.some(field => Object.hasOwn(view.values, field.key))}
                   onOpenChange={open => setAdvancedOpen(current => ({ ...current, [group.id]: open }))}>
-                  {advanced.map(row)}
+                  {rows(advanced)}
                 </Disclosure></div>}
               </section>;
             })}
