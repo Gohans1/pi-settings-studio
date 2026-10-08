@@ -124,3 +124,24 @@ describe("typography", () => {
     expect(rem.every((size, i) => size > 0 && (i === 0 || size < (rem[i - 1] ?? 0)))).toBe(true);
   });
 });
+
+describe("space and shape", () => {
+  const rules = declarations(styles);
+  // Everything a length can be built from once the scale's own expressions are taken out.
+  const raw = (value: string) => value.replace(/--spacing\([\d.]+\)|var\(--[\w-]+\)/g, "").match(/\d*\.?\d+(?:px|rem|em)\b/g);
+
+  test("padding, margins and gaps come from the spacing scale", () => {
+    const spacing = rules.filter((d) => /^(padding|margin|gap|row-gap|column-gap|scroll-margin)(-[a-z-]+)?$/.test(d.property));
+    expect(spacing.length).toBeGreaterThan(50);
+    expect(spacing.filter((d) => raw(d.value))).toEqual([]);
+  });
+
+  test("corners come from the radius scale", () => {
+    expect(rules.filter((d) => d.property === "border-radius" && !/^var\(--radius(-[a-z]+)?\)$|^calc\(infinity \* 1px\)$/.test(d.value))).toEqual([]);
+  });
+
+  test("controls share one height and sticky offsets share the header's", () => {
+    expect(rules.filter((d) => d.property === "min-height" && d.value === "40px")).toEqual([]);
+    expect(rules.filter((d) => /(?<![\d.])(128|148|60)px/.test(d.value))).toEqual([]);
+  });
+});
