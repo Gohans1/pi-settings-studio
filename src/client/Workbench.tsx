@@ -3,6 +3,7 @@ import { ChevronLeft, Ellipsis, type LucideIcon } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./components/ui/empty";
+import { Item, ItemContent, ItemMedia, ItemTitle } from "./components/ui/item";
 
 /**
  * A list and the chosen item's details. Wide screens show both panes, each scrolling on its own;
@@ -29,6 +30,20 @@ export function Workbench({ list, detail, open, onBack, backLabel }: {
       {detail}
     </div>
   </div>;
+}
+
+/**
+ * A row of a workbench list: an Item that chooses what the detail pane shows. Its state reads after the
+ * name ("off", "Tool search"); a tone marks a state Pi refuses or skips.
+ */
+export function ListItem({ selected, onSelect, icon: Icon, name, state, tone }: {
+  selected: boolean; onSelect: () => void; icon?: LucideIcon; name: ReactNode; state?: ReactNode; tone?: "refused" | "shadowed";
+}) {
+  return <Item size="xs" render={<button type="button" aria-pressed={selected} onClick={onSelect} />} className="flex-nowrap text-start hover:bg-muted aria-pressed:bg-selected">
+    {Icon && <ItemMedia variant="icon"><Icon aria-hidden="true" /></ItemMedia>}
+    <ItemContent className="min-w-0"><ItemTitle className="w-full">{name}</ItemTitle></ItemContent>
+    {state !== undefined && <span className="item-state" data-state={tone}>{state}</span>}
+  </Item>;
 }
 
 /** A list group's less frequent actions, behind one button. */

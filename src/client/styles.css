@@ -169,8 +169,6 @@
   :is(.notice, .error, .job) + :is(.notice, .error, .job) { margin-top: --spacing(3); }
   .field-error { margin: 0; color: var(--destructive); font-size: var(--text-small); }
   /* A value Pi may not accept: the icon carries the tone, the text stays readable. */
-  .field-warning { display: flex; gap: --spacing(2); margin: 0; font-size: var(--text-small); font-weight: var(--font-weight-normal); }
-  .field-warning svg { flex: none; width: --spacing(4); height: --spacing(4); margin-top: --spacing(0.5); color: var(--warning); }
   .muted { color: var(--muted-foreground); font-size: var(--text-small); }
   .loading { padding: --spacing(8) 0; color: var(--muted-foreground); }
   @media (prefers-reduced-motion: no-preference) { .loading { animation: appear 160ms var(--ease-out) 300ms backwards; } }
@@ -191,21 +189,16 @@
   .list-header h2 { margin: 0; margin-inline-end: auto; font-size: var(--text-caption); font-weight: var(--font-weight-semibold); line-height: var(--leading-tight); color: var(--muted-foreground); overflow-wrap: anywhere; text-wrap: wrap; }
   .list-header > span { color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .item-list { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(0.25); }
-  .item-list li { display: flex; align-items: center; gap: --spacing(2); border-radius: var(--radius-md); }
+  /* A row is its Item, then the switch that turns it on or off. */
+  .item-list li { display: flex; align-items: center; gap: --spacing(2); }
   .item-list li:has(> [data-slot=switch]) { padding-inline-end: --spacing(2); }
-  @media (hover: hover) { .item-list li:hover { background: var(--secondary); } }
-  .item-list li:has(> button[aria-pressed=true]) { background: var(--selected); }
-  .item-list li > button { flex: 1; min-width: 0; display: flex; align-items: center; gap: --spacing(2); min-height: --spacing(8); padding: --spacing(1.5) --spacing(2); border: 0; border-radius: var(--radius-md); background: transparent; color: inherit; text-align: start; }
-  .item-list li > button > svg { width: --spacing(4); height: --spacing(4); color: var(--muted-foreground); }
-  .item-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .item-state { font-size: var(--text-caption); color: var(--muted-foreground); white-space: nowrap; }
+  .item-state { margin-inline-start: auto; font-size: var(--text-caption); color: var(--muted-foreground); white-space: nowrap; }
   .item-state[data-state=refused] { color: var(--destructive); }
   .item-state[data-state=shadowed] { display: inline-flex; align-items: center; gap: --spacing(1); }
   .item-state[data-state=shadowed] svg { width: --spacing(3.5); height: --spacing(3.5); color: var(--warning); }
   .notice.callout-warning:has(> p) { display: grid; gap: --spacing(1.5); }
   .notice > p { margin: 0; }
   .pinned { padding-bottom: --spacing(2); border-bottom: 1px solid var(--border); }
-  .pinned .item-name { font-weight: var(--font-weight-semibold); }
 
   /* Detail pane. */
   .detail { min-width: 0; }
@@ -229,11 +222,6 @@
   /* Forms: fields stack with their hints; groups separate by twice the field gap. */
   .server-form { display: grid; gap: --spacing(4); max-width: 42rem; }
   .server-form > h2 { margin: 0; }
-  .server-form label, .server-form fieldset { display: grid; gap: --spacing(1.5); font-weight: var(--font-weight-semibold); }
-  .server-form label > :not(input, select, textarea), .server-form fieldset > :not(legend) { font-weight: var(--font-weight-normal); }
-  .server-form :is(label, fieldset) > .muted { font-weight: var(--font-weight-normal); }
-  .server-form fieldset { margin: 0; padding: --spacing(3) --spacing(4) --spacing(4); border: 1px solid var(--border); border-radius: var(--radius); }
-  .server-form legend { padding: 0 --spacing(1); font-weight: var(--font-weight-semibold); }
   label:is(.check, .checkbox) { display: flex; align-items: center; gap: --spacing(2); font-weight: var(--font-weight-normal); }
   /* The save row stays in reach at the bottom of a long form. */
   .form-actions { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2); margin-top: --spacing(2); padding: --spacing(3) 0; background: var(--background); border-top: 1px solid var(--border); }
@@ -282,8 +270,6 @@
 
   /* Models. */
   .key-form { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2) --spacing(3); margin-top: --spacing(5); }
-  .key-form label { display: grid; gap: --spacing(1.5); width: min(22rem, 100%); font-weight: var(--font-weight-semibold); }
-  .key-form p { flex-basis: 100%; margin: 0; }
   .key-setup { margin: --spacing(2) 0 0; }
   .detail > .key-setup + .job { margin-top: --spacing(3); }
   .detail > :is(.check-result, .remove-credential) { margin-top: --spacing(4); }
@@ -291,15 +277,11 @@
   .model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); align-items: center; }
   .found-models { display: grid; gap: --spacing(2); padding: --spacing(3); border: 1px solid var(--border); border-radius: var(--radius); }
   .found-models ul { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); max-height: 20rem; overflow: auto; }
-  .found-models label { flex-wrap: wrap; gap: --spacing(2); }
-  .enabled-models { display: grid; gap: --spacing(3); }
-  .enabled-models > p { margin: 0; }
   .pattern-list { list-style: none; margin: 0; padding: 0; display: grid; }
   .pattern-list > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: --spacing(3); min-height: --spacing(9); padding-block: --spacing(1); border-top: 1px solid var(--border); }
   .pattern-list > li:last-child { border-bottom: 1px solid var(--border); }
   .pattern-list code { font-size: var(--text-small); }
   .pattern-add { display: flex; gap: --spacing(2); }
-  .pattern-add input { flex: 1; min-width: 0; }
   .model-map-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: --spacing(1.5); width: 100%; }
 
   /* MCP import. */
@@ -450,6 +432,6 @@
   .setting-row { grid-template-columns: minmax(0, 1fr); }
 }
 @media (forced-colors: active) {
-  .item-list li:has(> button[aria-pressed=true]), .section-nav a[aria-current=true] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .item-list [aria-pressed=true], .section-nav a[aria-current=true] { outline: 2px solid Highlight; outline-offset: -2px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }

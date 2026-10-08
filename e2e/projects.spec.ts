@@ -53,7 +53,8 @@ test("project model defaults and raw JSON write the project's settings.json", as
   await page.getByRole("button", { name: /^Defaults/ }).click();
   const panel = page.getByRole("region", { name: "Defaults" });
   await panel.getByRole("radio", { name: "This project" }).check();
-  await panel.getByLabel("Thinking level").selectOption("high");
+  await panel.getByRole("combobox", { name: "Thinking level" }).click();
+  await page.getByRole("option", { name: "high", exact: true }).click();
   await panel.getByRole("button", { name: "Save defaults" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
   expect(JSON.parse(await readFile(join(project, ".pi", "settings.json"), "utf8"))).toEqual({ defaultThinkingLevel: "high" });

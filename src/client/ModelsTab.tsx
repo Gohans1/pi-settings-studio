@@ -1,17 +1,21 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
-import { Boxes, FileJson, Plus, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { Boxes, CircleAlert, CircleCheck, FileJson, Plus, RefreshCw, SlidersHorizontal } from "lucide-react";
 import type { CustomProvidersView, ProvidersView, ProviderView } from "../shared/models";
 import { loadModelsRaw, saveModelsRaw, addCustomProvider, editCustomProvider, loadCustomProviders, loadProviders, removeCustomProvider, removeProviderKey, restoreAuth, restoreCustomProviders, saveProviderKey } from "./api";
 import { CustomProviderForm } from "./CustomProviderForm";
 import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
+import { Input } from "./components/ui/input";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { ModelDefaults } from "./ModelDefaults";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, MoreMenu, Workbench } from "./Workbench";
+import { EmptyDetail, ListItem, MoreMenu, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
 
 const DEFAULTS = "#defaults";
@@ -46,6 +50,7 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
   provider: ProviderView; busy: boolean; onSaveKey: (key: string) => Promise<boolean>; onRemove: () => void; onSignedIn: () => void;
 }) {
   const [key, setKey] = useState("");
+  const keyId = useId();
   // Pi's own sign-in flow; its questions and links are shown here and Pi writes auth.json.
   const login = useJob(job => { if (job.status === "done") onSignedIn(); });
   // pi auth check: Pi resolves the credential as a session would, environment included.
@@ -70,14 +75,16 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
         : <span className="muted">Not in auth.json or models.json. Check credential also looks at the environment of this app.</span>}</dd></div>
       {provider.oauth && <div><dt>Sign-in</dt><dd>{provider.oauth.name}{provider.oauth.subscription ? " (subscription)" : ""}</dd></div>}
     </dl>
-    {check.job?.check && <p className={check.job.check.status === "ready" ? "notice check-result" : "error check-result"} role="status">{verdict(check.job.check)}</p>}
+    {check.job?.check && <Alert role="status" variant={check.job.check.status === "ready" ? "default" : "destructive"} className="check-result">
+      {check.job.check.status === "ready" ? <CircleCheck aria-hidden="true" /> : <CircleAlert aria-hidden="true" />}<AlertTitle>{verdict(check.job.check)}</AlertTitle></Alert>}
     {check.job && !check.job.check && <JobPanel job={check.job} error={check.error} onAnswer={() => {}} onCancel={() => void check.cancel()} onDismiss={check.dismiss} />}
     <JobPanel job={login.job} error={login.error} onAnswer={value => void login.answer(value)} onCancel={() => void login.cancel()} onDismiss={login.dismiss} />
     {provider.apiKey && <form className="key-form" onSubmit={event => void submit(event)}>
-      <label>API key<input type="password" value={key} autoComplete="new-password" spellCheck={false}
-        placeholder={provider.stored === "api_key" ? "Stored. Enter a new key to replace it." : "Paste a key"} onChange={event => setKey(event.target.value)} /></label>
+      <Field className="w-[min(22rem,100%)]"><FieldLabel htmlFor={keyId}>API key</FieldLabel>
+        <Input id={keyId} type="password" value={key} autoComplete="new-password" spellCheck={false}
+          placeholder={provider.stored === "api_key" ? "Stored. Enter a new key to replace it." : "Paste a key"} onChange={event => setKey(event.target.value)} /></Field>
       <Button type="submit" disabled={busy || !key}>Save key</Button>
-      {provider.stored === "oauth" && <p className="muted">Saving a key replaces the stored sign-in.</p>}
+      {provider.stored === "oauth" && <FieldDescription className="basis-full">Saving a key replaces the stored sign-in.</FieldDescription>}
     </form>}
     {provider.keySetup && <p className="muted key-setup">Needs more than a key, such as an account ID, a region or a profile?{" "}
       <Button variant="link" size="xs" className="px-0" disabled={busy || setup.running} onClick={() => void setup.start({ action: "provider-setup", provider: provider.id })}>Set up with Pi's questions</Button></p>}
@@ -154,36 +161,32 @@ export function ModelsTab({ project }: { project?: string }) {
     <JobPanel job={catalog.job} error={catalog.error} onAnswer={value => void catalog.answer(value)} onCancel={() => void catalog.cancel()} onDismiss={catalog.dismiss} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && view && { label: "Undo", disabled: busy, onClick: () => undo === "auth" ? void run(restoreAuth, "Restored the previous auth.json.") : void runCustom(restoreCustomProviders, "Restored the previous models.json.") }} />
-    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p></div>}
-    {view?.error && <div role="alert" className="error"><strong>models.json has a problem</strong><p>{view.error}</p></div>}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    {view?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>models.json has a problem</AlertTitle><AlertDescription>{view.error}</AlertDescription></Alert>}
     {raw ? <RawJsonEditor file="models.json" load={loadModelsRaw} save={saveModelsRaw}
       note={`${SECRET_NOTE} modelOverrides, compat, cost, thinkingLevelMap and samplingParams are edited here. Pi checks the file before it is saved.`}
       onClose={saved => { setRaw(false); if (saved) { setMessage("Saved models.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
     : !view ? !error && <div className="loading" aria-busy="true">Reading providers…</div> : <Workbench open={open} onBack={() => setSelected(undefined)} backLabel="All providers" list={<section aria-label="Providers">
       <div className="list-search"><SearchField label="Search providers" placeholder="Search providers…" value={query} onChange={setQuery} /></div>
-      <ul className="item-list pinned"><li><button type="button" aria-pressed={selected === DEFAULTS} onClick={() => setSelected(DEFAULTS)}>
-        <SlidersHorizontal aria-hidden="true" /><span className="item-name">Defaults</span><span className="item-state">provider, model, thinking</span></button></li></ul>
+      <ul className="item-list pinned"><li><ListItem selected={selected === DEFAULTS} onSelect={() => setSelected(DEFAULTS)} icon={SlidersHorizontal} name="Defaults" state="provider, model, thinking" /></li></ul>
       <section className="item-group" aria-label="Custom providers">
         <div className="list-header"><h2>models.json</h2><span>{custom?.providers.length ?? 0}</span>
           <Button variant="ghost" size="icon-xs" aria-label="Add custom provider" title="Add custom provider" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}><Plus aria-hidden="true" /></Button>
           <MoreMenu label="More actions for models.json"><DropdownMenuItem disabled={busy} onClick={() => setRaw(true)}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem></MoreMenu>
         </div>
-        {custom?.error && <p className="field-error list-note">{custom.error}</p>}
+        {custom?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertDescription>{custom.error}</AlertDescription></Alert>}
         {custom && !custom.error && !custom.providers.length && <p className="muted list-note">Ollama, LM Studio, a proxy: any endpoint that speaks an API Pi knows.</p>}
         <ul className="item-list">{(custom?.providers ?? []).map(entry => <li key={entry.id}>
-          <button type="button" aria-pressed={selected === CUSTOM + entry.id} onClick={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}>
-            <span className="item-name">{entry.name ?? entry.id}</span><span className="item-state">{entry.models.length ? `${entry.models.length} models` : entry.otherKeys.join(", ")}</span>
-          </button></li>)}</ul>
+          <ListItem selected={selected === CUSTOM + entry.id} onSelect={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}
+            name={entry.name ?? entry.id} state={entry.models.length ? `${entry.models.length} models` : entry.otherKeys.join(", ")} /></li>)}</ul>
       </section>
       {groups.map(([title, members]) => members.length > 0 && <div key={title} className="item-group">
         <div className="list-header"><h2>{title}</h2><span>{members.length}</span></div>
         <ul className="item-list">{members.map(provider => <li key={provider.id}>
-          <button type="button" aria-pressed={provider.id === selected} onClick={() => setSelected(provider.id)}>
-            <span className="item-name">{provider.name}</span><span className="item-state">{state(provider)}</span>
-          </button>
+          <ListItem selected={provider.id === selected} onSelect={() => setSelected(provider.id)} name={provider.name} state={state(provider)} />
         </li>)}</ul>
       </div>)}
-      {!visible.length && <p className="empty">No providers match “{query.trim()}”.</p>}
+      {!visible.length && <Empty><EmptyDescription>No providers match “{query.trim()}”.</EmptyDescription></Empty>}
     </section>} detail={selected === NEW_CUSTOM || customEntry ? <CustomProviderForm key={selected + (customEntry ? custom!.revision : "")} provider={customEntry} busy={busy} error={formError}
           onCancel={() => setSelected(undefined)}
           onSave={(id, input) => void runCustom(revision => customEntry ? editCustomProvider(customEntry.id, revision, input) : addCustomProvider(revision, id, input),

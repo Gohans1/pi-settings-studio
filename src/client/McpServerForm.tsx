@@ -3,6 +3,8 @@ import { X } from "lucide-react";
 import type { McpExposure, McpServerInput, McpServerView } from "../shared/mcp";
 import { loadProviders } from "./api";
 import { Button } from "./components/ui/button";
+import { FieldDescription } from "./components/ui/field";
+import { Input } from "./components/ui/input";
 
 export const exposureLabels: Record<string, [string, string]> = {
   codemode: ["Code mode", "Callable from codemode scripts; not declared to the model."],
@@ -67,15 +69,15 @@ export function NamedRows({ kind, rows, onChange }: { kind: "variable" | "header
   const update = (index: number, patch: Partial<Row>) => onChange(rows.map((row, i) => i === index ? { ...row, ...patch } : row));
   return <div className="named-rows">
     {rows.map((row, index) => <div className="named-row" key={index}>
-      <input aria-label={`${Kind} name ${index + 1}`} value={row.name} placeholder="NAME" autoComplete="off" spellCheck={false}
+      <Input aria-label={`${Kind} name ${index + 1}`} value={row.name} placeholder="NAME" autoComplete="off" spellCheck={false}
         onChange={event => update(index, { name: event.target.value })} />
-      <input aria-label={`Value of ${kind} ${index + 1}`} type="password" value={row.value} autoComplete="new-password"
+      <Input aria-label={`Value of ${kind} ${index + 1}`} type="password" value={row.value} autoComplete="new-password"
         placeholder={row.stored ? "Hidden. Leave empty to keep." : "Value"} onChange={event => update(index, { value: event.target.value })} />
       <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${kind} ${row.name || index + 1}`}
         onClick={() => onChange(rows.filter((_, i) => i !== index))}><X aria-hidden="true" /></Button>
     </div>)}
     <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, { name: "", value: "", stored: false }])}>Add {kind}</Button>
-    <p className="muted">Values can use <code>{"${NAME}"}</code> or <code>!command</code>. Saved values are never shown here.</p>
+    <FieldDescription>Values can use <code>{"${NAME}"}</code> or <code>!command</code>. Saved values are never shown here.</FieldDescription>
   </div>;
 }
 

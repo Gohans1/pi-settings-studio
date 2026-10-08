@@ -7,7 +7,7 @@ import { Switch } from "./components/ui/switch";
 import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, Workbench } from "./Workbench";
+import { EmptyDetail, ListItem, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
 import { FilePath } from "./PageHeader";
 import { ResourceFolders, type FolderChange } from "./ResourceFolders";
@@ -105,8 +105,7 @@ export function SkillsTab({ project }: { project?: string }) {
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading skills…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode(undefined); }} backLabel="All skills" list={<section aria-label="Skills list">
       <div className="list-search"><SearchField label="Search skills" placeholder="Search skills…" value={query} onChange={setQuery} /></div>
-      <ul className="item-list pinned"><li><button type="button" aria-pressed={mode === "folders"} onClick={() => { setMode("folders"); setSelected(undefined); }}>
-        <FolderOpen aria-hidden="true" /><span className="item-name">Folders</span><span className="item-state">where Pi finds skills</span></button></li></ul>
+      <ul className="item-list pinned"><li><ListItem selected={mode === "folders"} onSelect={() => { setMode("folders"); setSelected(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds skills" /></li></ul>
       <p className="list-count">{skills.filter(skill => skill.enabled).length} of {skills.length} skills on{shadowed > 0 && `, ${shadowed} not loaded (same name)`}</p>
       {!visible.length && <p className="empty">{skills.length ? `No skills match “${query.trim()}”.` : "No skills found. Create one, or add skill folders to ~/.pi/agent/skills."}</p>}
       {groups.map(group => {
@@ -117,11 +116,9 @@ export function SkillsTab({ project }: { project?: string }) {
             <Switch aria-label={`Enable every skill in ${group}`} checked={allOn} disabled={busy}
               onCheckedChange={enabled => void toggle(members.filter(skill => skill.enabled !== enabled), enabled, `All skills in ${group}`)} /></div>
           <ul className="item-list">{members.map(skill => <li key={skill.path}>
-            <button type="button" aria-pressed={skill.path === selected} onClick={() => { setSelected(skill.path); setMode(undefined); }}>
-              <span className="item-name">{skill.name}</span>
-              {skill.shadowedBy ? <span className="item-state" data-state="shadowed"><TriangleAlert aria-hidden="true" />not loaded</span>
-                : <span className="item-state">{!skill.enabled ? "off" : skill.disableModelInvocation ? "command only" : ""}</span>}
-            </button>
+            <ListItem selected={skill.path === selected} onSelect={() => { setSelected(skill.path); setMode(undefined); }} name={skill.name}
+              tone={skill.shadowedBy ? "shadowed" : undefined}
+              state={skill.shadowedBy ? <><TriangleAlert aria-hidden="true" />not loaded</> : !skill.enabled ? "off" : skill.disableModelInvocation ? "command only" : ""} />
             <Switch aria-label={`Enable ${skill.name}`} checked={skill.enabled} disabled={busy} onCheckedChange={enabled => void toggle([skill], enabled)} />
           </li>)}</ul>
         </div>;

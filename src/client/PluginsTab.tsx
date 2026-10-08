@@ -10,7 +10,7 @@ import { JobPanel, useJob } from "./JobPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, Workbench } from "./Workbench";
+import { EmptyDetail, ListItem, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
 import { ResourceFolders, type FolderChange } from "./ResourceFolders";
 
@@ -140,10 +140,9 @@ export function PluginsTab({ project }: { project?: string }) {
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <Workbench open={open} onBack={back} backLabel="All plugins" list={<section aria-label="Plugin list">
       <div className="list-search"><SearchField label="Search plugins" placeholder="Search plugins…" value={query} onChange={setQuery} /></div>
-      <ul className="item-list pinned"><li><button type="button" aria-pressed={pinned === "packages"} onClick={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }}>
-        <Package aria-hidden="true" /><span className="item-name">Packages</span><span className="item-state">{view.packages.length}</span></button></li>
-        <li><button type="button" aria-pressed={pinned === "folders"} onClick={() => { setPinned("folders"); setSelected(undefined); setMode(undefined); }}>
-          <FolderOpen aria-hidden="true" /><span className="item-name">Folders</span><span className="item-state">where Pi finds plugins</span></button></li></ul>
+      <ul className="item-list pinned">
+        <li><ListItem selected={pinned === "packages"} onSelect={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }} icon={Package} name="Packages" state={view.packages.length} /></li>
+        <li><ListItem selected={pinned === "folders"} onSelect={() => { setPinned("folders"); setSelected(undefined); setMode(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds plugins" /></li></ul>
       {!visible.length && <p className="empty">{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</p>}
       {groups.map(group => {
         const members = visible.filter(item => item.group === group);
@@ -152,9 +151,8 @@ export function PluginsTab({ project }: { project?: string }) {
             <Switch aria-label={`Enable everything in ${group}`} checked={members.every(item => item.enabled)} disabled={busy}
               onCheckedChange={enabled => void toggle(members.filter(item => item.enabled !== enabled), enabled, `Everything in ${group}`)} /></div>
           <ul className="item-list">{members.map(item => <li key={item.type + item.path}>
-            <button type="button" aria-pressed={item.path === selected} onClick={() => { setSelected(item.path); setMode(undefined); setPinned(undefined); }}>
-              <span className="item-name">{item.name}</span><span className="item-state">{item.enabled ? typeLabels[item.type] : "off"}</span>
-            </button>
+            <ListItem selected={item.path === selected} onSelect={() => { setSelected(item.path); setMode(undefined); setPinned(undefined); }}
+              name={item.name} state={item.enabled ? typeLabels[item.type] : "off"} />
             <Switch aria-label={`Enable ${item.name}`} checked={item.enabled} disabled={busy} onCheckedChange={enabled => void toggle([item], enabled)} />
           </li>)}</ul>
         </div>;

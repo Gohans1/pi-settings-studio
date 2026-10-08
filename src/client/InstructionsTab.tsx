@@ -4,7 +4,7 @@ import { deleteInstruction, loadInstructions, restoreInstruction, saveInstructio
 import { Button } from "./components/ui/button";
 import { Feedback } from "./Feedback";
 import { FilePath, home, PageHeader } from "./PageHeader";
-import { Workbench } from "./Workbench";
+import { ListItem, Workbench } from "./Workbench";
 
 const baseName = (path: string) => path.split(/[\\/]/).pop() ?? path;
 
@@ -76,9 +76,8 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
   const current = files.find(file => file.id === selected) ?? files[0];
   const extra = (view?.loaded ?? []).filter(path => !files.some(file => file.path === path));
   const list = (scope: "global" | "project") => <ul className="item-list">{files.filter(file => file.scope === scope).map(file => <li key={file.id}>
-    <button type="button" aria-pressed={file.id === current?.id} onClick={() => { setSelected(file.id); setPicked(true); }}>
-      <span className="item-name">{title(file)}</span><span className="item-state">{file.error ? "unreadable" : file.exists ? "" : "not created"}</span>
-    </button>
+    <ListItem selected={file.id === current?.id} onSelect={() => { setSelected(file.id); setPicked(true); }}
+      name={title(file)} state={file.error ? "unreadable" : file.exists ? "" : "not created"} />
   </li>)}</ul>;
   return <>
     <PageHeader title="Instructions" description="Text Pi puts in every system prompt: context files (AGENTS.md), SYSTEM.md and APPEND_SYSTEM.md." />

@@ -1,11 +1,16 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
-import { TriangleAlert, X } from "lucide-react";
+import { CircleAlert, TriangleAlert, X } from "lucide-react";
 import type { ModelScopeView, ModelSummary, ProviderView } from "../shared/models";
 import type { SettingsChange, SettingsView } from "../shared/settings";
 import { checkModelScope, loadModelIds, loadModels, loadSettings, saveSettings } from "./api";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
+import { Input } from "./components/ui/input";
+import { OptionSelect } from "./OptionSelect";
+import { ScopeChoice } from "./ScopeChoice";
 
-const LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
+const LEVELS = [{ value: "", label: "Pi's default (medium)" }, ...["off", "minimal", "low", "medium", "high", "xhigh", "max"].map(level => ({ value: level, label: level }))];
 const hasGlob = (text: string) => /[*?[]/.test(text);
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 const misses = {
@@ -14,8 +19,9 @@ const misses = {
   "no-match": "No model matches",
 };
 
+/** A value Pi may not accept: the icon carries the tone, the text stays readable. */
 function Warning({ id, children }: { id: string; children: React.ReactNode }) {
-  return <p id={id} className="field-warning"><TriangleAlert aria-hidden="true" /><span>{children}</span></p>;
+  return <FieldDescription id={id} className="flex gap-2 text-foreground"><TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" /><span>{children}</span></FieldDescription>;
 }
 
 /** enabledModels as rows: what each pattern selects among the providers that are set up, and an adder. */
@@ -31,8 +37,8 @@ function EnabledModels({ patterns, scope, ids, inherited, onChange }: {
   // Enter adds the pattern here instead of submitting the whole form.
   const onKey = (event: KeyboardEvent) => { if (event.key === "Enter") { event.preventDefault(); add(); } };
   const matched = (pattern: string) => scope?.patterns.find(entry => entry.pattern === pattern);
-  return <fieldset className="enabled-models">
-    <legend>Enabled models</legend>
+  return <FieldSet className="gap-3">
+    <FieldLegend variant="label">Enabled models</FieldLegend>
     {patterns.length ? <ul className="pattern-list">{patterns.map(pattern => {
       const match = matched(pattern);
       return <li key={pattern}>
@@ -40,15 +46,15 @@ function EnabledModels({ patterns, scope, ids, inherited, onChange }: {
         <span className="muted" title={match?.examples.join(", ") || undefined}>{match && (match.matches ? plural(match.matches, "model", "models") : misses[match.reason ?? "no-match"])}</span>
         <Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove ${pattern}`} title="Remove" onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></Button>
       </li>;
-    })}</ul> : <p className="muted">{inherited?.length ? `None here, so the global list applies: ${inherited.join(", ")}.` : "None: every model that has a credential."}</p>}
+    })}</ul> : <FieldDescription>{inherited?.length ? `None here, so the global list applies: ${inherited.join(", ")}.` : "None: every model that has a credential."}</FieldDescription>}
     <div className="pattern-add">
-      <input aria-label="Model or pattern" list="enabled-model-options" value={text} placeholder="anthropic/* or provider/model" autoComplete="off" spellCheck={false}
+      <Input aria-label="Model or pattern" list="enabled-model-options" value={text} placeholder="anthropic/* or provider/model" autoComplete="off" spellCheck={false}
         onChange={event => setText(event.target.value)} onKeyDown={onKey} />
       <Button type="button" variant="outline" onClick={add}>Add</Button>
       <datalist id="enabled-model-options">{ids.map(id => <option key={id} value={id} />)}</datalist>
     </div>
-    <p className="muted">Models for startup selection and Ctrl+P cycling. A pattern such as anthropic/* or *sonnet* selects several; add :high for a thinking level.</p>
-  </fieldset>;
+    <FieldDescription>Models for startup selection and Ctrl+P cycling. A pattern such as anthropic/* or *sonnet* selects several; add :high for a thinking level.</FieldDescription>
+  </FieldSet>;
 }
 
 /** Startup provider, model, thinking level and model cycling. Pi's catalog suggests; any name can be typed. */
@@ -133,31 +139,29 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
   return <section className="detail server-form" aria-labelledby="defaults-title">
     <header><h2 id="defaults-title">Defaults</h2>
       <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p></header>
-    {project && <fieldset className="scope-choice"><legend>Edit</legend>
-      <label><input type="radio" name="defaults-scope" checked={scope === "global"} disabled={busy} onChange={() => setScopeChoice("global")} />Global defaults</label>
-      <label><input type="radio" name="defaults-scope" checked={scope === "project"} disabled={busy} onChange={() => setScopeChoice("project")} />This project</label>
-    </fieldset>}
-    {error && <div role="alert" className="error"><strong>Not saved</strong><p>{error}</p></div>}
+    {project && <ScopeChoice value={scope} globalLabel="Global defaults" disabled={busy} onChange={setScopeChoice} />}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
-      <label>Default provider<input value={provider} list="default-provider-options" placeholder={String(inherited("defaultProvider") ?? "Automatic")} autoComplete="off" spellCheck={false}
-        aria-describedby={providerWarning ? "provider-warning" : undefined} onChange={event => setProvider(event.target.value)} /></label>
+      <Field><FieldLabel htmlFor="default-provider">Default provider</FieldLabel>
+        <Input id="default-provider" value={provider} list="default-provider-options" placeholder={String(inherited("defaultProvider") ?? "Automatic")} autoComplete="off" spellCheck={false}
+          aria-describedby={providerWarning ? "provider-warning" : undefined} onChange={event => setProvider(event.target.value)} />
+        {providerWarning && <Warning id="provider-warning">{provider.trim()} is not in the catalog this app reads. An extension or package may provide it; this app does not run them, so it cannot check the name. If Pi cannot find it, new sessions start with another available model.</Warning>}</Field>
       <datalist id="default-provider-options">
         {providers.map(entry => <option key={entry.id} value={entry.id} label={`${entry.name}${entry.auth.configured ? "" : " (not set up)"}`} />)}
         {extraProviders.map(name => <option key={name} value={name} label="From Enabled models" />)}
       </datalist>
-      {providerWarning && <Warning id="provider-warning">{provider.trim()} is not in the catalog this app reads. An extension or package may provide it; this app does not run them, so it cannot check the name. If Pi cannot find it, new sessions start with another available model.</Warning>}
-      <label>Default model<input value={model} list="default-model-options" placeholder={String(inherited("defaultModel") ?? "Automatic")} autoComplete="off" spellCheck={false}
-        aria-describedby={[modelWarning && "model-warning", outOfScope && "scope-warning"].filter(Boolean).join(" ") || undefined} onChange={event => setModel(event.target.value)} /></label>
+      <Field><FieldLabel htmlFor="default-model">Default model</FieldLabel>
+        <Input id="default-model" value={model} list="default-model-options" placeholder={String(inherited("defaultModel") ?? "Automatic")} autoComplete="off" spellCheck={false}
+          aria-describedby={[modelWarning && "model-warning", outOfScope && "scope-warning"].filter(Boolean).join(" ") || undefined} onChange={event => setModel(event.target.value)} />
+        {modelWarning && <Warning id="model-warning">{catalogued!.name} has no model {model.trim()} in the catalog this app reads. Check the ID, or refresh the model catalogs. If Pi cannot find it, new sessions start with another available model.</Warning>}
+        {outOfScope && <Warning id="scope-warning">Not in Enabled models, so new sessions start with {modelScope!.first} instead. {addToScope ? "Saving adds it to Enabled models, as Pi does when you save a default with Ctrl+S." : "Add it to Enabled models to start with it."}</Warning>}</Field>
       <datalist id="default-model-options">
         {models.map(entry => <option key={entry.id} value={entry.id} label={entry.name === entry.id ? undefined : entry.name} />)}
         {extraModels.map(id => <option key={id} value={id} label="From Enabled models" />)}
       </datalist>
-      {modelWarning && <Warning id="model-warning">{catalogued!.name} has no model {model.trim()} in the catalog this app reads. Check the ID, or refresh the model catalogs. If Pi cannot find it, new sessions start with another available model.</Warning>}
-      {outOfScope && <Warning id="scope-warning">Not in Enabled models, so new sessions start with {modelScope!.first} instead. {addToScope ? "Saving adds it to Enabled models, as Pi does when you save a default with Ctrl+S." : "Add it to Enabled models to start with it."}</Warning>}
-      <label>Thinking level<select value={thinking} onChange={event => setThinking(event.target.value)}>
-        <option value="">Pi's default (medium)</option>
-        {LEVELS.map(level => <option key={level} value={level}>{level}</option>)}
-      </select><span className="muted">Pi limits the level to what the model supports.</span></label>
+      <Field><FieldLabel htmlFor="default-thinking">Thinking level</FieldLabel>
+        <OptionSelect id="default-thinking" className="w-full" options={LEVELS} value={thinking} onChange={setThinking} aria-describedby="default-thinking-help" />
+        <FieldDescription id="default-thinking-help">Pi limits the level to what the model supports.</FieldDescription></Field>
       <EnabledModels patterns={enabled} scope={modelScope} ids={ids} inherited={inheritedEnabled} onChange={setEnabled} />
       <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save defaults"}</Button></div>
     </form>}

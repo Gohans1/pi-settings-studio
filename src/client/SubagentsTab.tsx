@@ -5,7 +5,7 @@ import { Bot, Plus } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, Workbench } from "./Workbench";
+import { EmptyDetail, ListItem, Workbench } from "./Workbench";
 
 function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
   agent?: AgentView; busy: boolean; error: string; title?: string; onSave: (input: AgentInput) => void; onCancel: () => void;
@@ -89,10 +89,8 @@ export function SubagentsTab({ project }: { project?: string }) {
   const current = agents.find(agent => agent.scope === selected?.scope && agent.file === selected.file);
   const add = (scope: AgentScope) => { setAddScope(scope); setMode("add"); setFormError(""); };
   const list = (scope: AgentScope) => <ul className="item-list">{agents.filter(agent => agent.scope === scope).map(agent => <li key={agent.file}>
-    <button type="button" aria-pressed={selected?.scope === scope && agent.file === selected.file} onClick={() => { setSelected({ scope, file: agent.file }); setMode("view"); }}>
-      <span className="item-name">{agent.name ?? agent.file}</span>
-      <span className="item-state" data-state={agent.error ? "refused" : undefined}>{agent.error ? "skipped" : agent.shadowed ? "replaced here" : agent.model ?? ""}</span>
-    </button>
+    <ListItem selected={selected?.scope === scope && agent.file === selected.file} onSelect={() => { setSelected({ scope, file: agent.file }); setMode("view"); }}
+      name={agent.name ?? agent.file} tone={agent.error ? "refused" : undefined} state={agent.error ? "skipped" : agent.shadowed ? "replaced here" : agent.model ?? ""} />
   </li>)}</ul>;
   const open = mode !== "view" || !!current;
   return <>

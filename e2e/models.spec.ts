@@ -50,7 +50,8 @@ test("defaults are chosen from Pi's catalog and saved to settings.json", async (
   const chosen = await suggestions.first().getAttribute("value");
   await panel.getByLabel("Default model").fill(chosen!);
   await expect(panel).not.toContainText("not in the catalog");
-  await panel.getByLabel("Thinking level").selectOption("high");
+  await panel.getByRole("combobox", { name: "Thinking level" }).click();
+  await page.getByRole("option", { name: "high", exact: true }).click();
   const enabled = panel.getByRole("group", { name: "Enabled models" });
   await enabled.getByLabel("Model or pattern").fill("anthropic/*");
   await enabled.getByRole("button", { name: "Add" }).click();
@@ -69,7 +70,8 @@ test("a custom provider is added to models.json, edited without seeing its key, 
   const form = page.getByRole("form", { name: "Add custom provider" });
   await form.getByLabel("Provider ID").fill("lmstudio");
   await form.getByLabel("Base URL").fill("http://localhost:1234/v1");
-  await form.getByLabel("API", { exact: true }).selectOption("openai-completions");
+  await form.getByRole("combobox", { name: "API", exact: true }).click();
+  await page.getByRole("option", { name: "openai-completions", exact: true }).click();
   await form.getByLabel("API key", { exact: true }).fill("fixture-lm-key");
   await form.getByRole("button", { name: "Add model" }).click();
   await form.getByLabel("Model ID 1").fill("llama-3");

@@ -14,7 +14,7 @@ import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Switch } from "./components/ui/switch";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, MoreMenu, Workbench } from "./Workbench";
+import { EmptyDetail, ListItem, MoreMenu, Workbench } from "./Workbench";
 
 
 function shortState(server: McpServerView): string {
@@ -213,9 +213,8 @@ export function McpTab({ project }: { project?: string }) {
       const state = scope === "project" && server.override ? `override, ${server.enabled ? "on" : "off"}`
         : local ? (local.override ? `${shortState(server)}, ${local.enabled ? "on" : "off"} here` : `${shortState(server)}, replaced here`) : shortState(server);
       return <li key={server.name}>
-        <button type="button" aria-pressed={isSelected(scope, server.name)} onClick={() => choose({ scope, name: server.name })}>
-          <span className="item-name">{server.name}</span><span className="item-state" data-state={shortState(server)}>{state}</span>
-        </button>
+        <ListItem selected={isSelected(scope, server.name)} onSelect={() => choose({ scope, name: server.name })} name={server.name} state={state}
+          tone={server.error ? "refused" : undefined} />
         <Switch aria-label={scope === "global" ? `Enable ${server.name}` : `Enable ${server.name} in this project`} checked={server.enabled} disabled={busy}
           onCheckedChange={enabled => void run(scope, revision => saveMcpServer(target(scope), server.name, revision, { enabled }),
             `${server.name} turned ${enabled ? "on" : "off"}${scope === "project" ? " in this project" : ""}.`)} />
@@ -302,9 +301,7 @@ export function McpTab({ project }: { project?: string }) {
       note={SECRET_NOTE}
       onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
     : !global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <Workbench open={open} onBack={back} backLabel="All servers" detail={detail} list={<>
-      <ul className="item-list pinned"><li><button type="button" aria-pressed={selected === "codemode"} onClick={() => choose("codemode")}>
-        <Braces aria-hidden="true" /><span className="item-name">Code mode</span><span className="item-state">{codemodeState}</span>
-      </button></li></ul>
+      <ul className="item-list pinned"><li><ListItem selected={selected === "codemode"} onSelect={() => choose("codemode")} icon={Braces} name="Code mode" state={codemodeState} /></li></ul>
       <section aria-labelledby="global-servers" className="item-group">
         <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span>
           <Button variant="ghost" size="icon-xs" aria-label="Add server" title="Add server" disabled={busy || !!global.error} onClick={() => add("global")}><Plus aria-hidden="true" /></Button>
