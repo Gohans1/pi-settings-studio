@@ -1,6 +1,10 @@
 import type { Field } from "../shared/settings";
 import { Button } from "./components/ui/button";
+import { FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
+import { Input } from "./components/ui/input";
 import { Switch } from "./components/ui/switch";
+import { Textarea } from "./components/ui/textarea";
+import { OptionSelect } from "./OptionSelect";
 import { ModelMapField } from "./ModelMapField";
 import { ThemeField } from "./ThemeField";
 import { ToolsField } from "./ToolsField";
@@ -37,11 +41,9 @@ export function SettingField({ field, value, inherited, overridden, invalid, sco
   if (field.kind === "boolean") {
     control = <Switch aria-labelledby={id + "-label"} aria-describedby={described} checked={value === true} disabled={disabled} onCheckedChange={onChange} />;
   } else if (field.kind === "select") {
-    // Options can be strings, numbers or booleans; JSON keeps their type through <select>.
-    control = <select {...common} value={value === undefined ? "" : JSON.stringify(value)} onChange={e => onChange(JSON.parse(e.target.value))}>
-      {value === undefined && <option value="" disabled>Select a value</option>}
-      {field.options?.map(option => <option key={option.label} value={JSON.stringify(option.value)}>{option.label}</option>)}
-    </select>;
+    // Options can be strings, numbers or booleans; the Select keeps their type.
+    control = <OptionSelect {...common} className="w-full" options={field.options ?? []} value={value === undefined ? null : value as string | number | boolean}
+      placeholder="Select a value" onChange={onChange} />;
   } else if (field.kind === "theme") {
     control = <ThemeField value={value} project={project} disabled={disabled} onChange={onChange} />;
   } else if (field.kind === "tools") {
@@ -51,10 +53,10 @@ export function SettingField({ field, value, inherited, overridden, invalid, sco
   } else if (field.kind === "thinkingMap" || field.kind === "compactionMap") {
     control = <ModelMapField kind={field.kind} label={field.label} value={value} disabled={disabled} onChange={onChange} />;
   } else if (field.kind === "lines") {
-    control = <textarea {...common} rows={3} value={Array.isArray(value) ? value.join("\n") : ""} spellCheck={false}
+    control = <Textarea {...common} rows={3} value={Array.isArray(value) ? value.join("\n") : ""} spellCheck={false}
       placeholder={Array.isArray(field.defaultValue) ? field.defaultValue.join("\n") : "Empty"} onChange={e => onChange(e.target.value.split("\n"))} />;
   } else {
-    control = <input {...common} type={field.kind === "number" ? "number" : "text"}
+    control = <Input {...common} type={field.kind === "number" ? "number" : "text"}
       min={field.kind === "number" ? 0 : undefined} step={field.kind === "number" ? 1 : undefined}
       inputMode={field.kind === "number" ? "numeric" : undefined}
       value={typeof value === "number" && Number.isNaN(value) ? "" : String(value ?? "")}
@@ -69,16 +71,16 @@ export function SettingField({ field, value, inherited, overridden, invalid, sco
     : scope === "project" ? "Inherited" : "";
   return <div className="setting-row" id={"row-" + field.key}>
     <div className="setting-label">
-      <label id={id + "-label"} htmlFor={["boolean", "thinkingMap", "compactionMap", "theme", "tools"].includes(field.kind) ? undefined : id}>{field.label}</label>
+      <FieldLabel id={id + "-label"} htmlFor={["boolean", "thinkingMap", "compactionMap", "theme", "tools"].includes(field.kind) ? undefined : id}>{field.label}</FieldLabel>
       <code className="setting-key" translate="no">{field.key}</code>
-      <p id={id + "-help"}>{field.help}</p>
+      <FieldDescription id={id + "-help"} className="max-w-[62ch]">{field.help}</FieldDescription>
     </div>
     <div className="setting-control">
       {control}
       {source && <div className="field-meta"><span data-set={overridden && !disabled}>{source}</span>
         {overridden && !disabled && <Button type="button" variant="ghost" size="xs" onClick={onReset} aria-label={`${scope === "project" ? "Use inherited" : "Use default"} for ${field.label}`}>{scope === "project" ? "Use inherited" : "Use default"}</Button>}
       </div>}
-      {invalid && <p className="field-error" id={id + "-error"}>{fixes[field.kind]}</p>}
+      {invalid && <FieldError id={id + "-error"}>{fixes[field.kind]}</FieldError>}
     </div>
   </div>;
 }

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, FileJson, History, RotateCcw } from "lucide-react";
+import { ChevronDown, CircleAlert, FileJson, History, RotateCcw } from "lucide-react";
 import { fields, sections, type SettingsChange, type SettingsView } from "../shared/settings";
 import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Feedback } from "./Feedback";
@@ -12,6 +13,8 @@ import { NotHere } from "./NotHere";
 import { RawJsonEditor } from "./RawJsonEditor";
 import { KeybindingsPanel } from "./KeybindingsPanel";
 import { SearchField } from "./SearchField";
+import { ScopeChoice } from "./ScopeChoice";
+import { Empty, EmptyDescription } from "./components/ui/empty";
 
 const KEYBINDINGS = { id: "keybindings", title: "Keyboard shortcuts" };
 
@@ -101,7 +104,7 @@ export function GeneralTab({ project }: { project?: string }) {
     if (!view) return;
     // Pi would refuse the file: take the reader to the first value to fix, and write nothing.
     if (invalidKeys.length) {
-      document.getElementById("row-" + invalidKeys[0])?.querySelector<HTMLElement>("input, select, textarea, [role=switch]")?.focus();
+      document.getElementById("row-" + invalidKeys[0])?.querySelector<HTMLElement>("[data-slot=input], [data-slot=textarea], [data-slot=select-trigger], [data-slot=switch]")?.focus();
       return;
     }
     setBusy(true); setError(""); setMessage("");
@@ -162,15 +165,12 @@ export function GeneralTab({ project }: { project?: string }) {
         </DropdownMenuContent>
       </DropdownMenu>
     </>} />
-    {project && <fieldset className="scope-choice"><legend>Edit</legend>
-      <label><input type="radio" name="general-scope" checked={scope === "global"} disabled={busy || !!changes.length} onChange={() => setScopeChoice("global")} />Global settings</label>
-      <label><input type="radio" name="general-scope" checked={scope === "project"} disabled={busy || !!changes.length} onChange={() => setScopeChoice("project")} />This project</label>
-    </fieldset>}
+    {project && <ScopeChoice value={scope} globalLabel="Global settings" disabled={busy || !!changes.length} onChange={setScopeChoice} />}
     {scope === "global" && !needle && <PiPanel />}
     <Feedback message={message} onDismiss={() => setMessage("")} />
-    {error && <div role="alert" className="error page-notice"><strong>Could not complete the operation</strong><p>{error}</p>
-      <div className="actions"><Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>
-        <Button variant="outline" size="sm" disabled={busy || !!changes.length} onClick={openRaw}>Edit as JSON</Button></div></div>}
+    {error && <Alert variant="destructive" className="page-notice"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription>
+      <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>
+        <Button variant="outline" size="sm" disabled={busy || !!changes.length} onClick={openRaw}>Edit as JSON</Button></div></Alert>}
     {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && (restore
       ? <section className="review" aria-labelledby="restore-title"><h2 id="restore-title">Restore previous file?</h2>
         <p>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</p>
@@ -194,7 +194,7 @@ export function GeneralTab({ project }: { project?: string }) {
               const items = results.filter(field => field.section === group.id);
               return items.length > 0 && <section key={group.id} id={"group-" + group.id} className="settings-group" aria-labelledby={"group-" + group.id + "-title"}>
                 <h2 id={"group-" + group.id + "-title"}>{group.title}</h2>
-                {"note" in group && <p className="notice">{group.note}</p>}
+                {"note" in group && <Alert role="note"><AlertDescription>{group.note}</AlertDescription></Alert>}
                 {items.map(field => {
                   const edit = draft[field.key];
                   const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
@@ -206,7 +206,7 @@ export function GeneralTab({ project }: { project?: string }) {
                 })}
               </section>;
             })}
-            {!results.length && <p className="empty">No settings match “{query.trim()}”. Try a label such as “model” or “budget”, or a key.</p>}
+            {!results.length && <Empty><EmptyDescription>No settings match “{query.trim()}”. Try a label such as “model” or “budget”, or a key.</EmptyDescription></Empty>}
             {changes.length > 0 && <div className="save-bar" role="region" aria-label="Unsaved changes">
               <p>{changes.length} unsaved {changes.length === 1 ? "change" : "changes"}</p>
               <div className="actions">

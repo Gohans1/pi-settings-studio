@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import type { KeybindingAction, KeybindingsView } from "../shared/keybindings";
 import { isValidKey } from "../shared/keys";
 import { loadKeybindings, saveKeybindings } from "./api";
+import { CircleAlert } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { FieldError } from "./components/ui/field";
+import { Input } from "./components/ui/input";
 import { FilePath } from "./PageHeader";
 import { SearchField } from "./SearchField";
 
@@ -40,9 +44,9 @@ export function KeybindingsPanel({ onMessage }: { onMessage: (text: string) => v
   const visible = (view?.actions ?? []).filter(action => !needle || `${action.id} ${action.description}`.toLowerCase().includes(needle));
   return <section className="settings-group keybindings" id="group-keybindings" aria-labelledby="keybindings-title">
     <h2 id="keybindings-title">Keyboard shortcuts</h2>
-    <p className="notice">Only affects Pi in a terminal. No effect in T3Code. A set value replaces the defaults; separate several keys with commas.</p>
+    <Alert role="note"><AlertDescription>Only affects Pi in a terminal. No effect in T3Code. A set value replaces the defaults; separate several keys with commas.</AlertDescription></Alert>
     {view && <FilePath path={view.path} />}
-    {(error || view?.error) && <div role="alert" className="error"><strong>keybindings.json</strong><p>{error || view?.error}</p></div>}
+    {(error || view?.error) && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>keybindings.json</AlertTitle><AlertDescription>{error || view?.error}</AlertDescription></Alert>}
     <SearchField label="Search shortcuts" placeholder="Search shortcuts…" value={query} onChange={setQuery} shortcut={false} className="my-3 w-72 max-w-full" />
     {view && <div className="keybinding-list">{visible.map(action => {
       const keys = current(action);
@@ -51,13 +55,13 @@ export function KeybindingsPanel({ onMessage }: { onMessage: (text: string) => v
       return <div className="keybinding-row" key={action.id}>
         <div><strong>{action.description}</strong><code className="setting-key" translate="no">{action.id}</code></div>
         <div className="keybinding-control">
-          <input id={"keys-" + action.id} aria-label={`Keys for ${action.id}`} value={text} aria-invalid={bad || undefined} aria-describedby={bad ? `keys-${action.id}-error` : undefined} spellCheck={false} autoComplete="off"
+          <Input id={"keys-" + action.id} className="min-w-0 flex-1 basis-40 font-mono" aria-label={`Keys for ${action.id}`} value={text} aria-invalid={bad || undefined} aria-describedby={bad ? `keys-${action.id}-error` : undefined} spellCheck={false} autoComplete="off"
             placeholder={keys && !keys.length ? "Disabled" : action.defaults.join(", ") || "No default"}
             onChange={e => { setTexts(old => ({ ...old, [action.id]: e.target.value })); if (!parse(e.target.value).some(key => !isValidKey(key))) set(action.id, e.target.value.trim() ? parse(e.target.value) : null); }} />
           <span className="muted">{keys === null ? "Default" : keys.length ? "Custom" : "Disabled"}</span>
           {keys !== null && <Button variant="ghost" size="xs" aria-label={`Use default for ${action.id}`} onClick={() => { setTexts(old => ({ ...old, [action.id]: "" })); set(action.id, null); }}>Use default</Button>}
           {!(keys && !keys.length) && <Button variant="ghost" size="xs" aria-label={`Disable ${action.id}`} onClick={() => { setTexts(old => ({ ...old, [action.id]: "" })); set(action.id, []); }}>Disable</Button>}
-          {bad && <p className="field-error" id={`keys-${action.id}-error`}>"{parse(text).find(key => !isValidKey(key))}" is not a key Pi understands. Use names such as ctrl+k or shift+enter.</p>}
+          {bad && <FieldError id={`keys-${action.id}-error`} className="basis-full">"{parse(text).find(key => !isValidKey(key))}" is not a key Pi understands. Use names such as ctrl+k or shift+enter.</FieldError>}
         </div>
       </div>;
     })}</div>}

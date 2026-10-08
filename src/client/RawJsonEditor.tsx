@@ -1,6 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { CircleAlert } from "lucide-react";
 import type { RawSettings } from "./api";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Field, FieldLabel } from "./components/ui/field";
+import { Textarea } from "./components/ui/textarea";
 import { FilePath } from "./PageHeader";
 
 /**
@@ -15,6 +19,7 @@ export function RawJsonEditor({ file, load, save, note, onClose }: {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const id = useId();
   useEffect(() => {
     load().then(data => { setRaw(data); setText(data.text); })
       .catch(cause => setError(cause instanceof Error ? cause.message : `Could not read ${file}.`));
@@ -30,8 +35,9 @@ export function RawJsonEditor({ file, load, save, note, onClose }: {
     <header><h2 id="raw-title">Edit {file} as JSON</h2>
       <p className="muted">Edits the whole file as text, including keys that have no field. It must stay one JSON object. The previous file is kept as a backup.{note ? ` ${note}` : ""}</p>
       {raw && <FilePath path={raw.path} />}</header>
-    {error && <div role="alert" className="error"><strong>Not saved</strong><p>{error}</p></div>}
-    {raw ? <label>{file}<textarea aria-label={file} value={text} rows={22} spellCheck={false} autoComplete="off" onChange={event => setText(event.target.value)} /></label>
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    {raw ? <Field><FieldLabel htmlFor={id}>{file}</FieldLabel>
+      <Textarea id={id} className="field-sizing-fixed font-mono" value={text} rows={22} spellCheck={false} autoComplete="off" onChange={event => setText(event.target.value)} /></Field>
       : !error && <div className="loading" aria-busy="true">Reading {file}…</div>}
     <div className="form-actions"><Button disabled={!raw || busy} onClick={() => void submit()}>{busy ? "Saving…" : "Save JSON"}</Button>
       <Button variant="outline" disabled={busy} onClick={() => onClose(false)}>Cancel</Button></div>

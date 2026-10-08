@@ -92,7 +92,8 @@ test("desktop and narrow layouts are accessible, keyboard usable and error-free"
 
 test("a switch and a typed choice save with their JSON types", async ({ page }) => {
   await page.getByRole("switch", { name: "Automatic compaction" }).click();
-  await page.getByLabel("Image protocol").selectOption("false");
+  await page.getByRole("combobox", { name: "Image protocol" }).click();
+  await page.getByRole("option", { name: "false", exact: true }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   const saved = JSON.parse(await readFile(file, "utf8"));
@@ -146,7 +147,8 @@ test("per-model thinking levels and compaction overrides are edited as rows", as
   const thinking = page.getByRole("group", { name: "Thinking level per model" });
   await thinking.getByRole("button", { name: "Add model" }).click();
   await thinking.getByLabel("Model 1", { exact: true }).fill("anthropic/claude-sonnet");
-  await thinking.getByLabel("Thinking level for model 1").selectOption("high");
+  await thinking.getByRole("combobox", { name: "Thinking level for model 1" }).click();
+  await page.getByRole("option", { name: "high", exact: true }).click();
   const compaction = page.getByRole("group", { name: "Compaction per model" });
   await compaction.getByRole("button", { name: "Add model" }).click();
   await compaction.getByLabel("Model 1", { exact: true }).fill("openai/gpt");
@@ -166,14 +168,19 @@ test("the theme is chosen from Pi's themes: one theme, or a light and a dark one
   await writeFile(join(root, "agent", "themes", "ocean.json"), JSON.stringify({ name: "ocean", appearance: "dark", colors: {} }));
   await page.reload();
   const theme = page.getByRole("group", { name: "Theme" });
-  await theme.getByLabel("Theme mode").selectOption("single");
-  await theme.getByLabel("Theme name").selectOption("ocean");
+  await theme.getByRole("combobox", { name: "Theme mode" }).click();
+  await page.getByRole("option", { name: "One theme" }).click();
+  await theme.getByRole("combobox", { name: "Theme name" }).click();
+  await page.getByRole("option", { name: /^ocean / }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   expect(JSON.parse(await readFile(file, "utf8")).theme).toBe("ocean");
-  await theme.getByLabel("Theme mode").selectOption("pair");
-  await theme.getByLabel("Light terminal theme").selectOption("light");
-  await theme.getByLabel("Dark terminal theme").selectOption("ocean");
+  await theme.getByRole("combobox", { name: "Theme mode" }).click();
+  await page.getByRole("option", { name: "A light and a dark theme" }).click();
+  await theme.getByRole("combobox", { name: "Light terminals" }).click();
+  await page.getByRole("option", { name: /^light / }).click();
+  await theme.getByRole("combobox", { name: "Dark terminals" }).click();
+  await page.getByRole("option", { name: /^ocean / }).click();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   expect(JSON.parse(await readFile(file, "utf8")).theme).toBe("light/ocean");

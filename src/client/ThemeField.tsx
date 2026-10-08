@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import type { ThemeView } from "../shared/themes";
 import { loadThemes } from "./api";
+import { Field, FieldError, FieldLabel, FieldSet } from "./components/ui/field";
+import { OptionSelect } from "./OptionSelect";
+
+const modes: { value: Mode; label: string }[] = [
+  { value: "system", label: "System: follow the terminal" }, { value: "single", label: "One theme" }, { value: "pair", label: "A light and a dark theme" },
+];
 
 type Mode = "system" | "single" | "pair";
 const modeOf = (value: string) => value === "system" || !value ? "system" : value.includes("/") ? "pair" : "single";
@@ -15,20 +21,18 @@ export function ThemeField({ value, project, disabled, onChange }: { value: unkn
   const names = themes.filter(theme => !theme.error).map(theme => theme.name);
   const options = (current: string) => [...new Set([current, ...names])].filter(Boolean).map(name => {
     const theme = themes.find(entry => entry.name === name);
-    return <option key={name} value={name}>{name}{theme ? ` (${theme.source}${theme.appearance ? `, ${theme.appearance}` : ""})` : " (not found)"}</option>;
+    return { value: name, label: `${name}${theme ? ` (${theme.source}${theme.appearance ? `, ${theme.appearance}` : ""})` : " (not found)"}` };
   });
   const setMode = (next: Mode) => onChange(next === "system" ? "system" : next === "single" ? (mode === "single" ? text : "dark") : `${light}/${dark}`);
-  return <fieldset className="theme-field" aria-label="Theme" disabled={disabled}>
-    <select aria-label="Theme mode" value={mode} onChange={event => setMode(event.target.value as Mode)}>
-      <option value="system">System: follow the terminal</option>
-      <option value="single">One theme</option>
-      <option value="pair">A light and a dark theme</option>
-    </select>
-    {mode === "single" && <select aria-label="Theme name" value={text} onChange={event => onChange(event.target.value)}>{options(text)}</select>}
+  return <FieldSet className="gap-2" aria-label="Theme" disabled={disabled}>
+    <OptionSelect aria-label="Theme mode" className="w-full" options={modes} value={mode} disabled={disabled} onChange={setMode} />
+    {mode === "single" && <OptionSelect aria-label="Theme name" className="w-full" options={options(text)} value={text} disabled={disabled} onChange={onChange} />}
     {mode === "pair" && <>
-      <label>Light terminals<select aria-label="Light terminal theme" value={light} onChange={event => onChange(`${event.target.value}/${dark}`)}>{options(light)}</select></label>
-      <label>Dark terminals<select aria-label="Dark terminal theme" value={dark} onChange={event => onChange(`${light}/${event.target.value}`)}>{options(dark)}</select></label>
+      <Field className="gap-1"><FieldLabel htmlFor="theme-light">Light terminals</FieldLabel>
+        <OptionSelect id="theme-light" className="w-full" options={options(light)} value={light} disabled={disabled} onChange={name => onChange(`${name}/${dark}`)} /></Field>
+      <Field className="gap-1"><FieldLabel htmlFor="theme-dark">Dark terminals</FieldLabel>
+        <OptionSelect id="theme-dark" className="w-full" options={options(dark)} value={dark} disabled={disabled} onChange={name => onChange(`${light}/${name}`)} /></Field>
     </>}
-    {themes.filter(theme => theme.error).map(theme => <p key={theme.path} className="field-error">{theme.name}: {theme.error}</p>)}
-  </fieldset>;
+    {themes.filter(theme => theme.error).map(theme => <FieldError key={theme.path}>{theme.name}: {theme.error}</FieldError>)}
+  </FieldSet>;
 }

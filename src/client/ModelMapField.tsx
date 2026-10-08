@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "./components/ui/button";
+import { FieldSet } from "./components/ui/field";
+import { Input } from "./components/ui/input";
+import { OptionSelect } from "./OptionSelect";
 
 type Row = { model: string; level: string; reserve: string; recent: string; extra: Record<string, unknown> };
-const LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
+const LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"].map(level => ({ value: level, label: level }));
 
 function toRows(value: unknown, kind: "thinkingMap" | "compactionMap"): Row[] {
   const entries = value && typeof value === "object" ? Object.entries(value as Record<string, unknown>) : [];
@@ -32,19 +35,18 @@ export function ModelMapField({ kind, label, value, disabled, onChange }: {
   }, [value]);
   const update = (next: Row[]) => { setRows(next); onChange(toValue(next, kind)); };
   const set = (index: number, patch: Partial<Row>) => update(rows.map((row, i) => i === index ? { ...row, ...patch } : row));
-  return <fieldset className="model-map" aria-label={label} disabled={disabled}>
+  return <FieldSet className="model-map gap-2" aria-label={label} disabled={disabled}>
     {rows.map((row, index) => <div className="model-map-row" key={index}>
-      <input aria-label={`Model ${index + 1}`} list="model-ids" value={row.model} placeholder="provider/modelId" spellCheck={false} autoComplete="off"
+      <Input aria-label={`Model ${index + 1}`} list="model-ids" value={row.model} placeholder="provider/modelId" spellCheck={false} autoComplete="off"
         onChange={e => set(index, { model: e.target.value })} />
       {kind === "thinkingMap"
-        ? <select aria-label={`Thinking level for model ${index + 1}`} value={row.level} onChange={e => set(index, { level: e.target.value })}>
-          {LEVELS.map(level => <option key={level} value={level}>{level}</option>)}</select>
+        ? <OptionSelect aria-label={`Thinking level for model ${index + 1}`} options={LEVELS} value={row.level} disabled={disabled} onChange={level => set(index, { level })} />
         : <>
-          <input aria-label={`Reserved tokens for model ${index + 1}`} type="number" min={0} value={row.reserve} placeholder="Reserved" onChange={e => set(index, { reserve: e.target.value })} />
-          <input aria-label={`Recent tokens kept for model ${index + 1}`} type="number" min={0} value={row.recent} placeholder="Recent kept" onChange={e => set(index, { recent: e.target.value })} />
+          <Input aria-label={`Reserved tokens for model ${index + 1}`} type="number" min={0} className="w-28" value={row.reserve} placeholder="Reserved" onChange={e => set(index, { reserve: e.target.value })} />
+          <Input aria-label={`Recent tokens kept for model ${index + 1}`} type="number" min={0} className="w-28" value={row.recent} placeholder="Recent kept" onChange={e => set(index, { recent: e.target.value })} />
         </>}
       <Button type="button" variant="ghost" size="icon" aria-label={`Remove model ${row.model || index + 1}`} onClick={() => update(rows.filter((_, i) => i !== index))}><X aria-hidden="true" /></Button>
     </div>)}
-    <Button type="button" variant="outline" size="sm" onClick={() => update([...rows, { model: "", level: "high", reserve: "", recent: "", extra: {} }])}>Add model</Button>
-  </fieldset>;
+    <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => update([...rows, { model: "", level: "high", reserve: "", recent: "", extra: {} }])}>Add model</Button>
+  </FieldSet>;
 }

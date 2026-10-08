@@ -245,21 +245,19 @@
   .choice { display: flex; gap: --spacing(2.5); align-items: flex-start; padding: --spacing(1.5) 0; font-weight: var(--font-weight-normal); }
   .choice > span { display: grid; }
   .choice input { margin-top: --spacing(0.5); }
-  .scope-choice { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1.5) --spacing(5); margin: 0 0 --spacing(5); padding: 0; border: 0; }
-  .codemode .scope-choice { margin: 0; }
-  .scope-choice legend { float: inline-start; margin-inline-end: --spacing(2); font-weight: var(--font-weight-semibold); }
-  .scope-choice label { display: flex; gap: --spacing(2); align-items: center; }
+  .scope-choice { margin-bottom: --spacing(5); }
+  .codemode .scope-choice { margin-bottom: 0; }
   .switch-row { display: flex; gap: --spacing(3); align-items: center; font-weight: var(--font-weight-normal); }
   .in-project { display: grid; gap: --spacing(3); justify-items: start; margin: 0; padding: --spacing(3) --spacing(4); border: 1px solid var(--border); border-radius: var(--radius); }
   .in-project legend { padding: 0 --spacing(1); font-weight: var(--font-weight-semibold); }
 
   /* File contents, prompts and logs. */
-  :is(.log-tail, .import-source, .resource-editor textarea, .raw-editor textarea, .instruction textarea, .prompt pre, .prompt-preview pre, .job pre) { font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
+  :is(.log-tail, .import-source, .resource-editor textarea, .instruction textarea, .prompt pre, .prompt-preview pre, .job pre) { font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
   .log-tail { margin: 0; padding: --spacing(3); max-height: 32rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--muted); border-radius: var(--radius); }
   .resource-editor, .instruction, .raw-editor { display: grid; gap: --spacing(3); }
   :is(.resource-editor, .instruction, .raw-editor) h2 { margin: 0; }
-  :is(.resource-editor, .raw-editor) label { display: grid; gap: --spacing(1.5); font-weight: var(--font-weight-semibold); }
-  :is(.resource-editor, .instruction, .raw-editor) textarea { width: 100%; }
+  .resource-editor label { display: grid; gap: --spacing(1.5); font-weight: var(--font-weight-semibold); }
+  :is(.resource-editor, .instruction) textarea { width: 100%; }
   .resource-editor .file-list { display: flex; flex-wrap: wrap; gap: --spacing(1); }
   .raw-editor { max-width: 60rem; }
 
@@ -302,9 +300,7 @@
   .pattern-list code { font-size: var(--text-small); }
   .pattern-add { display: flex; gap: --spacing(2); }
   .pattern-add input { flex: 1; min-width: 0; }
-  .model-map { display: grid; gap: --spacing(2); justify-items: start; margin: 0; padding: 0; border: 0; }
   .model-map-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: --spacing(1.5); width: 100%; }
-  .model-map-row input[type=number] { width: 7rem; }
 
   /* MCP import. */
   .import-preview { display: grid; gap: --spacing(2.5); }
@@ -391,13 +387,11 @@
   .settings-group { scroll-margin-top: --spacing(4); }
   .settings-group + .settings-group { margin-top: --spacing(10); }
   .settings-group > h2 { margin: 0 0 --spacing(2); }
-  .settings-group > .notice { margin-bottom: --spacing(3); }
+  .settings-group > [data-slot=alert] { margin-bottom: --spacing(3); }
   .setting-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 22rem); gap: --spacing(2) --spacing(8); padding: --spacing(4) 0; border-top: 1px solid var(--border); }
-  .setting-label label { font-weight: var(--font-weight-semibold); }
-  .setting-key { display: block; margin-top: --spacing(0.5); color: var(--muted-foreground); }
-  .setting-label p { margin: --spacing(1.5) 0 0; max-width: 62ch; color: var(--muted-foreground); font-size: var(--text-small); }
+  .setting-label { display: grid; gap: --spacing(1); align-content: start; justify-items: start; }
+  .setting-key { color: var(--muted-foreground); }
   .setting-control { min-width: 0; display: grid; gap: --spacing(1.5); align-content: start; }
-  .setting-control > :is(input, select, textarea) { width: 100%; }
   .field-meta { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(2); min-height: --spacing(7); color: var(--muted-foreground); font-size: var(--text-caption); }
   .field-meta [data-set=true] { color: var(--foreground); }
   .save-bar { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); margin-top: --spacing(4); padding: --spacing(3) 0; background: var(--background); border-top: 1px solid var(--border); }
@@ -409,29 +403,20 @@
   .pi-panel { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2) --spacing(3); margin-bottom: --spacing(6); }
   .pi-panel > p { margin: 0; }
   .pi-panel code { color: var(--muted-foreground); }
-  .pi-panel .notice, .pi-panel .job, .pi-panel > .error { flex-basis: 100%; }
+  .pi-panel > :is([data-slot=alert], .job) { flex-basis: 100%; }
   .not-here { margin-top: --spacing(10); }
   .not-here ul { margin: --spacing(2) 0 0; padding-inline-start: --spacing(5); display: grid; gap: --spacing(2); color: var(--muted-foreground); }
   .scope-footnote { margin-top: --spacing(6); color: var(--muted-foreground); font-size: var(--text-small); }
   .keybinding-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 1fr); gap: --spacing(1.5) --spacing(6); padding: --spacing(2.5) 0; border-top: 1px solid var(--border); }
   .keybinding-row > div:first-child { display: grid; gap: --spacing(0.5); align-content: start; }
   .keybinding-control { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(2); }
-  .keybinding-control input { flex: 1 1 10rem; min-width: 0; font-family: var(--font-mono); }
-  .keybinding-control .field-error { flex-basis: 100%; }
   /* Startup tools: a checklist that takes the whole row. */
   .setting-row:has(.tool-field) { grid-template-columns: minmax(0, 1fr); }
-  .tool-field { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: --spacing(4) --spacing(8); margin: 0; padding: 0; border: 0; }
   .tool-group { display: grid; gap: --spacing(2.5); align-content: start; }
   .tool-group-title { margin: 0; color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-semibold); }
-  .tool-option { display: grid; gap: --spacing(0.5); }
-  .tool-option label { display: flex; align-items: center; gap: --spacing(2.5); width: fit-content; }
   .tool-option code { font-size: var(--text-small); font-weight: var(--font-weight-semibold); }
-  /* Help sits under the name, past the checkbox. */
-  .tool-option > span { padding-inline-start: --spacing(6.5); }
   .tool-changed { color: var(--foreground); }
   .tool-option[data-changed] code::after { content: ""; display: inline-block; width: --spacing(1.5); height: --spacing(1.5); margin-inline-start: --spacing(1.5); vertical-align: middle; border-radius: calc(infinity * 1px); background: var(--primary); }
-  .theme-field { display: grid; gap: --spacing(2); margin: 0; padding: 0; border: 0; }
-  .theme-field label { display: grid; gap: --spacing(1); color: var(--muted-foreground); font-size: var(--text-small); }
 }
 
 @keyframes appear { from { opacity: 0; } }
