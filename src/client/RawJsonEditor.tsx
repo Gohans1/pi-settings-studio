@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Field, FieldLabel } from "./components/ui/field";
 import { Textarea } from "./components/ui/textarea";
+import { Spinner } from "./components/ui/spinner";
 import { FilePath } from "./PageHeader";
 
 /**
@@ -38,7 +39,7 @@ export function RawJsonEditor({ file, load, save, note, onClose }: {
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {raw ? <Field><FieldLabel htmlFor={id}>{file}</FieldLabel>
       <Textarea id={id} className="field-sizing-fixed font-mono" value={text} rows={22} spellCheck={false} autoComplete="off" onChange={event => setText(event.target.value)} /></Field>
-      : !error && <div className="loading" aria-busy="true">Reading {file}…</div>}
+      : !error && <div className="loading" aria-busy="true"><Spinner />Reading {file}…</div>}
     <div className="form-actions"><Button disabled={!raw || busy} onClick={() => void submit()}>{busy ? "Saving…" : "Save JSON"}</Button>
       <Button variant="outline" disabled={busy} onClick={() => onClose(false)}>Cancel</Button></div>
   </section>;

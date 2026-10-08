@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
+import { Spinner } from "./components/ui/spinner";
 import { OptionSelect } from "./OptionSelect";
 import { FilePath, home } from "./PageHeader";
 
@@ -86,7 +87,7 @@ export function ResourceFolders({ type, project, level = 3, onChanged }: {
         {error && <FieldError id={`${id}-error`} className="basis-full">{error}</FieldError>}
       </form>
     </>}
-    {!view && !error && <div className="loading" aria-busy="true">Reading settings…</div>}
+    {!view && !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div>}
     {!view && error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertDescription>{error}</AlertDescription></Alert>}
   </section>;
 }

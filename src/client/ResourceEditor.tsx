@@ -8,6 +8,7 @@ import { Button } from "./components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
+import { Spinner } from "./components/ui/spinner";
 import { OptionSelect } from "./OptionSelect";
 import { FilePath } from "./PageHeader";
 
@@ -53,7 +54,7 @@ export function ResourceEditor({ type, path, name, editable: hint, project, onMe
     {view && <Field><FieldLabel htmlFor={id}>{view.file}</FieldLabel>
       <Textarea id={id} aria-label={`Content of ${view.file}`} className="field-sizing-fixed font-mono" value={text} readOnly={!view.editable} rows={22} spellCheck={false}
         onChange={event => setText(event.target.value)} /></Field>}
-    {!view && !error && <div className="loading" aria-busy="true">Reading…</div>}
+    {!view && !error && <div className="loading" aria-busy="true"><Spinner />Reading…</div>}
     <div className="form-actions">
       {view?.editable && <Button type="submit" disabled={busy || !dirty}>Save</Button>}
       {dirty && <Button type="button" variant="outline" disabled={busy} onClick={() => setText(view!.text)}>Discard changes</Button>}

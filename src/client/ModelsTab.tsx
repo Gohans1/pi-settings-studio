@@ -13,6 +13,7 @@ import { Empty, EmptyDescription } from "./components/ui/empty";
 import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
+import { Spinner } from "./components/ui/spinner";
 import { ModelDefaults } from "./ModelDefaults";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -169,7 +170,7 @@ export function ModelsTab({ project }: { project?: string }) {
     {raw ? <RawJsonEditor file="models.json" load={loadModelsRaw} save={saveModelsRaw}
       note={`${SECRET_NOTE} modelOverrides, compat, cost, thinkingLevelMap and samplingParams are edited here. Pi checks the file before it is saved.`}
       onClose={saved => { setRaw(false); if (saved) { setMessage("Saved models.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
-    : !view ? !error && <div className="loading" aria-busy="true">Reading providers…</div> : <Workbench open={open} onBack={() => setSelected(undefined)} backLabel="All providers" list={<section aria-label="Providers">
+    : !view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading providers…</div> : <Workbench open={open} onBack={() => setSelected(undefined)} backLabel="All providers" list={<section aria-label="Providers">
       <div className="list-search"><SearchField label="Search providers" placeholder="Search providers…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned"><li><ListItem selected={selected === DEFAULTS} onSelect={() => setSelected(DEFAULTS)} icon={SlidersHorizontal} name="Defaults" state="provider, model, thinking" /></li></ul>
       <section className="item-group" aria-label="Custom providers">

@@ -17,6 +17,19 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+test("while the settings load, a spinner says so", async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/settings/global", async route => { await held; await route.continue(); });
+  await page.reload();
+  await expect(page.getByText("Reading settings…")).toBeVisible();
+  await expect(page.getByRole("status", { name: "Loading" })).toBeVisible();
+  release();
+  await expect(page.getByRole("heading", { name: "Models & thinking" })).toBeVisible();
+  await expect(page.getByRole("status", { name: "Loading" })).toHaveCount(0);
+  await page.unrouteAll({ behavior: "wait" });
+});
+
 test("save writes native files directly, preserves unknown values, and survives reload", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Models & thinking" })).toBeVisible();
   await page.getByLabel("Shell command prefix", { exact: true }).fill("new-model");

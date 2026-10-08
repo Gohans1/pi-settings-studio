@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { ArrowUp, ChevronDown, CircleAlert, FolderOpen, LoaderCircle, Package, Plus, Puzzle } from "lucide-react";
+import { ArrowUp, ChevronDown, CircleAlert, FolderOpen, Package, Plus, Puzzle } from "lucide-react";
 import type { PluginsView, ResourceType, ResourceView } from "../shared/resources";
 import { checkPackageUpdates, loadPlugins, restoreSettings, savePackageFilters, savePlugins } from "./api";
 import { PackageFilterForm, type FilterPatch } from "./PackageFilterForm";
@@ -14,6 +14,7 @@ import { OptionSelect } from "./OptionSelect";
 import { Switch } from "./components/ui/switch";
 import { JobPanel, useJob } from "./JobPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { Spinner } from "./components/ui/spinner";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, ListItem, Workbench } from "./Workbench";
@@ -154,7 +155,8 @@ export function PluginsTab({ project }: { project?: string }) {
     <JobPanel job={job.job} error={job.error} onAnswer={value => void job.answer(value)} onCancel={() => void job.cancel()} onDismiss={job.dismiss} />
     <div className="list-header package-list-header flex-wrap"><h3>In settings.json</h3><span>{view.packages.length}</span>
       <Button variant="outline" size="sm" disabled={checking || job.running || !view.packages.length} onClick={() => void checkUpdates()}>
-        {checking && <LoaderCircle aria-hidden="true" className="animate-spin motion-reduce:animate-none" />}Check for updates</Button>
+        {/* The region's status line announces the check; the spinner only shows it. */}
+        {checking && <Spinner data-icon="inline-start" aria-hidden="true" />}Check for updates</Button>
       <Button variant="ghost" size="sm" disabled={job.running || checking || !view.packages.length} onClick={() => void job.start({ action: "packages-update", ...(project ? { project } : {}) })}>Update all</Button></div>
     <div className="my-4 space-y-2">
       <p role="status" aria-live="polite" className="m-0">{checking ? "Checking for package updates…"
@@ -190,7 +192,7 @@ export function PluginsTab({ project }: { project?: string }) {
       action={undo && { label: "Undo", disabled: busy, onClick: () => void restore(undo) }} />
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription>
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></Alert>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <Workbench open={open} onBack={back} backLabel="All plugins" list={<section aria-label="Plugin list">
+    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading plugins…</div> : <Workbench open={open} onBack={back} backLabel="All plugins" list={<section aria-label="Plugin list">
       <div className="list-search"><SearchField label="Search plugins" placeholder="Search plugins…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned">
         <li><ListItem selected={pinned === "packages"} onSelect={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }} icon={Package} name="Packages" state={updateCount ? `${updateCount} ${updateCount === 1 ? "update" : "updates"}` : view.packages.length} /></li>

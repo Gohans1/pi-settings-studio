@@ -5,6 +5,7 @@ import { loadPluginTools } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
+import { Spinner } from "./components/ui/spinner";
 import { Disclosure } from "./Disclosure";
 
 const states: Record<PluginToolsView["tools"][number]["visibility"], string> = {
@@ -36,7 +37,7 @@ export function PluginTools({ path, project }: { path: string; project?: string 
       <Button variant="outline" size="sm" disabled={loading} onClick={() => setAttempt(value => value + 1)}><RefreshCw aria-hidden="true" />Refresh tools</Button>
     </div>
     <p className="muted">{project ? "Global + selected project settings, trusted for inspection." : "Global settings only."} Startup preview, not a running thread.</p>
-    {loading && <p className="loading" role="status">Loading tools with Pi…</p>}
+    {loading && <p className="loading" role="status"><Spinner aria-hidden="true" />Loading tools with Pi…</p>}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not inspect tools</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {view && <>
       {!view.complete && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not verify all tools</AlertTitle>

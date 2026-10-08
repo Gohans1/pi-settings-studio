@@ -5,6 +5,7 @@ import { deleteInstruction, loadInstructions, restoreInstruction, saveInstructio
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Textarea } from "./components/ui/textarea";
+import { Spinner } from "./components/ui/spinner";
 import { Feedback } from "./Feedback";
 import { FilePath, home, PageHeader } from "./PageHeader";
 import { ListItem, Workbench } from "./Workbench";
@@ -87,7 +88,7 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={!!undo && { label: "Undo", disabled: busy, onClick: () => { const id = undo; const name = baseName(files.find(file => file.id === id)?.path ?? id); void run(() => restoreInstruction(id, project), `Restored ${name}.`); } }} />
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading instruction files…</div> : <Workbench open={picked} onBack={() => setPicked(false)} backLabel="All files" list={<>
+    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading instruction files…</div> : <Workbench open={picked} onBack={() => setPicked(false)} backLabel="All files" list={<>
       <section className="item-group" aria-label="Global instruction files"><div className="list-header"><h2>Global</h2></div>{list("global")}</section>
       {project && <section className="item-group" aria-label="This project's instruction files"><div className="list-header"><h2>This project</h2></div>{list("project")}</section>}
       {project && extra.length > 0 && <section className="item-group" aria-label="Also loaded">

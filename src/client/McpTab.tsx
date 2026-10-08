@@ -18,6 +18,7 @@ import { FieldDescription, FieldLegend, FieldSet } from "./components/ui/field";
 import { OptionSelect } from "./OptionSelect";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Switch } from "./components/ui/switch";
+import { Spinner } from "./components/ui/spinner";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, IconButton, ListItem, MoreMenu, Workbench } from "./Workbench";
@@ -306,7 +307,7 @@ export function McpTab({ project }: { project?: string }) {
     {rawScope ? <RawJsonEditor file="mcp.json" load={loadRaw} save={saveRaw}
       note={SECRET_NOTE}
       onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
-    : !global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <Workbench open={open} onBack={back} backLabel="All servers" detail={detail} list={<>
+    : !global ? !error && <div className="loading" aria-busy="true"><Spinner />Reading MCP settings…</div> : <Workbench open={open} onBack={back} backLabel="All servers" detail={detail} list={<>
       <ul className="item-list pinned"><li><ListItem selected={selected === "codemode"} onSelect={() => choose("codemode")} icon={Braces} name="Code mode" state={codemodeState} /></li></ul>
       <section aria-labelledby="global-servers" className="item-group">
         <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span>

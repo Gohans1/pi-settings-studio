@@ -18,6 +18,7 @@ import { KeybindingsPanel } from "./KeybindingsPanel";
 import { SearchField } from "./SearchField";
 import { ScopeChoice } from "./ScopeChoice";
 import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Spinner } from "./components/ui/spinner";
 
 const KEYBINDINGS = { id: "keybindings", title: "Keyboard shortcuts" };
 
@@ -189,7 +190,7 @@ export function GeneralTab({ project }: { project?: string }) {
     {error && <Alert variant="destructive" className="mb-4"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription>
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>
         <Button variant="outline" size="sm" disabled={busy || !!changes.length} onClick={openRaw}>Edit as JSON</Button></div></Alert>}
-    {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && <div className="settings-layout">
+    {loading ? <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : view && <div className="settings-layout">
         <nav className="section-nav" aria-label="Setting groups">{shownSections.map(section => {
           // What the reader has made of each group: a dot for unsaved edits, else how many keys the file sets.
           const keys = fields.filter(field => field.section === section.id).map(field => field.key);

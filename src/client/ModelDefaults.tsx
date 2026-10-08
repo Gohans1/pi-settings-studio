@@ -8,6 +8,7 @@ import { Button } from "./components/ui/button";
 import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
+import { Spinner } from "./components/ui/spinner";
 import { OptionSelect } from "./OptionSelect";
 import { ScopeChoice } from "./ScopeChoice";
 import { IconButton } from "./Workbench";
@@ -146,7 +147,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
       <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p></header>
     {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global defaults" disabled={busy} onChange={setScopeChoice} />}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
+    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
       <Field><FieldLabel htmlFor="default-provider">Default provider</FieldLabel>
         <Input id="default-provider" value={provider} list="default-provider-options" placeholder={String(inherited("defaultProvider") ?? "Automatic")} autoComplete="off" spellCheck={false}
           aria-describedby={providerWarning ? "provider-warning" : undefined} onChange={event => setProvider(event.target.value)} />

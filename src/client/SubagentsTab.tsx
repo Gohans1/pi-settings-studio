@@ -9,6 +9,7 @@ import { Empty, EmptyDescription } from "./components/ui/empty";
 import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
+import { Spinner } from "./components/ui/spinner";
 import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -113,7 +114,7 @@ export function SubagentsTab({ project }: { project?: string }) {
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => { const target = undo; void run(() => restoreAgent(target.scope, target.file, project), `Restored ${target.file}.`, () => setSelected(target)); } }} />
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading profiles…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode("view"); }} backLabel="All profiles" list={<>
+    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading profiles…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode("view"); }} backLabel="All profiles" list={<>
       <section className="item-group" aria-label="Global profiles">
         <div className="list-header"><h2>Global</h2><span>{agents.filter(agent => agent.scope === "user").length}</span></div>
         {agents.some(agent => agent.scope === "user") ? list("user") : <Empty><EmptyDescription>No profiles yet.</EmptyDescription></Empty>}
