@@ -17,7 +17,7 @@
 - [x] Models: custom providers form for models.json.
 - [x] Plugins tab (built-ins, user files, packages, install/update/remove).
 - [x] Sub-agents tab (user and project profiles).
-- [ ] Background service on port 4369 (unit file ready; install after WSL restarts with systemd).
+- [x] Background service on port 4369 (systemd user unit, linger on).
 - [x] Execution features: MCP test and sign-in, provider sign-in, package install/update/remove, model catalog refresh.
 - [x] Project scope for every tab, project trust.
 - [x] Raw JSON for mcp.json and models.json with secrets masked.

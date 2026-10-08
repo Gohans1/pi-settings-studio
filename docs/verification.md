@@ -12,7 +12,9 @@ Scope: everything added since the first full run: Pi 1.1.0 update, package filte
 
 Manual browser checks on a temporary agent directory (`/tmp/pss-fx`): MCP form with rules and OAuth (global and project scope), import preview of a VS Code file with `${input:…}` and an SSE server, model list from a fake OpenRouter-style endpoint, skill editor with a supporting file, a symlinked prompt shown read-only, the `mcp.log` panel, the Pi panel, the notes. The real `~/.pi` was not written.
 
-Not exercised: `pi update` itself (its arguments are tested with a stand-in command), OAuth sign-ins with a real account, the background service.
+Background service: installed as a systemd user unit (linger on) and running on `127.0.0.1:4369` against the real `~/.pi/agent`. Every GET endpoint answered 200; none of the 10 credential values in `auth.json`, `mcp.json`, `models.json` and `mcp-auth.json` appeared in any response; checksums of the 12,731 files under `~/.pi/agent` (sessions excluded) were identical before and after.
+
+Not exercised: `pi update` itself (its arguments are tested with a stand-in command), OAuth sign-ins with a real account.
 
 ---
 
