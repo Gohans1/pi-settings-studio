@@ -66,3 +66,6 @@ export type McpServerInput = {
   oauth?: McpOAuthInput | null;
   authProvider?: string | null;
 };
+
+/** What a pasted configuration would add: Pi's verdict per server, values never included. */
+export type McpImportPreview = { format: string; notes: string[]; servers: { exists: boolean; server: McpServerView }[] };

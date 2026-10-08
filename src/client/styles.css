@@ -118,6 +118,13 @@ textarea { resize: vertical; }
 .server-form legend { padding: 0 4px; font-weight: 560; }
 .named-rows { display: grid; gap: 8px; justify-items: start; }
 .oauth-fields { display: grid; gap: 10px; }
+.import-source { font: 12px/1.6 ui-monospace, monospace; tab-size: 2; }
+.import-preview { display: grid; gap: 10px; }
+.import-preview p { margin: 0; }
+.import-preview .notes { margin: 0; padding-left: 20px; color: var(--muted-foreground); font-size: 13px; }
+.import-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.import-list li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+.import-list code { overflow-wrap: anywhere; font-size: 12px; }
 .oauth-fields[open] > summary { margin-bottom: 4px; }
 .oauth-fields summary { cursor: pointer; font-weight: 560; }
 .server-form label.check { display: flex; align-items: center; gap: 8px; font-weight: 400; }

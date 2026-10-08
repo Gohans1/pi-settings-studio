@@ -5,6 +5,7 @@ import { addMcpServer, editMcpServer, loadCodemode, loadMcp, removeMcpServer, re
 import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
 import { CodemodePanel } from "./CodemodePanel";
 import { exposureLabels, McpServerForm } from "./McpServerForm";
+import { McpImportPanel } from "./McpImportPanel";
 import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
 import { Button } from "./components/ui/button";
@@ -81,7 +82,7 @@ export function McpTab({ project }: { project?: string }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState<{ mode: "add" | "edit"; scope: "global" | "project" }>();
+  const [form, setForm] = useState<{ mode: "add" | "edit" | "import"; scope: "global" | "project" }>();
   const [formError, setFormError] = useState("");
   const [undo, setUndo] = useState<McpTarget>();
   const target = (scope: "global" | "project"): McpTarget => ({ scope, project });
@@ -191,7 +192,15 @@ export function McpTab({ project }: { project?: string }) {
   }
 
   let detail: ReactNode = <section className="detail"><p className="empty">Select a server to see its details.</p></section>;
-  if (form) {
+  if (form?.mode === "import" && views[form.scope]) {
+    const scope = form.scope;
+    detail = <McpImportPanel key={scope} target={target(scope)} revision={views[scope]!.revision} onCancel={() => setForm(undefined)}
+      onImported={(next, names) => {
+        setViews(current => ({ ...current, [scope]: next }));
+        setForm(undefined); setError(""); setUndo(target(scope));
+        setMessage(`Imported ${names.join(", ")}. Applies to new T3Code threads, or after /reload.`);
+      }} />;
+  } else if (form) {
     detail = <McpServerForm key={form.mode + form.scope + (current?.name ?? "")} server={form.mode === "edit" ? current : undefined} busy={busy} error={formError} scope={form.scope}
       title={form.mode === "add" ? (form.scope === "project" ? "Add MCP server to this project" : "Add MCP server") : undefined}
       onSave={(name, input) => void submit(name, input)} onCancel={() => setForm(undefined)} />;
@@ -236,7 +245,7 @@ export function McpTab({ project }: { project?: string }) {
       {check.job && <TestResults job={check.job} />}
     </JobPanel>
     {rawScope ? <RawJsonEditor file="mcp.json" load={loadRaw} save={saveRaw}
-      note={`${SECRET_NOTE} toolExposure, oauth and auth are edited here.`}
+      note={SECRET_NOTE}
       onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
     : !global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
       <div className="master">
@@ -247,6 +256,7 @@ export function McpTab({ project }: { project?: string }) {
           <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span></div>
           <div className="actions add-button">
             <Button variant="outline" size="sm" disabled={busy || !!global.error} onClick={() => { setForm({ mode: "add", scope: "global" }); setFormError(""); }}>Add server</Button>
+            <Button variant="outline" size="sm" disabled={busy || !!global.error} aria-label="Import servers into the global mcp.json" onClick={() => setForm({ mode: "import", scope: "global" })}>Import</Button>
             <Button variant="outline" size="sm" disabled={check.running} onClick={() => void check.start({ action: "mcp-test", ...(project ? { project } : {}) })}>Test connections</Button>
             <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRawScope("global")} aria-label="Edit global mcp.json as JSON">Edit JSON</Button>
           </div>
@@ -256,6 +266,7 @@ export function McpTab({ project }: { project?: string }) {
           <div className="list-header"><h2>This project</h2><span>{projectServers.length} in .pi/mcp.json</span></div>
           <div className="actions add-button">
             <Button variant="outline" size="sm" disabled={busy || !!local.error} onClick={() => { setForm({ mode: "add", scope: "project" }); setFormError(""); }}>Add server to project</Button>
+            <Button variant="outline" size="sm" disabled={busy || !!local.error} aria-label="Import servers into the project's mcp.json" onClick={() => setForm({ mode: "import", scope: "project" })}>Import</Button>
             <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRawScope("project")} aria-label="Edit the project's mcp.json as JSON">Edit JSON</Button>
           </div>
           {projectServers.length ? serverList("project", projectServers) : !local.error && <p className="empty">No servers in this project's .pi/mcp.json yet.</p>}

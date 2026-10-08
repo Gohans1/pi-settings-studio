@@ -162,3 +162,34 @@ test("tool exposure rules, OAuth settings and provider sign-in are edited in the
   expect([docs.toolExposure, docs.oauth, docs.auth]).toEqual([undefined, { callbackPort: 8765, clientRegistration: "cimd" }, { provider: "anthropic" }]);
   expect(await page.content()).not.toContain("fixture-client-secret");
 });
+
+test("servers pasted from another client are previewed, then the chosen ones imported", async ({ page }) => {
+  const readServers = async () => JSON.parse(await readFile(file, "utf8")).mcpServers;
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "Import servers into the global mcp.json" }).click();
+  const panel = page.getByRole("form", { name: "Import MCP servers" });
+  await panel.getByLabel("Pasted configuration").fill(`[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+env = { CONTEXT7_KEY = "fixture-codex-secret" }
+
+[mcp_servers.docs]
+url = "https://docs2.example.com/mcp"
+startup_timeout_sec = 20`);
+  await panel.getByRole("button", { name: "Preview" }).click();
+  await expect(panel).toContainText("Read as Codex");
+  await expect(panel).toContainText("docs: dropped startup_timeout_sec");
+  await expect(panel.getByRole("checkbox", { name: "Import context7" })).toBeChecked();
+  await expect(panel.getByRole("checkbox", { name: "Import docs" })).not.toBeChecked();
+  await expect(panel).toContainText("Replaces the server of the same name");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await panel.getByRole("button", { name: "Import 1 server" }).click();
+  await expect(page.getByRole("status")).toContainText("Imported context7");
+  const servers = await readServers();
+  expect(servers.context7).toEqual({ command: "npx", args: ["-y", "@upstash/context7-mcp"], env: { CONTEXT7_KEY: "fixture-codex-secret" } });
+  expect(servers.docs.url).toBe("https://example.com/mcp");
+  expect(await page.content()).not.toContain("fixture-codex-secret");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("status")).toContainText("Restored");
+  expect((await readServers()).context7).toBeUndefined();
+});

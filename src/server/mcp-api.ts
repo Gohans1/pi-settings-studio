@@ -4,6 +4,7 @@ import type { McpFileView, McpOAuthInput, McpOAuthView, McpServerInput, McpServe
 import { isRecord, MCP_EXPOSURES, readMcpServers, updateMcpServer, type McpEntry } from "./mcp-config.ts";
 import { maskArgs, maskUrl, unmaskArgs, unmaskUrl } from "./mcp-secrets.ts";
 import { maskJson, mcpSecrets, unmaskJson } from "./json-secrets.ts";
+import { convertMcpConfig } from "./mcp-import.ts";
 import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
 import type { ProjectRegistry } from "./projects.ts";
 import type { McpExposure, McpServerConfig } from "@earendil-works/pi-coding-agent";
@@ -202,7 +203,40 @@ export function mcpRoutes(store: ConfigStore, registry: ProjectRegistry) {
     return { path: store.path(scope, "mcp.json"), revision, text: maskJson(value, mcpSecrets(value)) };
   }
 
+  /** The pasted servers merged over the file, so Pi judges them as they would be saved. */
+  function merged(file: Record<string, unknown>, text: string, names?: string[]) {
+    const converted = convertMcpConfig(text);
+    const next = structuredClone(file);
+    const entries = servers(next);
+    const existing = new Set(Object.keys(entries));
+    for (const [name, entry] of Object.entries(converted.servers)) if (!names || names.includes(name)) entries[name] = entry;
+    return { converted, next, existing };
+  }
+  const importText = z.string().min(1).max(60_000);
+
   return new Hono()
+    .post("/:scope/import/preview", async c => {
+      const { scope, store, base } = await ctx(c);
+      const { text } = z.object({ text: importText }).strict().parse(await c.req.json());
+      const { converted, next, existing } = merged((await store.read(scope, "mcp.json")).value, text);
+      const { servers: entries } = readMcpServers(next, base);
+      return c.json({
+        format: converted.format, notes: converted.notes,
+        servers: Object.keys(converted.servers).map(name => ({ exists: existing.has(name), server: toView(entries.find(entry => entry.name === name)!) })),
+      });
+    })
+    .post("/:scope/import", async c => {
+      const context = await ctx(c);
+      const { revision, text, names } = z.object({ revision: z.string().min(1).max(100), text: importText, names: z.array(z.string().max(200)).min(1).max(200) }).strict().parse(await c.req.json());
+      await context.store.transform(context.scope, revision, file => {
+        const { converted, next } = merged(file, text, names);
+        const missing = names.filter(name => !Object.hasOwn(converted.servers, name));
+        if (missing.length) throw new ConfigError(`The pasted configuration has no server named ${missing.join(", ")}.`);
+        for (const name of names) assertAccepted(next, name, context.base);
+        return next;
+      }, "mcp.json");
+      return c.json(await view(context));
+    })
     .get("/:scope/raw", async c => c.json(await raw(await ctx(c))))
     .put("/:scope/raw", async c => {
       const context = await ctx(c);

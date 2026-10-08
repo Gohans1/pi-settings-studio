@@ -1,5 +1,5 @@
 import type { SettingsView, SettingsChange } from "../shared/settings";
-import type { McpFileView, McpServerInput } from "../shared/mcp";
+import type { McpFileView, McpImportPreview, McpServerInput } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PluginsView, SkillsView } from "../shared/resources";
@@ -45,6 +45,9 @@ export const editMcpServer = (target: McpTarget, name: string, revision: string,
   request<McpFileView>(serverUrl(target, name), "PUT", { revision, server });
 export const removeMcpServer = (target: McpTarget, name: string, revision: string) =>
   request<McpFileView>(serverUrl(target, name), "DELETE", { revision });
+export const previewMcpImport = (target: McpTarget, text: string) => request<McpImportPreview>(mcpUrl(target, "/import/preview"), "POST", { text });
+export const importMcp = (target: McpTarget, revision: string, text: string, names: string[]) =>
+  request<McpFileView>(mcpUrl(target, "/import"), "POST", { revision, text, names });
 export const loadMcpRaw = (target: McpTarget) => request<RawSettings>(mcpUrl(target, "/raw"));
 export const saveMcpRaw = (target: McpTarget, revision: string, text: string) => request<RawSettings>(mcpUrl(target, "/raw"), "PUT", { revision, text });
 export const restoreMcp = (target: McpTarget, revision: string) => request<McpFileView>(mcpUrl(target, "/restore"), "POST", { revision });
