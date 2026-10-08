@@ -62,3 +62,30 @@ test("a package's resource filters are edited in settings.json", async ({ page }
   await expect(page.getByRole("status").first()).toContainText("Filters saved");
   expect((await settings()).packages[0]).toBe("./pkgs/my-pack");
 });
+
+test("prompts and extensions are edited or viewed, and a new theme is created", async ({ page }) => {
+  await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: /^review/ }).click();
+  await page.getByRole("button", { name: "Edit review" }).click();
+  const editor = page.getByRole("form", { name: "Edit review" });
+  await editor.getByLabel("Content of review.md").fill("---\ndescription: Review the diff\n---\nReview it twice.\n");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("status").first()).toContainText("Saved review.md");
+  expect(await readFile(join(agent, "prompts/review.md"), "utf8")).toContain("Review it twice.");
+  await editor.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: /^tool\.ts/ }).click();
+  await page.getByRole("button", { name: "View tool.ts" }).click();
+  await expect(page.getByRole("form", { name: "View tool.ts" }).getByLabel("Content of tool.ts")).toHaveAttribute("readonly", "");
+  await page.getByRole("form", { name: "View tool.ts" }).getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: /^mcp/ }).click();
+  await expect(page.getByRole("button", { name: /^(Edit|View) mcp$/ })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "New theme" }).click();
+  const create = page.getByRole("form", { name: "New theme" });
+  await create.getByLabel("Name").fill("ocean");
+  await create.getByRole("button", { name: "Create theme" }).click();
+  await expect(page.getByRole("form", { name: "Edit ocean.json" })).toBeVisible();
+  expect(JSON.parse(await readFile(join(agent, "themes/ocean.json"), "utf8")).name).toBe("ocean");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

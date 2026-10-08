@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
-import type { PluginsView, ResourceView } from "../shared/resources";
+import type { PluginsView, ResourceType, ResourceView } from "../shared/resources";
 import { loadPlugins, savePackageFilters, savePlugins } from "./api";
 import { PackageFilterForm, type FilterPatch } from "./PackageFilterForm";
+import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 import { JobPanel, useJob } from "./JobPanel";
@@ -15,8 +16,9 @@ const builtinNotes: Record<string, string> = {
   "llama.cpp": "Local llama.cpp provider support.",
 };
 
-function PluginDetail({ item }: { item: ResourceView }) {
+function PluginDetail({ item, onOpen }: { item: ResourceView; onOpen: () => void }) {
   const builtin = item.group.startsWith("Built-in");
+  const editable = item.origin === "top-level";
   return <section className="detail" aria-labelledby="plugin-title">
     <h2 id="plugin-title">{item.name}</h2>
     {!item.enabled && <p className="notice">Turned off, so Pi does not load it.</p>}
@@ -27,6 +29,7 @@ function PluginDetail({ item }: { item: ResourceView }) {
       <div><dt>Source</dt><dd>{item.group}</dd></div>
       <div><dt>{builtin ? "Name" : "File"}</dt><dd><code>{item.path}</code></dd></div>
     </dl>
+    {!builtin && <div className="actions detail-actions"><Button variant="outline" aria-label={`${editable ? "Edit" : "View"} ${item.name}`} onClick={onOpen}>{editable ? "Edit" : "View"}</Button></div>}
   </section>;
 }
 
@@ -39,6 +42,7 @@ export function PluginsTab({ project }: { project?: string }) {
   const [busy, setBusy] = useState(false);
   const [source, setSource] = useState("");
   const [filtering, setFiltering] = useState<string>();
+  const [mode, setMode] = useState<"edit" | ResourceType>();
   const [installScope, setInstallScope] = useState<"global" | "project">("global");
   // pi install / remove / update run on click; the list reloads when they finish.
   const job = useJob(() => void refresh());
@@ -48,7 +52,7 @@ export function PluginsTab({ project }: { project?: string }) {
     try { setView(await loadPlugins(project)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the plugins."); }
   }
-  useEffect(() => { setSelected(undefined); void refresh(); }, [project]);
+  useEffect(() => { setSelected(undefined); setMode(undefined); void refresh(); }, [project]);
 
   async function toggle(items: ResourceView[], enabled: boolean, label = items[0]?.name) {
     if (!view || !items.length) return;
@@ -86,6 +90,8 @@ export function PluginsTab({ project }: { project?: string }) {
     {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <>
       <div className="master-detail">
         <section className="master" aria-label="Plugin list">
+          <div className="actions add-button">{(["prompts", "themes", "extensions"] as const).map(type =>
+            <Button key={type} variant="outline" size="sm" onClick={() => setMode(type)}>New {typeLabels[type]}</Button>)}</div>
           {!visible.length && <p className="empty">{resources.length ? "No matching plugins." : "No plugins found."}</p>}
           {groups.map(group => {
             const members = visible.filter(item => item.group === group);
@@ -94,7 +100,7 @@ export function PluginsTab({ project }: { project?: string }) {
                 <Switch aria-label={`Enable everything in ${group}`} checked={members.every(item => item.enabled)} disabled={busy}
                   onCheckedChange={enabled => void toggle(members.filter(item => item.enabled !== enabled), enabled, `Everything in ${group}`)} /></div>
               <ul className="item-list">{members.map(item => <li key={item.type + item.path}>
-                <button type="button" aria-pressed={item.path === selected} onClick={() => setSelected(item.path)}>
+                <button type="button" aria-pressed={item.path === selected} onClick={() => { setSelected(item.path); setMode(undefined); }}>
                   <span className="item-name">{item.name}</span><span className="item-state">{item.enabled ? typeLabels[item.type] : "off"}</span>
                 </button>
                 <Switch aria-label={`Enable ${item.name}`} checked={item.enabled} disabled={busy} onCheckedChange={enabled => void toggle([item], enabled)} />
@@ -102,7 +108,12 @@ export function PluginsTab({ project }: { project?: string }) {
             </div>;
           })}
         </section>
-        {current ? <PluginDetail item={current} /> : <section className="detail"><p className="empty">Select a plugin to see its details.</p></section>}
+        {mode && mode !== "edit" ? <NewResourceForm key={mode} type={mode} project={project} onCancel={() => setMode(undefined)}
+            onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
+          : current && mode === "edit" ? <ResourceEditor key={current.path} type={current.type} path={current.path} name={current.name} editable={current.origin === "top-level"}
+            project={project} onMessage={setMessage} onClose={() => { setMode(undefined); void refresh(); }} />
+          : current ? <PluginDetail item={current} onOpen={() => setMode("edit")} />
+          : <section className="detail"><p className="empty">Select a plugin to see its details.</p></section>}
       </div>
       <section className="packages" aria-labelledby="packages-title">
         <h2 id="packages-title">Packages</h2>
