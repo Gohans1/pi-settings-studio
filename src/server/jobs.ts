@@ -75,8 +75,8 @@ const body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("mcp-logout"), server: SERVER, project: z.string().optional() }).strict(),
   z.object({ action: z.literal("package-install"), source: SOURCE, project: z.string().optional() }).strict(),
   z.object({ action: z.literal("package-remove"), source: SOURCE, project: z.string().optional() }).strict(),
-  z.object({ action: z.literal("package-update"), source: SOURCE }).strict(),
-  z.object({ action: z.literal("packages-update") }).strict(),
+  z.object({ action: z.literal("package-update"), source: SOURCE, project: z.string().optional() }).strict(),
+  z.object({ action: z.literal("packages-update"), project: z.string().optional() }).strict(),
   z.object({ action: z.literal("models-refresh") }).strict(),
   z.object({ action: z.literal("provider-login"), provider: z.string().max(100) }).strict(),
   z.object({ action: z.literal("provider-setup"), provider: z.string().max(100) }).strict(),
@@ -203,13 +203,13 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
         case "package-update": {
           const job = create(input.action, `Update ${input.source}`, secrets);
           onPackageChange();
-          runPi(job, ["update", input.source], agentDir, onPackageChange);
+          runPi(job, ["update", input.source], cwd, onPackageChange);
           return c.json(view(job));
         }
         case "packages-update": {
           const job = create(input.action, "Update all packages", secrets);
           onPackageChange();
-          runPi(job, ["update", "--extensions"], agentDir, onPackageChange);
+          runPi(job, ["update", "--extensions"], cwd, onPackageChange);
           return c.json(view(job));
         }
         case "models-refresh": {

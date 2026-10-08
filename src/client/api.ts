@@ -2,7 +2,7 @@ import type { SettingsView, SettingsChange } from "../shared/settings";
 import type { McpFileView, McpImportPreview, McpServerInput } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
-import type { PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
+import type { PackageUpdateCheck, PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
 import type { AgentInput, AgentsView } from "../shared/agents";
 import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelScopeView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
@@ -67,6 +67,7 @@ export const loadRawSettings = (scope: Scope = "global", project?: string) => re
 export const saveRawSettings = (revision: string, text: string, scope: Scope = "global", project?: string) =>
   request<RawSettings>(withProject(`/api/settings/${scope}/raw`, project), "PUT", { revision, text });
 export const loadPlugins = (project?: string) => request<PluginsView>(withProject("/api/plugins", project));
+export const checkPackageUpdates = (project?: string) => request<PackageUpdateCheck>(withProject("/api/plugins/updates", project), "POST", {});
 export const savePlugins = (scope: Scope, revision: string, items: { type: string; path: string }[], enabled: boolean, project?: string) =>
   request<PluginsView>(withProject("/api/plugins", project), "PATCH", { scope, revision, items, enabled });
 export type AgentScope = "user" | "project";
