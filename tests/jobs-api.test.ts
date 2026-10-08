@@ -75,3 +75,23 @@ test("a provider sign-in relays Pi's prompts to the browser and can be cancelled
   assert.equal(cancelled.status, "cancelled");
   assert.equal((await request("/api/jobs/unknown")).status, 404);
 });
+
+test("a provider's own key setup asks Pi's questions, stores every field, and never shows the key", async (t) => {
+  const { agent, request, start, settle } = await fixture(t);
+  assert.equal((await start({ action: "provider-setup", provider: "openai-codex" })).status, 422);
+  const { id } = await (await start({ action: "provider-setup", provider: "cloudflare-workers-ai" })).json();
+  const answer = async (value: string) => {
+    const waiting = await settle(id, job => !!job.prompt || job.status !== "running");
+    assert.equal(waiting.status, "running");
+    const response = await request(`/api/jobs/${id}/answer`, { method: "POST", headers: json, body: JSON.stringify({ promptId: waiting.prompt.id, value }) });
+    assert.equal(response.status, 200);
+    return waiting.prompt;
+  };
+  assert.equal((await answer("fixture-cloudflare-key")).type, "secret");
+  assert.match((await answer("acct-123")).message, /account ID/);
+  const done = await settle(id);
+  assert.equal(done.status, "done");
+  assert.deepEqual(JSON.parse(await readFile(join(agent, "auth.json"), "utf8"))["cloudflare-workers-ai"],
+    { type: "api_key", key: "fixture-cloudflare-key", env: { CLOUDFLARE_ACCOUNT_ID: "acct-123" } });
+  assert.doesNotMatch(JSON.stringify(await (await request(`/api/jobs/${id}`)).json()), /fixture-cloudflare-key/);
+});

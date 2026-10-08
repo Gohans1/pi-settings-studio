@@ -1,4 +1,4 @@
-export type JobAction = "mcp-test" | "mcp-login" | "mcp-logout" | "package-install" | "package-remove" | "package-update" | "packages-update" | "models-refresh" | "provider-login" | "provider-check" | "pi-update";
+export type JobAction = "mcp-test" | "mcp-login" | "mcp-logout" | "package-install" | "package-remove" | "package-update" | "packages-update" | "models-refresh" | "provider-login" | "provider-setup" | "provider-check" | "pi-update";
 
 export type JobEvent =
   | { type: "link"; url: string; label: string }

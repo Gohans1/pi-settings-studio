@@ -55,6 +55,7 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
         name: provider.name,
         models: runtime.getModels(provider.id).length,
         apiKey: !!provider.auth.apiKey,
+        keySetup: !!provider.auth.apiKey?.login,
         ...(provider.auth.oauth ? { oauth: { name: provider.auth.oauth.name, subscription: !!provider.auth.oauth.isSubscription } } : {}),
         auth: { configured: status.configured, ...(status.source ? { source: status.source } : {}), ...(status.label ? { label: status.label } : {}) },
         ...(credentials[provider.id] ? { stored: credentials[provider.id]!.type } : {}),

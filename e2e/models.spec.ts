@@ -195,3 +195,21 @@ test("a default model outside the enabled models is added to them on save, as Pi
   const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
   expect(settings.enabledModels).toEqual(["anthropic/claude-sonnet-4-5", `anthropic/${other}`]);
 });
+
+test("a provider whose key comes with more fields is set up with Pi's own questions", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("searchbox", { name: "Search providers" }).fill("workers");
+  await page.getByRole("button", { name: /^Cloudflare Workers AI/ }).click();
+  await page.getByRole("button", { name: "Set up with Pi's questions" }).click();
+  const job = page.getByRole("region", { name: "Set up cloudflare-workers-ai" });
+  await job.getByLabel("Enter Cloudflare API key").fill("fixture-cloudflare-key");
+  await job.getByRole("button", { name: "Continue" }).click();
+  await job.getByLabel("Enter Cloudflare account ID").fill("acct-1");
+  await job.getByRole("button", { name: "Continue" }).click();
+  await expect(job).toContainText("Finished");
+  expect(JSON.parse(await readFile(join(agent, "auth.json"), "utf8"))["cloudflare-workers-ai"])
+    .toEqual({ type: "api_key", key: "fixture-cloudflare-key", env: { CLOUDFLARE_ACCOUNT_ID: "acct-1" } });
+  await expect(page.getByRole("region", { name: "Cloudflare Workers AI" })).toContainText("Stored in auth.json");
+  expect(await page.content()).not.toContain("fixture-cloudflare-key");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

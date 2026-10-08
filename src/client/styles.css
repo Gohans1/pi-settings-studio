@@ -301,6 +301,8 @@
   .key-form { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2) --spacing(3); margin-top: --spacing(5); }
   .key-form label { display: grid; gap: --spacing(1.5); width: min(22rem, 100%); font-weight: var(--font-weight-semibold); }
   .key-form p { flex-basis: 100%; margin: 0; }
+  .key-setup { margin: --spacing(2) 0 0; }
+  .detail > .key-setup + .job { margin-top: --spacing(3); }
   .detail > :is(.check-result, .remove-credential) { margin-top: --spacing(4); }
   .model-rows { display: grid; gap: --spacing(2); }
   .model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); align-items: center; }

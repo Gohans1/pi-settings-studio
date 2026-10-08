@@ -5,6 +5,8 @@ export type ProviderView = {
   models: number;
   /** The provider accepts an API key. */
   apiKey: boolean;
+  /** Pi has its own key setup for it, which can ask for more than the key (account, region, profile). */
+  keySetup: boolean;
   oauth?: { name: string; subscription: boolean };
   /** Pi's own status: whether requests would be authenticated, and from where. */
   auth: { configured: boolean; source?: string; label?: string };

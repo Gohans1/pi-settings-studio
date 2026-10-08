@@ -50,6 +50,8 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
   const login = useJob(job => { if (job.status === "done") onSignedIn(); });
   // pi auth check: Pi resolves the credential as a session would, environment included.
   const check = useJob();
+  // Pi's own key setup: its questions (a key, an account ID, a region…) are answered here.
+  const setup = useJob(job => { if (job.status === "done") onSignedIn(); });
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (await onSaveKey(key)) setKey("");
@@ -77,6 +79,9 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
       <Button type="submit" disabled={busy || !key}>Save key</Button>
       {provider.stored === "oauth" && <p className="muted">Saving a key replaces the stored sign-in.</p>}
     </form>}
+    {provider.keySetup && <p className="muted key-setup">Needs more than a key, such as an account ID, a region or a profile?{" "}
+      <Button variant="link" size="xs" className="px-0" disabled={busy || setup.running} onClick={() => void setup.start({ action: "provider-setup", provider: provider.id })}>Set up with Pi's questions</Button></p>}
+    <JobPanel job={setup.job} error={setup.error} onAnswer={value => void setup.answer(value)} onCancel={() => void setup.cancel()} onDismiss={setup.dismiss} />
     {provider.stored && <div className="actions remove-credential">
       <Button variant="destructive" disabled={busy} onClick={onRemove}>Remove credential</Button></div>}
   </section>;

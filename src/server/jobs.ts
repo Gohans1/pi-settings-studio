@@ -79,6 +79,7 @@ const body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("packages-update") }).strict(),
   z.object({ action: z.literal("models-refresh") }).strict(),
   z.object({ action: z.literal("provider-login"), provider: z.string().max(100) }).strict(),
+  z.object({ action: z.literal("provider-setup"), provider: z.string().max(100) }).strict(),
   z.object({ action: z.literal("provider-check"), provider: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/) }).strict(),
   z.object({ action: z.literal("pi-update") }).strict(),
 ]);
@@ -121,14 +122,16 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
     }).catch(error => { if (job.status === "running") { job.status = "failed"; job.error = String(error); } });
   }
 
-  async function providerLogin(job: Job, providerId: string) {
+  /** Pi's own sign-in (oauth) or key setup (api_key), its questions relayed to the browser; Pi writes auth.json. */
+  async function providerLogin(job: Job, providerId: string, type: "oauth" | "api_key") {
     const runtime = await ModelRuntime.create({
       authPath: join(agentDir, "auth.json"), modelsPath: join(agentDir, "models.json"), modelsStorePath: join(agentDir, "models-store.json"),
       allowModelNetwork: false, refreshOnCreate: false,
     });
     const provider = runtime.getProvider(providerId);
     if (!provider) throw new ConfigError(`Pi has no provider named "${providerId}".`);
-    if (!provider.auth.oauth) throw new ConfigError(`${provider.name} has no sign-in. Store an API key instead.`);
+    if (type === "oauth" && !provider.auth.oauth) throw new ConfigError(`${provider.name} has no sign-in. Store an API key instead.`);
+    if (type === "api_key" && !provider.auth.apiKey?.login) throw new ConfigError(`${provider.name} has no key setup in Pi. Sign in instead.`);
     // Pi's own device id (settings.json deviceId), created the way Pi creates it.
     let deviceId = (await store.read("global")).value.deviceId;
     if (typeof deviceId !== "string" || !deviceId) {
@@ -142,6 +145,8 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
     job.answer = (promptId, value) => {
       const resolve = pending.get(promptId);
       if (!resolve) return false;
+      // A typed secret is hidden from anything the job shows later, like the stored ones.
+      if (job.prompt?.type === "secret" && value.length >= 6) job.secrets.push(value);
       pending.delete(promptId); job.prompt = undefined; resolve(value);
       return true;
     };
@@ -164,8 +169,8 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
       controller.signal.addEventListener("abort", abort, { once: true });
       request.signal?.addEventListener("abort", abort, { once: true });
     });
-    runtime.login(providerId, "oauth", { signal: controller.signal, notify, prompt }, { getDeviceId: () => deviceId as string })
-      .then(() => { if (job.status === "running") { job.status = "done"; job.events.push({ type: "info", message: `Signed in to ${provider.name}. Pi stored the credential in auth.json.` }); } })
+    runtime.login(providerId, type, { signal: controller.signal, notify, prompt }, { getDeviceId: () => deviceId as string })
+      .then(() => { if (job.status === "running") { job.status = "done"; job.events.push({ type: "info", message: `${type === "oauth" ? "Signed in to" : "Set up"} ${provider.name}. Pi stored the credential in auth.json.` }); } })
       .catch(error => { if (job.status === "running") { job.status = "failed"; job.error = error instanceof Error ? error.message : String(error); } });
   }
 
@@ -221,9 +226,9 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
           runPi(job, ["update", "--self"], agentDir);
           return c.json(view(job));
         }
-        case "provider-login": {
-          const job = create(input.action, `Sign in to ${input.provider}`, secrets);
-          try { await providerLogin(job, input.provider); }
+        case "provider-login": case "provider-setup": {
+          const job = create(input.action, `${input.action === "provider-login" ? "Sign in to" : "Set up"} ${input.provider}`, secrets);
+          try { await providerLogin(job, input.provider, input.action === "provider-login" ? "oauth" : "api_key"); }
           catch (error) { jobs.delete(job.id); throw error; }
           return c.json(view(job));
         }
