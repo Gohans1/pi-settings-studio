@@ -4,6 +4,7 @@ import { answerJob, cancelJob, loadJob, startJob } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
+import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
@@ -67,8 +68,12 @@ export function JobPanel({ job, error, onAnswer, onCancel, onDismiss, children }
   job?: JobView; error?: string; onAnswer: (value: string) => void; onCancel: () => void; onDismiss: () => void; children?: ReactNode;
 }) {
   if (!job) return error ? <Alert variant="destructive"><AlertTitle>Could not start</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null;
-  return <section className="job" data-status={job.status} aria-label={job.title} aria-busy={job.status === "running"}>
-    <div className="job-header"><strong>{job.title}</strong><span role="status">{statusText[job.status]}{job.exitCode !== undefined && job.status === "failed" ? ` (exit ${job.exitCode})` : ""}</span></div>
+  return <Card size="sm" role="region" aria-label={job.title} aria-busy={job.status === "running"}>
+    <CardHeader>
+      <CardTitle>{job.title}</CardTitle>
+      <CardAction><Badge role="status" variant={job.status === "failed" ? "destructive" : "secondary"}>{statusText[job.status]}{job.exitCode !== undefined && job.status === "failed" ? ` (exit ${job.exitCode})` : ""}</Badge></CardAction>
+    </CardHeader>
+    <CardContent><div className="job-body">
     {job.events.map((event, index) => event.type === "link"
       ? <p key={index}><a href={event.url} target="_blank" rel="noreferrer noopener">{event.label}</a></p>
       : event.type === "code" ? <p key={index}>Enter <Badge variant="outline" render={<code />}>{event.code}</Badge> at <a href={event.url} target="_blank" rel="noreferrer noopener">{event.url}</a></p>
@@ -78,8 +83,9 @@ export function JobPanel({ job, error, onAnswer, onCancel, onDismiss, children }
     {(job.error || error) && <FieldError>{job.error || error}</FieldError>}
     {/* Output opens by itself when the job fails; the key starts it over at each change of status. */}
     {job.output && <Disclosure key={job.status} label="Output" defaultOpen={job.status === "failed"}><pre>{job.output}</pre></Disclosure>}
-    <div className="actions">{job.status === "running"
+    </div></CardContent>
+    <CardFooter>{job.status === "running"
       ? <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-      : <Button variant="ghost" size="sm" onClick={onDismiss}>Dismiss</Button>}</div>
-  </section>;
+      : <Button variant="ghost" size="sm" onClick={onDismiss}>Dismiss</Button>}</CardFooter>
+  </Card>;
 }

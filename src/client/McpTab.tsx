@@ -10,6 +10,7 @@ import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
 import { Braces, CircleAlert, FileJson, Import, Plus, PlugZap, ScrollText, Server } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { Card, CardContent } from "./components/ui/card";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Empty, EmptyDescription } from "./components/ui/empty";
@@ -202,13 +203,13 @@ export function McpTab({ project }: { project?: string }) {
     const globalEntry = globalServers.find(server => server.name === name);
     if (entry && !entry.override) return <Alert role="note"><AlertDescription>This project's .pi/mcp.json defines its own "{name}" server, which replaces the global one there.</AlertDescription></Alert>;
     const enabled = entry ? entry.enabled : !!globalEntry?.enabled;
-    return <FieldSet className="in-project items-start gap-3 rounded-lg border p-4" aria-label="In this project"><FieldLegend variant="label">In this project</FieldLegend>
+    return <Card size="sm"><CardContent><FieldSet className="items-start" aria-label="In this project"><FieldLegend variant="label">In this project</FieldLegend>
       <div className="switch-row"><Switch aria-label={`Enable ${name} in this project`} checked={enabled} disabled={busy || !globalEntry}
         onCheckedChange={on => void run("project", revision => saveMcpServer(target("project"), name, revision, { enabled: on }), `${name} turned ${on ? "on" : "off"} in this project.`)} />
         <span>{entry ? `${enabled ? "On" : "Off"} here (override in .pi/mcp.json)` : "Same as global"}</span></div>
       {entry && <Button variant="outline" size="sm" disabled={busy}
         onClick={() => void run("project", revision => removeMcpServer(target("project"), name, revision), `${name} follows the global setting again in this project.`)}>Use the global setting</Button>}
-    </FieldSet>;
+    </FieldSet></CardContent></Card>;
   }
 
   function serverList(scope: "global" | "project", list: McpServerView[]) {

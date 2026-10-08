@@ -134,7 +134,7 @@
   .file-path svg { width: --spacing(3.5); height: --spacing(3.5); }
 
   /* Callouts (shadcn Alerts) and job panels in a row keep apart. */
-  :is([data-slot=alert], .job) + :is([data-slot=alert], .job) { margin-top: --spacing(3); }
+  :is([data-slot=alert], [data-slot=card]) + :is([data-slot=alert], [data-slot=card]) { margin-top: --spacing(3); }
   .muted { color: var(--muted-foreground); font-size: var(--text-small); }
   .loading { padding: --spacing(8) 0; color: var(--muted-foreground); }
   @media (prefers-reduced-motion: no-preference) { .loading { animation: appear 160ms var(--ease-out) 300ms backwards; } }
@@ -182,7 +182,7 @@
   .detail-list dd { min-width: 0; overflow-wrap: anywhere; }
   .detail-list dd p { margin: --spacing(1.5) 0 0; }
   .detail-list dd > p:first-child { margin-top: 0; }
-  .detail > .job, .detail > .prompt-preview, .detail > .in-project { margin-top: --spacing(4); }
+  .detail > [data-slot=card], .detail > .prompt-preview { margin-top: --spacing(4); }
 
   /* Forms: fields stack with their hints; groups separate by twice the field gap. */
   .server-form { display: grid; gap: --spacing(4); max-width: 42rem; }
@@ -195,7 +195,7 @@
   .switch-row { display: flex; gap: --spacing(3); align-items: center; font-weight: var(--font-weight-normal); }
 
   /* File contents, prompts and logs. */
-  :is(.log-tail, .prompt pre, .prompt-preview pre, .job pre) { font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
+  :is(.log-tail, .prompt pre, .prompt-preview pre, .job-body pre) { font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
   .log-tail { margin: 0; padding: --spacing(3); max-height: 32rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--muted); border-radius: var(--radius); }
   .resource-editor, .instruction, .raw-editor { display: grid; gap: --spacing(3); }
   :is(.resource-editor, .instruction, .raw-editor) h2 { margin: 0; }
@@ -219,12 +219,11 @@
   /* Models. */
   .key-form { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2) --spacing(3); margin-top: --spacing(5); }
   .key-setup { margin: --spacing(2) 0 0; }
-  .detail > .key-setup + .job { margin-top: --spacing(3); }
+  .detail > .key-setup + [data-slot=card] { margin-top: --spacing(3); }
   .detail > .remove-credential { margin-top: --spacing(4); }
   .model-rows { display: grid; gap: --spacing(2); }
   .model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); align-items: center; }
-  .found-models { display: grid; gap: --spacing(2); padding: --spacing(3); border: 1px solid var(--border); border-radius: var(--radius); }
-  .found-models ul { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); max-height: 20rem; overflow: auto; }
+  .found-models { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); max-height: 20rem; overflow: auto; }
   .pattern-list { list-style: none; margin: 0; padding: 0; display: grid; }
   .pattern-list > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: --spacing(3); min-height: --spacing(9); padding-block: --spacing(1); border-top: 1px solid var(--border); }
   .pattern-list > li:last-child { border-bottom: 1px solid var(--border); }
@@ -237,15 +236,11 @@
   .import-preview p { margin: 0; }
   .import-preview .notes { margin: 0; padding-inline-start: --spacing(5); color: var(--muted-foreground); font-size: var(--text-small); }
   .import-list { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(2); }
-  .import-list li { display: grid; gap: --spacing(1); padding: --spacing(2.5) --spacing(3); border: 1px solid var(--border); border-radius: var(--radius); }
 
   /* Jobs that run Pi: what runs, its state, its questions and its output. */
-  .job { display: grid; gap: --spacing(2); padding: --spacing(3) --spacing(4); border: 1px solid var(--border); border-radius: var(--radius); }
-  .job[data-status=failed] { border-color: var(--destructive); }
-  .job p { margin: 0; }
-  .job-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: --spacing(3); }
-  .job-header [role=status] { color: var(--muted-foreground); font-size: var(--text-small); }
-  .job pre { margin: 0; max-height: 20rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .job-body { display: grid; gap: --spacing(2); }
+  .job-body p { margin: 0; }
+  .job-body pre { margin: 0; max-height: 20rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .job-prompt { display: grid; gap: --spacing(2); }
   .job-results { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); }
   .job-results li { display: flex; flex-wrap: wrap; gap: --spacing(1) --spacing(3); }
@@ -261,8 +256,6 @@
   .package-list > li { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(3); padding: --spacing(2.5) 0; border-top: 1px solid var(--border); }
   .package-list > li:last-child { border-bottom: 1px solid var(--border); }
   .package-list .actions { margin-inline-start: auto; gap: --spacing(1); }
-  .package-filters { flex-basis: 100%; display: grid; gap: --spacing(3); margin: --spacing(1) 0 --spacing(2); padding: --spacing(3) --spacing(4); border: 1px solid var(--border); border-radius: var(--radius); }
-  .package-filters h3 { margin: 0; }
 
   /* Folders Pi loads resources from. */
   .resource-folders { display: grid; gap: --spacing(4); }
@@ -318,7 +311,7 @@
   .pi-panel { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2) --spacing(3); margin-bottom: --spacing(6); }
   .pi-panel > p { margin: 0; }
   .pi-panel code { color: var(--muted-foreground); }
-  .pi-panel > :is([data-slot=alert], .job) { flex-basis: 100%; }
+  .pi-panel > :is([data-slot=alert], [data-slot=card]) { flex-basis: 100%; }
   .not-here { margin-top: --spacing(10); }
   .not-here ul { margin: --spacing(2) 0 0; padding-inline-start: --spacing(5); display: grid; gap: --spacing(2); color: var(--muted-foreground); }
   .scope-footnote { margin-top: --spacing(6); color: var(--muted-foreground); font-size: var(--text-small); }

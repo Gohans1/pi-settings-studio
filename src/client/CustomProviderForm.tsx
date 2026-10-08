@@ -3,6 +3,7 @@ import { CircleAlert, X } from "lucide-react";
 import type { CustomModel, CustomProviderInput, CustomProviderView } from "../shared/models";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Card, CardContent } from "./components/ui/card";
 import { Checkbox } from "./components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
@@ -94,8 +95,9 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
         <Button type="button" variant="outline" size="sm" disabled={listing || !baseUrl.trim() || !api} onClick={() => void listModels()}>{listing ? "Listing…" : "List models from the endpoint"}</Button>
       </div>
       {listError && <FieldError>{listError}</FieldError>}
-      {found && <div role="group" aria-label="Models the endpoint offers" className="found-models">
-        {found.length ? <ul>{found.map(model => <li key={model.id}><Field orientation="horizontal" className="flex-wrap">
+      {found && <Card size="sm"><CardContent><FieldSet>
+        <FieldLegend variant="label">Models the endpoint offers</FieldLegend>
+        {found.length ? <ul className="found-models">{found.map(model => <li key={model.id}><Field orientation="horizontal" className="flex-wrap">
           <Checkbox id={`${id}found-${model.id}`} checked={known.has(model.id) || picked.has(model.id)} disabled={known.has(model.id)}
             onCheckedChange={checked => setPicked(current => { const next = new Set(current); if (checked) next.add(model.id); else next.delete(model.id); return next; })} />
           <FieldLabel htmlFor={`${id}found-${model.id}`} className="flex-wrap"><code>{model.id}</code>{model.name && <span className="muted">{model.name}</span>}
@@ -110,7 +112,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
           <Button type="button" variant="outline" size="sm" onClick={() => setFound(undefined)}>Close</Button>
         </div>
         <FieldDescription>Uses the stored key and headers only while the base URL is unchanged. A key that is a command is not run.</FieldDescription>
-      </div>}
+      </FieldSet></CardContent></Card>}
       <FieldDescription>Other model fields (cost, compat, thinking maps) stay as they are in the file.</FieldDescription>
     </FieldSet>
     {provider && provider.otherKeys.length > 0 && <FieldDescription>Kept as they are: {provider.otherKeys.join(", ")}.</FieldDescription>}
