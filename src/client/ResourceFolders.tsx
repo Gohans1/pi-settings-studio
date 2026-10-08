@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useId, useState, type FormEvent } from "react";
 import { CircleAlert, TriangleAlert } from "lucide-react";
 import type { ResourcePathsView, ResourceType } from "../shared/resources";
 import { changeResourcePath, loadResourcePaths } from "./api";
@@ -7,6 +7,7 @@ import { Button } from "./components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Spinner } from "./components/ui/spinner";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator } from "./components/ui/item";
 import { OptionSelect } from "./OptionSelect";
 import { FilePath, home } from "./PageHeader";
 
@@ -58,23 +59,30 @@ export function ResourceFolders({ type, project, level = 3, onChanged }: {
     {view && <>
       <div className="folder-block">
         <p className="folder-block-title">Pi looks here</p>
-        <ul className="folder-list">{view.standard.map(place => <li key={place.path}>
-          <FilePath path={place.path} folder />{place.scope === "project" && <span className="muted">This project</span>}
-          {!place.exists && <span className="muted">not created</span>}
-        </li>)}</ul>
+        <ItemGroup>{view.standard.map((place, index) => <Fragment key={place.path}>{index > 0 && <ItemSeparator aria-hidden="true" />}<Item size="xs" role="listitem">
+          <ItemContent><FilePath path={place.path} folder />
+            {(place.scope === "project" || !place.exists) && <ItemDescription>{[place.scope === "project" && "This project", !place.exists && "not created"].filter(Boolean).join(" · ")}</ItemDescription>}</ItemContent>
+        </Item></Fragment>)}</ItemGroup>
       </div>
       <div className="folder-block">
         <p className="folder-block-title">Added in settings</p>
-        {view.paths.length ? <ul className="folder-list">{view.paths.map(entry => <li key={entry.scope + entry.entry}>
-          <FilePath path={entry.resolved} folder={entry.kind !== "file"} />
-          {home(entry.resolved) !== entry.entry && <span className="muted">as <code translate="no">{entry.entry}</code></span>}
-          {entry.scope === "project" && <span className="muted">This project</span>}
-          {entry.exists ? <span className="muted">{entry.found} {entry.found === 1 ? singular : plural}{entry.kind === "file" ? " (a file)" : ""}</span>
-            : <span className="folder-missing"><TriangleAlert aria-hidden="true" />Not found</span>}
-          {!!entry.replaces && <span className="folder-missing"><TriangleAlert aria-hidden="true" />{entry.replaces} {entry.replaces === 1 ? "replaces a skill" : "replace skills"} of the same name</span>}
-          {!!entry.skipped && <span className="folder-missing"><TriangleAlert aria-hidden="true" />{entry.skipped} not loaded (same name)</span>}
-          <Button variant="ghost" size="xs" disabled={busy} aria-label={`Remove ${entry.entry}`} onClick={() => void change("DELETE", entry.scope, entry.entry)}>Remove</Button>
-        </li>)}</ul> : <p className="muted">None. Pi only uses the folders above{type === "skills" ? " and packages" : ""}.</p>}
+        {view.paths.length ? <ItemGroup>{view.paths.map((entry, index) => {
+          const notes = [
+            home(entry.resolved) !== entry.entry && <span>as <code translate="no">{entry.entry}</code></span>,
+            entry.scope === "project" && "This project",
+            entry.exists ? `${entry.found} ${entry.found === 1 ? singular : plural}${entry.kind === "file" ? " (a file)" : ""}`
+              : <span className="folder-missing"><TriangleAlert aria-hidden="true" />Not found</span>,
+            !!entry.replaces && <span className="folder-missing"><TriangleAlert aria-hidden="true" />{entry.replaces} {entry.replaces === 1 ? "replaces a skill" : "replace skills"} of the same name</span>,
+            !!entry.skipped && <span className="folder-missing"><TriangleAlert aria-hidden="true" />{entry.skipped} not loaded (same name)</span>,
+          ].filter(Boolean);
+          return <Fragment key={entry.scope + entry.entry}>{index > 0 && <ItemSeparator aria-hidden="true" />}<Item size="xs" role="listitem">
+            <ItemContent>
+              <FilePath path={entry.resolved} folder={entry.kind !== "file"} />
+              <ItemDescription>{notes.map((note, i) => <Fragment key={i}>{i > 0 && " · "}{note}</Fragment>)}</ItemDescription>
+            </ItemContent>
+            <ItemActions><Button variant="ghost" size="xs" disabled={busy} aria-label={`Remove ${entry.entry}`} onClick={() => void change("DELETE", entry.scope, entry.entry)}>Remove</Button></ItemActions>
+          </Item></Fragment>;
+        })}</ItemGroup> : <p className="muted">None. Pi only uses the folders above{type === "skills" ? " and packages" : ""}.</p>}
       </div>
       <form className="add-path" onSubmit={submit} noValidate>
         <Field className="flex-1 basis-72" data-invalid={!!error || undefined}><FieldLabel htmlFor={`${id}-path`}>Folder or file</FieldLabel>

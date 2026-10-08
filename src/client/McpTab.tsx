@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from "react";
 import { toolExposure, type McpFileView, type McpServerInput, type McpServerView } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import { addMcpServer, editMcpServer, loadCodemode, loadMcp, loadMcpLog, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget, loadMcpRaw, saveMcpRaw } from "./api";
@@ -19,6 +19,7 @@ import { OptionSelect } from "./OptionSelect";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Switch } from "./components/ui/switch";
 import { Spinner } from "./components/ui/spinner";
+import { Item, ItemActions, ItemContent, ItemGroup, ItemSeparator, ItemTitle } from "./components/ui/item";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, IconButton, ListItem, MoreMenu, Workbench } from "./Workbench";
@@ -57,14 +58,16 @@ function ServerTools({ server, tools, busy, onTest, onToolExposure }: {
     {tools === undefined ? <p className="muted">Test connections to list this server's tools and choose how each one reaches the model.{" "}
       <Button variant="link" size="xs" onClick={onTest}>Test now</Button></p>
       : !tools.length ? <p className="muted">The last test listed no tools{server.enabled ? "" : "; turn the server on and test again"}.</p>
-      : <ul className="tool-exposures">{tools.map(tool => {
+      : <ItemGroup>{tools.map((tool, index) => {
         const { [tool]: own, ...others } = server.toolExposure;
         const options = [{ value: "", label: `Inherit: ${label(toolExposure({ exposure: server.exposure, toolExposure: others }, tool))}` },
           ...Object.entries(exposureLabels).map(([value, [text]]) => ({ value, label: text }))];
-        return <li key={tool}><code translate="no">{tool}</code>
-          <OptionSelect aria-label={`Exposure of ${server.name}/${tool}`} className="w-52" options={options} value={own ?? ""} disabled={busy || !onToolExposure}
-            onChange={value => onToolExposure?.(tool, value || null)} /></li>;
-      })}</ul>}
+        return <Fragment key={tool}>{index > 0 && <ItemSeparator aria-hidden="true" />}<Item size="xs" role="listitem">
+          <ItemContent><ItemTitle><code translate="no">{tool}</code></ItemTitle></ItemContent>
+          <ItemActions><OptionSelect aria-label={`Exposure of ${server.name}/${tool}`} className="w-52" options={options} value={own ?? ""} disabled={busy || !onToolExposure}
+            onChange={value => onToolExposure?.(tool, value || null)} /></ItemActions>
+        </Item></Fragment>;
+      })}</ItemGroup>}
   </section>;
 }
 

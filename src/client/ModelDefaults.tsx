@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { CircleAlert, TriangleAlert, X } from "lucide-react";
 import type { ModelScopeView, ModelSummary, ProviderView } from "../shared/models";
 import type { SettingsChange, SettingsView } from "../shared/settings";
@@ -9,6 +9,7 @@ import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet 
 import { Input } from "./components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 import { Spinner } from "./components/ui/spinner";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator, ItemTitle } from "./components/ui/item";
 import { OptionSelect } from "./OptionSelect";
 import { ScopeChoice } from "./ScopeChoice";
 import { IconButton } from "./Workbench";
@@ -42,17 +43,19 @@ function EnabledModels({ patterns, scope, ids, inherited, onChange }: {
   const matched = (pattern: string) => scope?.patterns.find(entry => entry.pattern === pattern);
   return <FieldSet>
     <FieldLegend variant="label">Enabled models</FieldLegend>
-    {patterns.length ? <ul className="pattern-list">{patterns.map(pattern => {
+    {patterns.length ? <ItemGroup>{patterns.map((pattern, index) => {
       const match = matched(pattern);
       const count = match && (match.matches ? plural(match.matches, "model", "models") : misses[match.reason ?? "no-match"]);
-      return <li key={pattern}>
-        <code translate="no">{pattern}</code>
-        {match?.examples.length
-          ? <Tooltip><TooltipTrigger render={<span className="muted" />}>{count}</TooltipTrigger><TooltipContent>{match.examples.join(", ")}</TooltipContent></Tooltip>
-          : <span className="muted">{count}</span>}
-        <IconButton type="button" label={`Remove ${pattern}`} onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></IconButton>
-      </li>;
-    })}</ul> : <FieldDescription>{inherited?.length ? `None here, so the global list applies: ${inherited.join(", ")}.` : "None: every model that has a credential."}</FieldDescription>}
+      return <Fragment key={pattern}>{index > 0 && <ItemSeparator aria-hidden="true" />}<Item size="xs" role="listitem">
+        <ItemContent>
+          <ItemTitle><code translate="no">{pattern}</code></ItemTitle>
+          <ItemDescription>{match?.examples.length
+            ? <Tooltip><TooltipTrigger render={<span />}>{count}</TooltipTrigger><TooltipContent>{match.examples.join(", ")}</TooltipContent></Tooltip>
+            : count}</ItemDescription>
+        </ItemContent>
+        <ItemActions><IconButton type="button" label={`Remove ${pattern}`} onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></IconButton></ItemActions>
+      </Item></Fragment>;
+    })}</ItemGroup> : <FieldDescription>{inherited?.length ? `None here, so the global list applies: ${inherited.join(", ")}.` : "None: every model that has a credential."}</FieldDescription>}
     <div className="pattern-add">
       <Input aria-label="Model or pattern" list="enabled-model-options" value={text} placeholder="anthropic/* or provider/model" autoComplete="off" spellCheck={false}
         onChange={event => setText(event.target.value)} onKeyDown={onKey} />

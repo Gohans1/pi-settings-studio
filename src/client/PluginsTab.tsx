@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { ArrowUp, ChevronDown, CircleAlert, FolderOpen, Package, Plus, Puzzle } from "lucide-react";
 import type { PluginsView, ResourceType, ResourceView } from "../shared/resources";
 import { checkPackageUpdates, loadPlugins, restoreSettings, savePackageFilters, savePlugins } from "./api";
@@ -15,6 +15,7 @@ import { Switch } from "./components/ui/switch";
 import { JobPanel, useJob } from "./JobPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Spinner } from "./components/ui/spinner";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator } from "./components/ui/item";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, ListItem, Workbench } from "./Workbench";
@@ -168,18 +169,21 @@ export function PluginsTab({ project }: { project?: string }) {
       <p className="muted m-0">Checks use npm and Git without installing anything. Pi skips local paths, pinned versions and failed lookups; no reported update is not a guarantee that every package is current.</p>
       {checkError && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not check updates</AlertTitle><AlertDescription>{checkError}</AlertDescription></Alert>}
     </div>
-    {view.packages.length ? <ul className="package-list">{view.packages.map(pkg => <li key={pkg.scope + pkg.source}>
-      <code translate="no" className="break-all">{pkg.source}</code>
-      <span className="muted">{pkg.scope === "project" ? "This project · " : ""}{pkg.installed ? "Installed" : "Not installed"}{pkg.filtered ? " · has resource filters" : ""}</span>
+    {/* ItemGroup is a list, which may own only list items: its separators are decoration (axe aria-required-children). */}
+    {view.packages.length ? <ItemGroup>{view.packages.map((pkg, index) => <Fragment key={pkg.scope + pkg.source}>{index > 0 && <ItemSeparator aria-hidden="true" />}<Item size="sm" role="listitem">
+      <ItemContent>
+        <code translate="no" className="break-all">{pkg.source}</code>
+        <ItemDescription>{pkg.scope === "project" ? "This project · " : ""}{pkg.installed ? "Installed" : "Not installed"}{pkg.filtered ? " · has resource filters" : ""}</ItemDescription>
+      </ItemContent>
       {lastCheck?.updates.some(update => update.source === pkg.source && update.scope === pkg.scope) && <Badge variant="secondary"><ArrowUp aria-hidden="true" data-icon="inline-start" />Update available</Badge>}
-      <span className="actions">
+      <ItemActions>
         <Button variant="ghost" size="xs" disabled={busy} aria-label={`Filters for ${pkg.source}`} onClick={() => setFiltering(pkg.scope + pkg.source)}>Filters</Button>
         <Button variant="ghost" size="xs" disabled={job.running || checking} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Update</Button>
         <Button variant="destructive" size="xs" disabled={job.running || checking} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Remove</Button>
-      </span>
+      </ItemActions>
       {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
         onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}
-    </li>)}</ul> : <Empty><EmptyDescription>No packages yet. Install one by its npm name, git URL or folder.</EmptyDescription></Empty>}
+    </Item></Fragment>)}</ItemGroup> : <Empty><EmptyDescription>No packages yet. Install one by its npm name, git URL or folder.</EmptyDescription></Empty>}
   </section>;
   return <>
     <PageHeader title="Plugins" description="Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab."
