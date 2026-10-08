@@ -5,7 +5,7 @@
   ],
   "rules": {
     "shadcn/no-restyle": [
-      "warn",
+      "error",
       {
         "allow": [
           "layout"
@@ -28,18 +28,18 @@
         ]
       }
     ],
-    "shadcn/no-raw-colors": "warn",
+    "shadcn/no-raw-colors": "error",
     "shadcn/no-arbitrary-values": [
-      "warn",
+      "error",
       {
         "allow": [
           "layout"
         ]
       }
     ],
-    "shadcn/no-inline-styles": "warn",
-    "shadcn/require-static-classes": "warn",
-    "shadcn/no-unknown-classes": "warn"
+    "shadcn/no-inline-styles": "error",
+    "shadcn/require-static-classes": "error",
+    "shadcn/no-unknown-classes": "error"
   },
   "overrides": [
     {
