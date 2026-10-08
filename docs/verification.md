@@ -1,3 +1,19 @@
+# Verification — Flexoki design system, 2026-10-08
+
+Scope: Flexoki colour tokens with `light-dark()`, the type scale, spacing and radius scales, layout tokens, working `dark:` variants, the tailwind-merge type scale, removed `!important`, named transitions.
+
+| Check | Result |
+|---|---|
+| `bun test` | 185 passed (36 files), including the design-token guardrails: palette seam, every contrast pair in light and dark, type, spacing and radius scales, no `!important` |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run test:e2e` (axe in light and dark mode) | 45 passed |
+
+Manual browser checks in Chromium against the running service (navigation only, nothing saved): General, MCP, Models, Skills and Plugins in light and dark at 1280px and 390px wide; computed styles of the tab bar, the invalid-field border and button transitions. Found during the run and fixed with a test: once a custom font size existed, tailwind-merge dropped `text-primary-foreground` from small primary buttons (axe reported black text on blue).
+
+Not verified: rendering with Windows' Segoe UI; the checks ran with Linux fonts.
+
+---
+
 # Verification — Pi 1.1.0 and the remaining editors, 2026-10-08
 
 Scope: everything added since the first full run: Pi 1.1.0 update, package filters, theme picker, MCP exposure rules/OAuth/provider auth, MCP import, model discovery, skill/prompt/theme/extension editors, custom `sessionDir`, MCP sign-in state and log, credential check, Update Pi, "Not editable here" notes. Also the fix for listing running `npmCommand` (introduced in `2acb564`, fixed in `30cd0cd`).

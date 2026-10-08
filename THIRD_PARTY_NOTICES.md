@@ -10,7 +10,7 @@
 
 ## shadcn/ui (Base Nova)
 
-`src/client/components/ui/button.tsx`, `tabs.tsx` and `switch.tsx` come from the shadcn registry (base-nova style, retrieved 2026-10-07; `cn` import pointed at `@/lib/utils`). The `data-horizontal`/`data-vertical` custom variants in `src/client/styles.css` come from `shadcn@4.21.4` `dist/tailwind.css`.
+`src/client/components/ui/button.tsx`, `tabs.tsx` and `switch.tsx` come from the shadcn registry (base-nova style, retrieved 2026-10-07; `cn` import pointed at `@/lib/utils`), adapted to the app's tokens: hover colours, the type scale and the transitions. The `data-horizontal`/`data-vertical` custom variants in `src/client/styles.css` come from `shadcn@4.21.4` `dist/tailwind.css`.
 
 MIT License
 
