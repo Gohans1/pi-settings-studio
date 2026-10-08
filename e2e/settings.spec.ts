@@ -231,3 +231,20 @@ test("slash moves to the search field unless the reader is typing", async ({ pag
   await page.getByLabel("Shell command prefix", { exact: true }).press("/");
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("a/");
 });
+
+test("startup tools are a checklist that saves modifiers against Pi's defaults", async ({ page }) => {
+  const tools = page.getByRole("group", { name: "Startup tools" });
+  await expect(tools.getByRole("checkbox", { name: "read", exact: true })).toBeChecked();
+  await expect(tools.getByRole("checkbox", { name: "grep", exact: true })).not.toBeChecked();
+  await tools.getByRole("checkbox", { name: "grep", exact: true }).check();
+  await tools.getByRole("checkbox", { name: "write", exact: true }).uncheck();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status").first()).toContainText("Saved to file");
+  expect(JSON.parse(await readFile(file, "utf8")).defaultTools).toEqual(["+grep", "-write"]);
+  await tools.getByRole("checkbox", { name: "grep", exact: true }).uncheck();
+  await tools.getByRole("checkbox", { name: "write", exact: true }).check();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status").first()).toContainText("Saved to file");
+  expect(JSON.parse(await readFile(file, "utf8")).defaultTools).toBeUndefined();
+  expect((await new AxeBuilder({ page }).include("#row-defaultTools").analyze()).violations).toEqual([]);
+});

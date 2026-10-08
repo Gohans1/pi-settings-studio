@@ -394,6 +394,18 @@
   .keybinding-control { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(2); }
   .keybinding-control input { flex: 1 1 10rem; min-width: 0; font-family: var(--font-mono); }
   .keybinding-control .field-error { flex-basis: 100%; }
+  /* Startup tools: a checklist that takes the whole row. */
+  .setting-row:has(.tool-field) { grid-template-columns: minmax(0, 1fr); }
+  .tool-field { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: --spacing(4) --spacing(8); margin: 0; padding: 0; border: 0; }
+  .tool-group { display: grid; gap: --spacing(2.5); align-content: start; }
+  .tool-group-title { margin: 0; color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-semibold); }
+  .tool-option { display: grid; gap: --spacing(0.5); }
+  .tool-option label { display: flex; align-items: center; gap: --spacing(2.5); width: fit-content; }
+  .tool-option code { font-size: var(--text-small); font-weight: var(--font-weight-semibold); }
+  /* Help sits under the name, past the checkbox. */
+  .tool-option > span { padding-inline-start: --spacing(6.5); }
+  .tool-changed { color: var(--foreground); }
+  .tool-option[data-changed] code::after { content: ""; display: inline-block; width: --spacing(1.5); height: --spacing(1.5); margin-inline-start: --spacing(1.5); vertical-align: middle; border-radius: calc(infinity * 1px); background: var(--primary); }
   .theme-field { display: grid; gap: --spacing(2); margin: 0; padding: 0; border: 0; }
   .theme-field label { display: grid; gap: --spacing(1); color: var(--muted-foreground); font-size: var(--text-small); }
 

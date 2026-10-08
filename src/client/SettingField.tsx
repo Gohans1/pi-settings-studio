@@ -3,6 +3,7 @@ import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 import { ModelMapField } from "./ModelMapField";
 import { ThemeField } from "./ThemeField";
+import { ToolsField } from "./ToolsField";
 
 /** How to fix a value Pi would reject, by the kind of field. */
 const fixes: Record<Field["kind"], string> = {
@@ -14,6 +15,7 @@ const fixes: Record<Field["kind"], string> = {
   select: "Choose one of the listed values.",
   boolean: "Turn it on or off.",
   theme: "Choose a theme Pi has.",
+  tools: "Remove control characters from the tool names in the file.",
 };
 
 /** Pi's default in words: switches read on/off, lists one per line. */
@@ -24,8 +26,8 @@ function shown(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export function SettingField({ field, value, overridden, invalid, scope = "global", disabled = false, project, onChange, onReset }: {
-  field: Field; value: unknown; overridden: boolean; invalid: boolean; scope?: "global" | "project"; disabled?: boolean; project?: string;
+export function SettingField({ field, value, inherited, overridden, invalid, scope = "global", disabled = false, project, onChange, onReset }: {
+  field: Field; value: unknown; inherited?: unknown; overridden: boolean; invalid: boolean; scope?: "global" | "project"; disabled?: boolean; project?: string;
   onChange: (value: unknown) => void; onReset: () => void;
 }) {
   const id = "setting-" + field.key;
@@ -42,6 +44,10 @@ export function SettingField({ field, value, overridden, invalid, scope = "globa
     </select>;
   } else if (field.kind === "theme") {
     control = <ThemeField value={value} project={project} disabled={disabled} onChange={onChange} />;
+  } else if (field.kind === "tools") {
+    const list = (list: unknown) => Array.isArray(list) ? list as string[] : undefined;
+    control = <ToolsField label={field.label} list={overridden ? list(value) : undefined} global={scope === "project" ? list(inherited) : undefined}
+      scope={scope} disabled={disabled} onChange={next => next === undefined ? onReset() : onChange(next)} />;
   } else if (field.kind === "thinkingMap" || field.kind === "compactionMap") {
     control = <ModelMapField kind={field.kind} label={field.label} value={value} disabled={disabled} onChange={onChange} />;
   } else if (field.kind === "lines") {
@@ -63,7 +69,7 @@ export function SettingField({ field, value, overridden, invalid, scope = "globa
     : scope === "project" ? "Inherited" : "";
   return <div className="setting-row" id={"row-" + field.key}>
     <div className="setting-label">
-      <label id={id + "-label"} htmlFor={["boolean", "thinkingMap", "compactionMap", "theme"].includes(field.kind) ? undefined : id}>{field.label}</label>
+      <label id={id + "-label"} htmlFor={["boolean", "thinkingMap", "compactionMap", "theme", "tools"].includes(field.kind) ? undefined : id}>{field.label}</label>
       <code className="setting-key" translate="no">{field.key}</code>
       <p id={id + "-help"}>{field.help}</p>
     </div>

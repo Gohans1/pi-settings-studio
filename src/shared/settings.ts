@@ -22,7 +22,7 @@ export type Field = {
   key: string;
   label: string;
   section: SectionId;
-  kind: "text" | "select" | "number" | "lines" | "boolean" | "thinkingMap" | "compactionMap" | "theme";
+  kind: "text" | "select" | "number" | "lines" | "boolean" | "thinkingMap" | "compactionMap" | "theme" | "tools";
   help: string;
   options?: readonly Option[];
   /** Pi's default, shown when the file has no value. */
@@ -65,7 +65,8 @@ export const fields: Field[] = [
   { key: "defaultProjectTrust", globalOnly: true, label: "Default project trust", section: "interaction", help: "Fallback when a project has no saved trust decision. Global setting only.", defaultValue: "ask", ...select(choices("ask", "always", "never")) },
   { key: "enableSkillCommands", label: "Skill commands", section: "interaction", help: "Register skills as /skill:name commands. Typed /skill:name commands work either way.", defaultValue: true, ...bool },
   // Tools
-  { key: "defaultTools", label: "Startup tools", section: "tools", kind: "lines", help: "One tool per line. Plain names replace the defaults; +name adds and -name removes. An empty list disables built-in tools, not extension or SDK tools.", defaultValue: ["read", "bash", "edit", "write"], schema: lines },
+  // No defaultValue: in a project, "inherited" must be the global list itself, or nothing (shared/tools.ts).
+  { key: "defaultTools", label: "Startup tools", section: "tools", kind: "tools", help: "Tools a session starts with. Pi's defaults are read, bash, edit and write. The file records only what differs from what this scope inherits (+grep, -write); extension and MCP tools are not affected.", schema: lines },
   // Sessions & context
   { key: "sessionDir", label: "Session directory", section: "context", kind: "text", help: "Where sessions are stored. Relative paths resolve from the working directory. PI_CODING_AGENT_SESSION_DIR and --session-dir override it.", schema: text },
   { key: "compaction.enabled", label: "Automatic compaction", section: "context", help: "Summarize older context automatically when it fills up.", defaultValue: true, ...bool },
