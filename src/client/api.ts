@@ -48,6 +48,7 @@ export const removeMcpServer = (target: McpTarget, name: string, revision: strin
 export const previewMcpImport = (target: McpTarget, text: string) => request<McpImportPreview>(mcpUrl(target, "/import/preview"), "POST", { text });
 export const importMcp = (target: McpTarget, revision: string, text: string, names: string[]) =>
   request<McpFileView>(mcpUrl(target, "/import"), "POST", { revision, text, names });
+export const loadMcpLog = (project?: string) => request<{ path: string; exists: boolean; text: string }>(withProject("/api/mcp/log", project));
 export const loadMcpRaw = (target: McpTarget) => request<RawSettings>(mcpUrl(target, "/raw"));
 export const saveMcpRaw = (target: McpTarget, revision: string, text: string) => request<RawSettings>(mcpUrl(target, "/raw"), "PUT", { revision, text });
 export const restoreMcp = (target: McpTarget, revision: string) => request<McpFileView>(mcpUrl(target, "/restore"), "POST", { revision });

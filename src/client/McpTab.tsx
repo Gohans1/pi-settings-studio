@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { McpFileView, McpServerInput, McpServerView } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
-import { addMcpServer, editMcpServer, loadCodemode, loadMcp, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget, loadMcpRaw, saveMcpRaw } from "./api";
+import { addMcpServer, editMcpServer, loadCodemode, loadMcp, loadMcpLog, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget, loadMcpRaw, saveMcpRaw } from "./api";
 import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
 import { CodemodePanel } from "./CodemodePanel";
 import { exposureLabels, McpServerForm } from "./McpServerForm";
@@ -22,9 +22,10 @@ function signIn(server: McpServerView): string | undefined {
   if (server.transport !== "http") return undefined;
   if (server.authProvider) return `Sends the token of the Pi provider ${server.authProvider}.`;
   if (server.headers.some(name => name.toLowerCase() === "authorization")) return "Authorization header.";
-  if (server.oauth?.clientId) return `OAuth with the registered client ${server.oauth.clientId}${server.oauth.hasClientSecret ? " (secret set)" : ""}.`;
-  if (server.oauth?.clientRegistration === "cimd") return "OAuth with Pi's client ID metadata document.";
-  return "OAuth, when the server asks for it.";
+  const state = server.signedIn === undefined ? "" : server.signedIn ? " Signed in." : " Not signed in yet.";
+  if (server.oauth?.clientId) return `OAuth with the registered client ${server.oauth.clientId}${server.oauth.hasClientSecret ? " (secret set)" : ""}.${state}`;
+  if (server.oauth?.clientRegistration === "cimd") return `OAuth with Pi's client ID metadata document.${state}`;
+  return `OAuth, when the server asks for it.${state}`;
 }
 
 function Names({ names }: { names: string[] }) {
@@ -89,6 +90,8 @@ export function McpTab({ project }: { project?: string }) {
   // Running servers is explicit: `pi mcp list` connects every enabled server.
   const check = useJob();
   const [rawScope, setRawScope] = useState<"global" | "project">();
+  const [log, setLog] = useState<{ path: string; exists: boolean; text: string }>();
+  const showLog = () => { setSelected(undefined); setForm(undefined); loadMcpLog(project).then(setLog).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read mcp.log.")); };
   const loadRaw = useCallback(() => loadMcpRaw(target(rawScope ?? "global")), [rawScope, project]);
   const saveRaw = useCallback((revision: string, text: string) => saveMcpRaw(target(rawScope ?? "global"), revision, text), [rawScope, project]);
   const signIn = useJob();
@@ -100,7 +103,7 @@ export function McpTab({ project }: { project?: string }) {
       setViews({ global, project: local }); setCodemode(code);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the MCP settings."); }
   }
-  useEffect(() => { setSelected(undefined); setForm(undefined); setRawScope(undefined); setCodemodeScope("global"); }, [project]);
+  useEffect(() => { setSelected(undefined); setForm(undefined); setRawScope(undefined); setLog(undefined); setCodemodeScope("global"); }, [project]);
   useEffect(() => { void refresh(); }, [project, codemodeProject]);
 
   async function run(scope: "global" | "project", change: (revision: string) => Promise<McpFileView>, done: string, options: { undoable?: boolean } = {}) {
@@ -157,7 +160,7 @@ export function McpTab({ project }: { project?: string }) {
   const inProject = (name: string) => projectServers.find(server => server.name === name);
   const current = selected && selected !== "codemode" ? (views[selected.scope]?.servers ?? []).find(server => server.name === selected.name) : undefined;
   const isSelected = (scope: "global" | "project", name: string) => selected !== "codemode" && selected?.scope === scope && selected.name === name;
-  const choose = (next: Selection) => { setSelected(next); setForm(undefined); };
+  const choose = (next: Selection) => { setSelected(next); setForm(undefined); setLog(undefined); };
 
   /** The global server's state in the chosen project: an override switch, or a replacement note. */
   function projectControls(name: string) {
@@ -192,7 +195,14 @@ export function McpTab({ project }: { project?: string }) {
   }
 
   let detail: ReactNode = <section className="detail"><p className="empty">Select a server to see its details.</p></section>;
-  if (form?.mode === "import" && views[form.scope]) {
+  if (log && !form && !selected) {
+    detail = <section className="detail" aria-labelledby="log-title">
+      <h2 id="log-title">mcp.log</h2>
+      <p className="muted">Messages servers log while Pi runs, newest last; known secrets are hidden. <code>{log.path}</code></p>
+      {log.exists ? <pre className="log-tail" tabIndex={0}>{log.text || "Empty."}</pre> : <p className="empty">No server has logged anything yet.</p>}
+      <div className="actions detail-actions"><Button variant="outline" onClick={showLog}>Reload</Button><Button variant="outline" onClick={() => setLog(undefined)}>Close</Button></div>
+    </section>;
+  } else if (form?.mode === "import" && views[form.scope]) {
     const scope = form.scope;
     detail = <McpImportPanel key={scope} target={target(scope)} revision={views[scope]!.revision} onCancel={() => setForm(undefined)}
       onImported={(next, names) => {
@@ -259,6 +269,7 @@ export function McpTab({ project }: { project?: string }) {
             <Button variant="outline" size="sm" disabled={busy || !!global.error} aria-label="Import servers into the global mcp.json" onClick={() => setForm({ mode: "import", scope: "global" })}>Import</Button>
             <Button variant="outline" size="sm" disabled={check.running} onClick={() => void check.start({ action: "mcp-test", ...(project ? { project } : {}) })}>Test connections</Button>
             <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRawScope("global")} aria-label="Edit global mcp.json as JSON">Edit JSON</Button>
+            <Button variant="ghost" size="sm" onClick={showLog} aria-label="Show mcp.log">Log</Button>
           </div>
           {globalServers.length ? serverList("global", globalServers) : !global.error && <p className="empty">No MCP servers yet.</p>}
         </section>

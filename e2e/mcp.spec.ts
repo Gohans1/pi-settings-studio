@@ -193,3 +193,22 @@ startup_timeout_sec = 20`);
   await expect(page.getByRole("status")).toContainText("Restored");
   expect((await readServers()).context7).toBeUndefined();
 });
+
+test("an OAuth server shows its sign-in state, and mcp.log is shown with secrets hidden", async ({ page }) => {
+  const servers = JSON.parse(await readFile(file, "utf8"));
+  servers.mcpServers.sentry = { url: "https://mcp.sentry.dev/mcp" };
+  servers.mcpServers.linear = { url: "https://mcp.linear.app/mcp" };
+  await writeFile(file, JSON.stringify(servers));
+  await writeFile(join(root, "agent", "mcp-auth.json"), JSON.stringify({ "mcp__sentry|https://mcp.sentry.dev/mcp": { tokens: { access_token: "fixture-oauth-token" } } }));
+  await writeFile(join(root, "agent", "mcp.log"), "2026-10-08T06:00:00.000Z [search] error key fixture-secret-value rejected\n");
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: /^sentry/ }).click();
+  await expect(page.getByRole("region", { name: "sentry" })).toContainText("Signed in.");
+  await page.getByRole("button", { name: /^linear/ }).click();
+  await expect(page.getByRole("region", { name: "linear" })).toContainText("Not signed in yet.");
+  await page.getByRole("button", { name: "Show mcp.log" }).click();
+  const log = page.getByRole("region", { name: "mcp.log" });
+  await expect(log).toContainText("[search] error key ‹hidden› rejected");
+  expect(await page.content()).not.toMatch(/fixture-secret-value|fixture-oauth-token/);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

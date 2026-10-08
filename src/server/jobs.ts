@@ -24,7 +24,7 @@ export function piCommand(): string[] {
 }
 
 /** Every credential string the app knows, so command output can never echo one to the browser. */
-async function knownSecrets(store: ConfigStore, projectStore?: ConfigStore): Promise<string[]> {
+export async function knownSecrets(store: ConfigStore, projectStore?: ConfigStore): Promise<string[]> {
   const found: string[] = [];
   const strings = (value: unknown): void => {
     if (typeof value === "string") found.push(value);
@@ -52,10 +52,12 @@ async function knownSecrets(store: ConfigStore, projectStore?: ConfigStore): Pro
   }
   const models = await read(store, "global", "models.json");
   if (isRecord(models.providers)) for (const provider of Object.values(models.providers)) if (isRecord(provider)) { strings(provider.apiKey); strings(provider.headers); }
+  // "Bearer <token>": the token can also show up on its own.
+  for (const value of [...found]) { const token = /^\s*(?:Bearer|Basic|Token|Bot)\s+(\S+)\s*$/i.exec(value)?.[1]; if (token) found.push(token); }
   return [...new Set(found.filter(value => value.length >= 6))].sort((a, b) => b.length - a.length);
 }
 
-function redact<T>(value: T, secrets: string[]): T {
+export function redact<T>(value: T, secrets: string[]): T {
   if (typeof value === "string") return secrets.reduce((text, secret) => text.split(secret).join("‹hidden›"), value) as T;
   if (Array.isArray(value)) return value.map(item => redact(item, secrets)) as T;
   if (isRecord(value)) return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, redact(item, secrets)])) as T;

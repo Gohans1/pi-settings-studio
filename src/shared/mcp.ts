@@ -26,6 +26,8 @@ export type McpServerView = {
   /** OAuth settings without the client secret, which is only reported as set. */
   oauth?: McpOAuthView;
   authProvider?: string;
+  /** For servers that sign in with OAuth: whether mcp-auth.json holds tokens. */
+  signedIn?: boolean;
 };
 
 export type McpOAuthView = {

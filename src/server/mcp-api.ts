@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { McpFileView, McpOAuthInput, McpOAuthView, McpServerInput, McpServerView, NamedValue } from "../shared/mcp.ts";
-import { isRecord, MCP_EXPOSURES, readMcpServers, updateMcpServer, type McpEntry } from "./mcp-config.ts";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { isRecord, MCP_EXPOSURES, mcpNamespace, readMcpServers, updateMcpServer, type McpEntry } from "./mcp-config.ts";
+import { knownSecrets, redact } from "./jobs.ts";
 import { maskArgs, maskUrl, unmaskArgs, unmaskUrl } from "./mcp-secrets.ts";
 import { maskJson, mcpSecrets, unmaskJson } from "./json-secrets.ts";
 import { convertMcpConfig } from "./mcp-import.ts";
@@ -46,7 +49,23 @@ function buildOAuth(input: McpOAuthInput, previous: unknown): Record<string, unk
   return Object.keys(next).length ? next : undefined;
 }
 
-function toView({ name, raw, config, error, override }: McpEntry): McpServerView {
+type SignedIn = (name: string, url: string) => boolean;
+/**
+ * Whether Pi holds OAuth tokens for a server in mcp-auth.json, keyed by namespace and URL or, from
+ * older versions, by URL alone (Pi 1.1.0 dist/extensions/mcp/oauth.js, storeKeys). Values are never read out.
+ */
+async function signedInReader(agentDir: string): Promise<SignedIn> {
+  let states: Record<string, unknown> = {};
+  try { const value = JSON.parse(await readFile(join(agentDir, "mcp-auth.json"), "utf8")); if (isRecord(value)) states = value; } catch { /* none stored */ }
+  return (name, url) => {
+    if (!URL.canParse(url)) return false;
+    const key = String(new URL(url));
+    const state = states[`${mcpNamespace(name)}|${key}`] ?? states[key];
+    return isRecord(state) && isRecord(state.tokens);
+  };
+}
+
+function toView({ name, raw, config, error, override }: McpEntry, signedIn?: SignedIn): McpServerView {
   // An override shows the merged server: the global entry with the project's switches.
   const entry = override && config ? config as unknown as Record<string, unknown> : isRecord(raw) ? raw : {};
   const args = strings(entry.args);
@@ -70,6 +89,9 @@ function toView({ name, raw, config, error, override }: McpEntry): McpServerView
     toolExposure: isRecord(entry.toolExposure) ? Object.fromEntries(Object.entries(entry.toolExposure).filter(([, value]) => typeof value === "string")) as Record<string, string> : {},
     ...(isRecord(entry.oauth) ? { oauth: oauthView(entry.oauth) } : {}),
     authProvider: isRecord(entry.auth) ? text(entry.auth.provider) : undefined,
+    // Pi uses OAuth for HTTP servers without auth and without an Authorization header (runtime.js usesOAuth).
+    ...(signedIn && !error && url && entry.auth === undefined && !Object.keys(isRecord(entry.headers) ? entry.headers : {}).some(header => header.toLowerCase() === "authorization")
+      ? { signedIn: signedIn(name, url) } : {}),
   };
 }
 
@@ -83,7 +105,8 @@ export async function mcpView(store: ConfigStore, scope: Scope = "global", base?
     return { path, revision: "invalid", exists: true, hasBackup, error: error.message, servers: [] };
   }
   const { servers, error, autoEnableCodemode } = readMcpServers(document.value, base);
-  return { path, revision: document.revision, exists: document.exists, hasBackup, ...(error ? { error } : {}), autoEnableCodemode, servers: servers.map(toView) };
+  const signedIn = await signedInReader(dirname(store.path("global", "mcp.json")));
+  return { path, revision: document.revision, exists: document.exists, hasBackup, ...(error ? { error } : {}), autoEnableCodemode, servers: servers.map(entry => toView(entry, signedIn)) };
 }
 
 const serverPatch = z.object({
@@ -215,6 +238,19 @@ export function mcpRoutes(store: ConfigStore, registry: ProjectRegistry) {
   const importText = z.string().min(1).max(60_000);
 
   return new Hono()
+    // Before the /:scope routes, which would take "log" for a scope.
+    .get("/log", async c => {
+      const path = join(dirname(store.path("global", "mcp.json")), "mcp.log");
+      const file = Bun.file(path);
+      if (!(await file.exists())) return c.json({ path, exists: false, text: "" });
+      // The last 256 KiB at most; a cut first line is dropped.
+      const cut = file.size > 262_144;
+      const lines = (await file.slice(-262_144).text()).split("\n").slice(cut ? 1 : 0);
+      if (lines.at(-1) === "") lines.pop();
+      const project = c.req.query("project");
+      const secrets = await knownSecrets(store, project === undefined ? undefined : registry.storeFor(await registry.require(project)));
+      return c.json({ path, exists: true, text: redact(lines.slice(-300).join("\n") + "\n", secrets) });
+    })
     .post("/:scope/import/preview", async c => {
       const { scope, store, base } = await ctx(c);
       const { text } = z.object({ text: importText }).strict().parse(await c.req.json());
