@@ -15,6 +15,7 @@ import { instructionRoutes } from "./instructions.ts";
 import { keybindingRoutes } from "./keybindings.ts";
 import { jobRoutes } from "./jobs.ts";
 import { themeRoutes } from "./themes.ts";
+import { resourceFileRoutes } from "./resource-files.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
@@ -49,7 +50,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   // Instruction files are free text and can be long; every other request stays small.
   const smallBodies = bodyLimit({ maxSize: 64 * 1024, onError: c => c.json({ error: "Request exceeds 64 KiB." }, 413) });
   const textBodies = bodyLimit({ maxSize: 1024 * 1024 + 4096, onError: c => c.json({ error: "Request exceeds 1 MiB." }, 413) });
-  app.use("/api/*", (c, next) => (c.req.path.startsWith("/api/instructions/") ? textBodies : smallBodies)(c, next));
+  app.use("/api/*", (c, next) => (/^\/api\/(instructions\/|resource-files)/.test(c.req.path) ? textBodies : smallBodies)(c, next));
   /** Global settings use the app's store; project settings need a known project in ?project=. */
   async function storeFor(scope: Scope, project: string | undefined): Promise<ConfigStore> {
     return scope === "global" ? store : registry.storeFor(await registry.require(project));
@@ -124,6 +125,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/keybindings", keybindingRoutes(store));
   app.route("/api/jobs", jobRoutes(store, registry, agentDir));
   app.route("/api/themes", themeRoutes(store, registry, agentDir));
+  app.route("/api/resource-files", resourceFileRoutes(store, registry, agentDir));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));
   app.onError((error, c) => {

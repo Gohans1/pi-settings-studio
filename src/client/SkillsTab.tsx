@@ -4,8 +4,10 @@ import type { ResourceView, SkillsView } from "../shared/resources";
 import { loadSkills, saveSkills } from "./api";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
+import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 
-function SkillDetail({ skill }: { skill: ResourceView }) {
+function SkillDetail({ skill, onEdit }: { skill: ResourceView; onEdit: () => void }) {
+  const editable = skill.origin === "top-level";
   return <section className="detail" aria-labelledby="skill-title">
     <h2 id="skill-title">{skill.name}</h2>
     {!skill.enabled && <p className="notice">Turned off, so Pi does not load it.</p>}
@@ -17,6 +19,7 @@ function SkillDetail({ skill }: { skill: ResourceView }) {
       <div><dt>Source</dt><dd>{skill.group}</dd></div>
       <div><dt>File</dt><dd><code>{skill.path}</code></dd></div>
     </dl>
+    <div className="actions detail-actions"><Button variant="outline" aria-label={`${editable ? "Edit" : "View"} files of ${skill.name}`} onClick={onEdit}>{editable ? "Edit files" : "View files"}</Button></div>
   </section>;
 }
 
@@ -27,13 +30,14 @@ export function SkillsTab({ project }: { project?: string }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<"edit" | "new">();
 
   async function refresh() {
     setError("");
     try { setView(await loadSkills(project)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the skills."); }
   }
-  useEffect(() => { setSelected(undefined); void refresh(); }, [project]);
+  useEffect(() => { setSelected(undefined); setMode(undefined); void refresh(); }, [project]);
 
   async function toggle(skills: ResourceView[], enabled: boolean, label = skills[0]?.name) {
     if (!view || !skills.length) return;
@@ -63,6 +67,7 @@ export function SkillsTab({ project }: { project?: string }) {
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Reload</Button></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading skills…</div> : <div className="master-detail">
       <section className="master" aria-label="Skills list">
+        <div className="actions add-button"><Button variant="outline" size="sm" onClick={() => setMode("new")}>New skill</Button></div>
         <p className="muted list-count">{skills.filter(skill => skill.enabled).length} of {skills.length} skills on</p>
         {!visible.length && <p className="empty">{skills.length ? "No matching skills." : "No skills found. Add skill folders to ~/.pi/agent/skills."}</p>}
         {groups.map(group => {
@@ -73,7 +78,7 @@ export function SkillsTab({ project }: { project?: string }) {
               <Switch aria-label={`Enable every skill in ${group}`} checked={allOn} disabled={busy}
                 onCheckedChange={enabled => void toggle(members.filter(skill => skill.enabled !== enabled), enabled, `All skills in ${group}`)} /></div>
             <ul className="item-list">{members.map(skill => <li key={skill.path}>
-              <button type="button" aria-pressed={skill.path === selected} onClick={() => setSelected(skill.path)}>
+              <button type="button" aria-pressed={skill.path === selected} onClick={() => { setSelected(skill.path); setMode(undefined); }}>
                 <span className="item-name">{skill.name}</span>
                 <span className="item-state">{!skill.enabled ? "off" : skill.disableModelInvocation ? "command only" : ""}</span>
               </button>
@@ -82,7 +87,12 @@ export function SkillsTab({ project }: { project?: string }) {
           </div>;
         })}
       </section>
-      {current ? <SkillDetail skill={current} /> : <section className="detail"><p className="empty">Select a skill to see its details.</p></section>}
+      {mode === "new" ? <NewResourceForm type="skills" project={project} onCancel={() => setMode(undefined)}
+          onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
+        : current && mode === "edit" ? <ResourceEditor key={current.path} type="skills" path={current.path} name={current.name} editable={current.origin === "top-level"}
+          project={project} onMessage={setMessage} onClose={() => { setMode(undefined); void refresh(); }} />
+        : current ? <SkillDetail skill={current} onEdit={() => setMode("edit")} />
+        : <section className="detail"><p className="empty">Select a skill to see its details.</p></section>}
     </div>}
   </>;
 }

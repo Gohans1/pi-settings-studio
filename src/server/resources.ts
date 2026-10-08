@@ -122,7 +122,7 @@ type ScopeName = "global" | "project";
 const scopeOf = (item: ResolvedResource): ScopeName => item.metadata.scope === "project" ? "project" : "global";
 
 /** Shared by Skills and Plugins: read both files, resolve, and toggle within one scope's file. */
-function resourceContext(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
+export function resourceContext(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
   async function load(project: string | undefined) {
     const dir = project === undefined ? undefined : await registry.require(project);
     const projectStore = dir ? registry.storeFor(dir) : undefined;

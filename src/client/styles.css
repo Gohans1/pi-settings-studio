@@ -118,6 +118,10 @@ textarea { resize: vertical; }
 .server-form legend { padding: 0 4px; font-weight: 560; }
 .named-rows { display: grid; gap: 8px; justify-items: start; }
 .oauth-fields { display: grid; gap: 10px; }
+.resource-editor { display: grid; gap: 12px; }
+.resource-editor label { display: grid; gap: 6px; font-weight: 560; }
+.resource-editor textarea { width: 100%; font: 12px/1.6 ui-monospace, monospace; font-weight: 400; tab-size: 2; }
+.resource-editor .file-list { display: flex; flex-wrap: wrap; gap: 4px; }
 .found-models { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); }
 .found-models ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow: auto; }
 .found-models label { flex-wrap: wrap; gap: 8px; }

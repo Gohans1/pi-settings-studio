@@ -9,7 +9,7 @@ import { resolveResources } from "./resources.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 
 // Pi's built-in themes ship as JSON next to its interactive mode (dist/modes/interactive/theme).
-const BUILTIN_DIR = join(dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"))), "modes", "interactive", "theme");
+export const BUILTIN_DIR = join(dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"))), "modes", "interactive", "theme");
 
 async function describe(path: string, source: ThemeView["source"]): Promise<ThemeView> {
   const file = path.split(/[\\/]/).pop()!;

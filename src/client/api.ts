@@ -2,7 +2,7 @@ import type { SettingsView, SettingsChange } from "../shared/settings";
 import type { McpFileView, McpImportPreview, McpServerInput } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
-import type { PluginsView, SkillsView } from "../shared/resources";
+import type { PluginsView, ResourceFileView, ResourceType, SkillsView } from "../shared/resources";
 import type { AgentInput, AgentsView } from "../shared/agents";
 import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
@@ -116,3 +116,9 @@ export const loadModelIds = () => request<string[]>("/api/models/ids");
 export const savePackageFilters = (scope: Scope, revision: string, source: string, filters: Record<string, unknown>, project?: string) =>
   request<PluginsView>(withProject("/api/plugins/packages", project), "PUT", { scope, revision, source, filters });
 export const loadThemes = (project?: string) => request<ThemeView[]>(withProject("/api/themes", project));
+export const loadResourceFile = (type: ResourceType, path: string, file?: string, project?: string) =>
+  request<ResourceFileView>(withProject(`/api/resource-files?type=${type}&path=${encodeURIComponent(path)}${file ? `&file=${encodeURIComponent(file)}` : ""}`, project));
+export const saveResourceFile = (body: { type: ResourceType; path: string; file: string; revision: string; text: string }, project?: string) =>
+  request<{ revision: string }>(withProject("/api/resource-files", project), "PUT", body);
+export const createResource = (body: { scope: "global" | "project"; type: ResourceType; name: string; description?: string }, project?: string) =>
+  request<{ type: ResourceType; path: string }>(withProject("/api/resource-files", project), "POST", body);

@@ -44,3 +44,36 @@ test("skills can be inspected, searched and switched one by one or by group", as
   await expect(page.getByRole("button", { name: /^gamma/ })).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("a skill and its files are edited, package skills are read-only, and a new skill is created", async ({ page }) => {
+  await mkdir(join(agent, "skills/alpha/references"), { recursive: true });
+  await writeFile(join(agent, "skills/alpha/references/notes.md"), "Old notes.\n");
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^alpha/ }).click();
+  await page.getByRole("button", { name: "Edit files of alpha" }).click();
+  const editor = page.getByRole("form", { name: "Edit alpha" });
+  await expect(editor.getByLabel("Content of SKILL.md")).toHaveValue(/Alpha does things/);
+  await editor.getByRole("button", { name: "references/notes.md" }).click();
+  await editor.getByLabel("Content of references/notes.md").fill("New notes.\n");
+  await editor.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("status")).toContainText("Saved references/notes.md");
+  expect(await readFile(join(agent, "skills/alpha/references/notes.md"), "utf8")).toBe("New notes.\n");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await editor.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: /^gamma/ }).click();
+  await page.getByRole("button", { name: "View files of gamma" }).click();
+  const viewer = page.getByRole("form", { name: "View gamma" });
+  await expect(viewer.getByLabel("Content of SKILL.md")).toHaveAttribute("readonly", "");
+  await expect(viewer).toContainText("From the package ./pkgs/my-pack");
+  await viewer.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: "New skill" }).click();
+  const create = page.getByRole("form", { name: "New skill" });
+  await create.getByLabel("Name").fill("delta");
+  await create.getByLabel("Description").fill("Delta: handles the fourth case.");
+  await create.getByRole("button", { name: "Create skill" }).click();
+  await expect(page.getByRole("form", { name: "Edit delta" })).toBeVisible();
+  expect(await readFile(join(agent, "skills/delta/SKILL.md"), "utf8")).toBe('---\nname: delta\ndescription: "Delta: handles the fourth case."\n---\n\n');
+  await expect(page.getByText("4 of 4 skills on")).toBeVisible();
+});
