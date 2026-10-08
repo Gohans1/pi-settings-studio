@@ -1,6 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import type { PackageFilters, PackageView } from "../shared/resources";
 import { Button } from "./components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
+import { Textarea } from "./components/ui/textarea";
+import { OptionSelect } from "./OptionSelect";
+
+const choiceOptions = [{ value: "all", label: "Everything the package allows" }, { value: "none", label: "None" }, { value: "only", label: "Only these patterns" }] as const;
+const autoloadOptions = [{ value: "default", label: "Default" }, { value: "on", label: "true" }, { value: "off", label: "false: in a project, filter the global package instead of replacing it" }];
 
 const TYPES = [["extensions", "Extensions", "Extension"], ["skills", "Skills", "Skill"], ["prompts", "Prompts", "Prompt"], ["themes", "Themes", "Theme"]] as const;
 type Choice = "all" | "none" | "only";
@@ -15,6 +21,7 @@ export function PackageFilterForm({ pkg, busy, onSave, onCancel }: { pkg: Packag
   const [patterns, setPatterns] = useState(() => Object.fromEntries(TYPES.map(([key]) => [key, (filters[key] ?? []).join("\n")])) as Record<string, string>);
   const [autoload, setAutoload] = useState(filters.autoload === undefined ? "default" : filters.autoload ? "on" : "off");
   const title = `Filters for ${pkg.source}`;
+  const id = useId();
   function submit(event: FormEvent) {
     event.preventDefault();
     const patch: FilterPatch = { autoload: autoload === "default" ? null : autoload === "on" };
@@ -26,17 +33,15 @@ export function PackageFilterForm({ pkg, busy, onSave, onCancel }: { pkg: Packag
   }
   return <form className="package-filters" aria-label={title} onSubmit={submit}>
     <h3>{title}</h3>
-    <p className="muted">Filters narrow what the package declares; they cannot add resources. Patterns are relative to the package root: globs, <code>!pattern</code> to exclude, <code>+path</code> or <code>-path</code> for one exact file.</p>
-    {TYPES.map(([key, label, singular]) => <div className="filter-row" key={key}>
-      <label>{label}<select aria-label={label} value={choices[key]} onChange={event => setChoices(old => ({ ...old, [key]: event.target.value as Choice }))}>
-        <option value="all">Everything the package allows</option><option value="none">None</option><option value="only">Only these patterns</option>
-      </select></label>
-      {choices[key] === "only" && <textarea aria-label={`${singular} patterns`} rows={3} spellCheck={false} value={patterns[key]}
+    <FieldDescription>Filters narrow what the package declares; they cannot add resources. Patterns are relative to the package root: globs, <code>!pattern</code> to exclude, <code>+path</code> or <code>-path</code> for one exact file.</FieldDescription>
+    {TYPES.map(([key, label, singular]) => <Field key={key}>
+      <FieldLabel htmlFor={id + key}>{label}</FieldLabel>
+      <OptionSelect id={id + key} className="w-full" options={choiceOptions} value={choices[key]!} onChange={choice => setChoices(old => ({ ...old, [key]: choice }))} />
+      {choices[key] === "only" && <Textarea aria-label={`${singular} patterns`} className="font-mono" rows={3} spellCheck={false} value={patterns[key]}
         placeholder={`${key}/*`} onChange={event => setPatterns(old => ({ ...old, [key]: event.target.value }))} />}
-    </div>)}
-    <label>Autoload<select aria-label="Autoload" value={autoload} onChange={event => setAutoload(event.target.value)}>
-      <option value="default">Default</option><option value="on">true</option><option value="off">false: in a project, filter the global package instead of replacing it</option>
-    </select></label>
+    </Field>)}
+    <Field><FieldLabel htmlFor={id + "autoload"}>Autoload</FieldLabel>
+      <OptionSelect id={id + "autoload"} className="w-full" options={autoloadOptions} value={autoload} onChange={setAutoload} /></Field>
     <div className="actions"><Button type="submit" disabled={busy}>Save filters</Button><Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;
 }

@@ -1,10 +1,15 @@
-import { useEffect, useState } from "react";
-import { ChevronDown, FolderOpen, Package, Plus, Puzzle } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { ChevronDown, CircleAlert, FolderOpen, Package, Plus, Puzzle } from "lucide-react";
 import type { PluginsView, ResourceType, ResourceView } from "../shared/resources";
 import { loadPlugins, restoreSettings, savePackageFilters, savePlugins } from "./api";
 import { PackageFilterForm, type FilterPatch } from "./PackageFilterForm";
 import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Field, FieldLabel } from "./components/ui/field";
+import { Input } from "./components/ui/input";
+import { OptionSelect } from "./OptionSelect";
 import { Switch } from "./components/ui/switch";
 import { JobPanel, useJob } from "./JobPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
@@ -29,8 +34,8 @@ function PluginDetail({ item, onOpen }: { item: ResourceView; onOpen: () => void
   return <section className="detail" aria-labelledby="plugin-title">
     <header className="detail-header"><h2 id="plugin-title">{item.name}</h2>
       {!builtin && <div className="actions"><Button variant="outline" aria-label={`${editable ? "Edit" : "View"} ${item.name}`} onClick={onOpen}>{editable ? "Edit" : "View"}</Button></div>}</header>
-    {!item.enabled && <p className="notice">Turned off, so Pi does not load it.</p>}
-    {builtin && builtinNotes[item.name] && <p className="notice">{builtinNotes[item.name]}</p>}
+    {!item.enabled && <Alert role="note"><AlertDescription>Turned off, so Pi does not load it.</AlertDescription></Alert>}
+    {builtin && builtinNotes[item.name] && <Alert role="note"><AlertDescription>{builtinNotes[item.name]}</AlertDescription></Alert>}
     <dl className="detail-list">
       <div><dt>Type</dt><dd>{builtin ? "built-in extension" : typeLabels[item.type]}</dd></div>
       {item.description && <div><dt>Description</dt><dd>{item.description}</dd></div>}
@@ -57,6 +62,7 @@ export function PluginsTab({ project }: { project?: string }) {
   const [folders, setFolders] = useState(0);
   // pi install / remove / update run on click; the list reloads when they finish.
   const job = useJob(() => void refresh());
+  const id = useId();
 
   async function refresh() {
     setError("");
@@ -108,9 +114,11 @@ export function PluginsTab({ project }: { project?: string }) {
     <header><h2 id="packages-title">Packages</h2>
       <p className="muted">Installed with pi install in this environment. Packages can run code: install only sources you trust.</p></header>
     <form className="install-form" onSubmit={event => { event.preventDefault(); void job.start({ action: "package-install", source: source.trim(), ...(installScope === "project" && project ? { project } : {}) }); }}>
-      <label>Package source<input value={source} placeholder="npm:@scope/name, git:github.com/user/repo or ./path" autoComplete="off" spellCheck={false} onChange={event => setSource(event.target.value)} /></label>
-      {project && <label>For<select aria-label="Install for" value={installScope} onChange={event => setInstallScope(event.target.value as "global" | "project")}>
-        <option value="global">Every project</option><option value="project">This project only</option></select></label>}
+      <Field className="flex-1 basis-72"><FieldLabel htmlFor={id + "source"}>Package source</FieldLabel>
+        <Input id={id + "source"} value={source} placeholder="npm:@scope/name, git:github.com/user/repo or ./path" autoComplete="off" spellCheck={false} onChange={event => setSource(event.target.value)} /></Field>
+      {project && <Field className="w-auto"><FieldLabel htmlFor={id + "for"}>For</FieldLabel>
+        <OptionSelect id={id + "for"} value={installScope} onChange={setInstallScope}
+          options={[{ value: "global", label: "Every project" }, { value: "project", label: "This project only" }] as const} /></Field>}
       <Button type="submit" disabled={job.running || !source.trim()}>Install</Button>
     </form>
     <JobPanel job={job.job} error={job.error} onAnswer={value => void job.answer(value)} onCancel={() => void job.cancel()} onDismiss={job.dismiss} />
@@ -126,7 +134,7 @@ export function PluginsTab({ project }: { project?: string }) {
       </span>
       {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
         onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}
-    </li>)}</ul> : <p className="empty">No packages yet. Install one by its npm name, git URL or folder.</p>}
+    </li>)}</ul> : <Empty><EmptyDescription>No packages yet. Install one by its npm name, git URL or folder.</EmptyDescription></Empty>}
   </section>;
   return <>
     <PageHeader title="Plugins" description="Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab."
@@ -137,13 +145,14 @@ export function PluginsTab({ project }: { project?: string }) {
       </DropdownMenu>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => void restore(undo) }} />
-    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></div>}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription>
+      <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <Workbench open={open} onBack={back} backLabel="All plugins" list={<section aria-label="Plugin list">
       <div className="list-search"><SearchField label="Search plugins" placeholder="Search plugins…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned">
         <li><ListItem selected={pinned === "packages"} onSelect={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }} icon={Package} name="Packages" state={view.packages.length} /></li>
         <li><ListItem selected={pinned === "folders"} onSelect={() => { setPinned("folders"); setSelected(undefined); setMode(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds plugins" /></li></ul>
-      {!visible.length && <p className="empty">{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</p>}
+      {!visible.length && <Empty><EmptyDescription>{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</EmptyDescription></Empty>}
       {groups.map(group => {
         const members = visible.filter(item => item.group === group);
         return <div key={group} className="item-group">

@@ -1,8 +1,12 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { TriangleAlert } from "lucide-react";
+import { CircleAlert, TriangleAlert } from "lucide-react";
 import type { ResourcePathsView, ResourceType } from "../shared/resources";
 import { changeResourcePath, loadResourcePaths } from "./api";
+import { Alert, AlertDescription } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Field, FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
+import { Input } from "./components/ui/input";
+import { OptionSelect } from "./OptionSelect";
 import { FilePath, home } from "./PageHeader";
 
 const TITLES: Record<ResourceType, string> = { skills: "Skill folders", extensions: "Extension folders", prompts: "Prompt template folders", themes: "Theme folders" };
@@ -72,16 +76,17 @@ export function ResourceFolders({ type, project, level = 3, onChanged }: {
         </li>)}</ul> : <p className="muted">None. Pi only uses the folders above{type === "skills" ? " and packages" : ""}.</p>}
       </div>
       <form className="add-path" onSubmit={submit} noValidate>
-        <label>Folder or file<input value={path} required autoComplete="off" spellCheck={false} placeholder={EXAMPLES[type]}
-          aria-invalid={!!error || undefined} aria-describedby={`${id}-hint${error ? ` ${id}-error` : ""}`} onChange={event => { setPath(event.target.value); setError(""); }} /></label>
-        {project && <label>Save in<select value={scope} onChange={event => setScope(event.target.value as "global" | "project")}>
-          <option value="global">Global settings</option><option value="project">This project</option></select></label>}
+        <Field className="flex-1 basis-72"><FieldLabel htmlFor={`${id}-path`}>Folder or file</FieldLabel>
+          <Input id={`${id}-path`} value={path} required autoComplete="off" spellCheck={false} placeholder={EXAMPLES[type]}
+            aria-invalid={!!error || undefined} aria-describedby={`${id}-hint${error ? ` ${id}-error` : ""}`} onChange={event => { setPath(event.target.value); setError(""); }} /></Field>
+        {project && <Field className="w-auto"><FieldLabel htmlFor={`${id}-scope`}>Save in</FieldLabel>
+          <OptionSelect id={`${id}-scope`} value={scope} onChange={setScope} options={[{ value: "global", label: "Global settings" }, { value: "project", label: "This project" }] as const} /></Field>}
         <Button type="submit" disabled={busy}>Add</Button>
-        <p id={`${id}-hint`} className="muted">An absolute path, ~/…, or a path relative to {scope === "project" ? "the project's .pi folder" : "the agent folder"}. Pi finds {plural} inside folders.</p>
-        {error && <p id={`${id}-error`} className="field-error">{error}</p>}
+        <FieldDescription id={`${id}-hint`} className="basis-full">An absolute path, ~/…, or a path relative to {scope === "project" ? "the project's .pi folder" : "the agent folder"}. Pi finds {plural} inside folders.</FieldDescription>
+        {error && <FieldError id={`${id}-error`} className="basis-full">{error}</FieldError>}
       </form>
     </>}
     {!view && !error && <div className="loading" aria-busy="true">Reading settings…</div>}
-    {!view && error && <p role="alert" className="field-error">{error}</p>}
+    {!view && error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertDescription>{error}</AlertDescription></Alert>}
   </section>;
 }

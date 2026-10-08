@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { FolderOpen, Layers, Plus, TriangleAlert } from "lucide-react";
+import { CircleAlert, FolderOpen, Layers, Plus, TriangleAlert } from "lucide-react";
 import type { ResourceView, SkillsView } from "../shared/resources";
 import { loadSkills, restoreSettings, saveSkills, setModelInvocation } from "./api";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Empty, EmptyDescription } from "./components/ui/empty";
 import { Switch } from "./components/ui/switch";
 import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Feedback } from "./Feedback";
@@ -17,12 +19,12 @@ function SkillDetail({ skill, busy, onEdit, onInvocation }: { skill: ResourceVie
   return <section className="detail" aria-labelledby="skill-title">
     <header className="detail-header"><h2 id="skill-title">{skill.name}</h2>
       <div className="actions"><Button variant="outline" aria-label={`${editable ? "Edit" : "View"} files of ${skill.name}`} onClick={onEdit}>{editable ? "Edit files" : "View files"}</Button></div></header>
-    {!skill.enabled && <p className="notice">Turned off, so Pi does not load it.</p>}
-    {skill.shadowedBy && <div className="notice callout-warning">
-      <p><strong>Pi does not load this copy.</strong> Another skill named {skill.name} comes first:</p>
-      <FilePath path={skill.shadowedBy} />
-      <p>Turn that one off or rename one of them to use this one.</p>
-    </div>}
+    {!skill.enabled && <Alert role="note"><AlertDescription>Turned off, so Pi does not load it.</AlertDescription></Alert>}
+    {skill.shadowedBy && <Alert role="note"><TriangleAlert aria-hidden="true" />
+      <AlertTitle>Pi does not load this copy.</AlertTitle>
+      <AlertDescription><p>Another skill named {skill.name} comes first:</p><FilePath path={skill.shadowedBy} />
+        <p>Turn that one off or rename one of them to use this one.</p></AlertDescription>
+    </Alert>}
     <dl className="detail-list">
       <div><dt>Description</dt><dd>{skill.description ?? <span className="muted">None. Pi does not load skills without a description.</span>}</dd></div>
       <div><dt>Invocation</dt><dd>
@@ -102,12 +104,13 @@ export function SkillsTab({ project }: { project?: string }) {
       actions={<Button variant="outline" onClick={() => { setMode("new"); setSelected(undefined); }}><Plus aria-hidden="true" />New skill</Button>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => void restore(undo) }} />
-    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></div>}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription>
+      <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading skills…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode(undefined); }} backLabel="All skills" list={<section aria-label="Skills list">
       <div className="list-search"><SearchField label="Search skills" placeholder="Search skills…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned"><li><ListItem selected={mode === "folders"} onSelect={() => { setMode("folders"); setSelected(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds skills" /></li></ul>
       <p className="list-count">{skills.filter(skill => skill.enabled).length} of {skills.length} skills on{shadowed > 0 && `, ${shadowed} not loaded (same name)`}</p>
-      {!visible.length && <p className="empty">{skills.length ? `No skills match “${query.trim()}”.` : "No skills found. Create one, or add skill folders to ~/.pi/agent/skills."}</p>}
+      {!visible.length && <Empty><EmptyDescription>{skills.length ? `No skills match “${query.trim()}”.` : "No skills found. Create one, or add skill folders to ~/.pi/agent/skills."}</EmptyDescription></Empty>}
       {groups.map(group => {
         const members = visible.filter(skill => skill.group === group);
         const allOn = members.every(skill => skill.enabled);
