@@ -22,7 +22,7 @@ export type Field = {
   key: string;
   label: string;
   section: SectionId;
-  kind: "text" | "select" | "number" | "lines" | "boolean" | "thinkingMap" | "compactionMap";
+  kind: "text" | "select" | "number" | "lines" | "boolean" | "thinkingMap" | "compactionMap" | "theme";
   help: string;
   options?: readonly Option[];
   /** Pi's default, shown when the file has no value. */
@@ -100,7 +100,8 @@ export const fields: Field[] = [
   { key: "enableAnalytics", label: "Analytics", section: "updates", help: "Opt in to analytics data sharing (currently only the experimental first-run setup).", defaultValue: false, ...bool },
   { key: "warnings.anthropicExtraUsage", label: "Anthropic extra-usage warning", section: "updates", help: "Warn when Anthropic subscription authentication may use paid extra usage.", defaultValue: true, ...bool },
   // Terminal UI
-  { key: "theme", label: "Theme", section: "terminal", kind: "text", help: "Built-in or custom theme name. system follows the terminal theme.", defaultValue: "system", schema: text },
+  { key: "theme", label: "Theme", section: "terminal", kind: "theme", help: "Built-in or custom theme. system follows the terminal; a light/dark pair switches with the terminal's appearance.", defaultValue: "system",
+    schema: text.refine(value => value === "system" || /^[^/]+(\/[^/]+)?$/.test(value), "Use a theme name, or light/dark names.") },
   { key: "quietStartup", label: "Quiet startup", section: "terminal", help: "true hides the header and loaded-resource listing; header keeps only the header.", defaultValue: false, ...select([{ label: "false", value: false }, { label: "true", value: true }, { label: "header", value: "header" }]) },
   { key: "tuiMode", label: "Interface mode", section: "terminal", help: "Interactive terminal UI mode.", defaultValue: "fullscreen", ...select(choices("fullscreen", "regular")) },
   { key: "fullscreenExitOutput", label: "Fullscreen exit output", section: "terminal", help: "What is printed when fullscreen mode exits.", defaultValue: "transcript", ...select(choices("transcript", "resume-hint")) },

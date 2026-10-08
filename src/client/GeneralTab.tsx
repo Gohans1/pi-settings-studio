@@ -137,7 +137,7 @@ export function GeneralTab({ project }: { project?: string }) {
               const edit = draft[field.key];
               const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
               const value = edit ? "value" in edit ? edit.value : view.inherited[field.key] : view.values[field.key] ?? view.inherited[field.key];
-              return <SettingField key={field.key} field={field} value={value} overridden={overridden} scope={scope}
+              return <SettingField key={field.key} field={field} value={value} overridden={overridden} scope={scope} project={project}
                 disabled={scope === "project" && !!field.globalOnly}
                 invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
                 onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;

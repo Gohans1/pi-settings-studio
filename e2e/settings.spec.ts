@@ -153,3 +153,21 @@ test("per-model thinking levels and compaction overrides are edited as rows", as
   await thinking.getByLabel("Model 1", { exact: true }).fill("no-slash");
   await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
 });
+
+test("the theme is chosen from Pi's themes: one theme, or a light and a dark one", async ({ page }) => {
+  await mkdir(join(root, "agent", "themes"), { recursive: true });
+  await writeFile(join(root, "agent", "themes", "ocean.json"), JSON.stringify({ name: "ocean", appearance: "dark", colors: {} }));
+  await page.reload();
+  const theme = page.getByRole("group", { name: "Theme" });
+  await theme.getByLabel("Theme mode").selectOption("single");
+  await theme.getByLabel("Theme name").selectOption("ocean");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status").first()).toContainText("Saved");
+  expect(JSON.parse(await readFile(file, "utf8")).theme).toBe("ocean");
+  await theme.getByLabel("Theme mode").selectOption("pair");
+  await theme.getByLabel("Light terminal theme").selectOption("light");
+  await theme.getByLabel("Dark terminal theme").selectOption("ocean");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status").first()).toContainText("Saved");
+  expect(JSON.parse(await readFile(file, "utf8")).theme).toBe("light/ocean");
+});

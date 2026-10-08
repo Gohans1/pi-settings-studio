@@ -9,6 +9,7 @@ import type { ProjectView, TrustView } from "../shared/projects";
 import type { InstructionsView } from "../shared/instructions";
 import type { KeybindingsView } from "../shared/keybindings";
 import type { JobView } from "../shared/jobs";
+import type { ThemeView } from "../shared/themes";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -109,3 +110,4 @@ export const saveModelsRaw = (revision: string, text: string) => request<RawSett
 export const loadModelIds = () => request<string[]>("/api/models/ids");
 export const savePackageFilters = (scope: Scope, revision: string, source: string, filters: Record<string, unknown>, project?: string) =>
   request<PluginsView>(withProject("/api/plugins/packages", project), "PUT", { scope, revision, source, filters });
+export const loadThemes = (project?: string) => request<ThemeView[]>(withProject("/api/themes", project));
