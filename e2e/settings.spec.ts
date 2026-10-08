@@ -188,11 +188,19 @@ test("the theme is chosen from Pi's themes: one theme, or a light and a dark one
   expect(JSON.parse(await readFile(file, "utf8")).theme).toBe("light/ocean");
 });
 
-test("the installed Pi version is shown with an Update Pi action", async ({ page }) => {
+test("the installed Pi version is shown with an Update Pi action that asks first", async ({ page }) => {
   const pi = page.getByRole("region", { name: "Pi" });
   await expect(pi).toContainText(/Pi \d+\.\d+\.\d+ is installed/);
-  // Not clicked: it would update the real Pi on this machine.
-  await expect(pi.getByRole("button", { name: "Update Pi" })).toBeEnabled();
+  const update = pi.getByRole("button", { name: "Update Pi" });
+  await update.click();
+  const ask = page.getByRole("alertdialog", { name: "Update Pi now?" });
+  await expect(ask).toContainText("Open T3Code threads keep the running version until they restart.");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  // Only ever cancelled: confirming would update the real Pi on this machine.
+  await ask.getByRole("button", { name: "Cancel" }).click();
+  await expect(ask).toBeHidden();
+  await expect(update).toBeFocused();
+  await expect(pi.getByRole("region")).toHaveCount(0);
 });
 
 test("unsaved changes keep their save action in view while scrolling", async ({ page }) => {

@@ -3,6 +3,7 @@ import { CircleAlert } from "lucide-react";
 import type { ResourceFileView, ResourceType } from "../shared/resources";
 import { createResource, loadResourceFile, saveResourceFile } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
@@ -18,6 +19,7 @@ export function ResourceEditor({ type, path, name, editable: hint, project, onMe
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [asking, setAsking] = useState(false);
   const id = useId();
   async function open(file?: string) {
     setBusy(true); setError("");
@@ -54,8 +56,20 @@ export function ResourceEditor({ type, path, name, editable: hint, project, onMe
     <div className="form-actions">
       {view?.editable && <Button type="submit" disabled={busy || !dirty}>Save</Button>}
       {dirty && <Button type="button" variant="outline" disabled={busy} onClick={() => setText(view!.text)}>Discard changes</Button>}
-      <Button type="button" variant="outline" onClick={() => { if (!dirty || window.confirm("Discard the unsaved changes?")) onClose(); }}>Close</Button>
+      <Button type="button" variant="outline" onClick={() => { if (dirty) setAsking(true); else onClose(); }}>Close</Button>
     </div>
+    <AlertDialog open={asking} onOpenChange={setAsking}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard the unsaved changes?</AlertDialogTitle>
+          <AlertDialogDescription>Your edits to {view?.file} are not saved.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onClose}>Discard</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </form>;
 }
 
