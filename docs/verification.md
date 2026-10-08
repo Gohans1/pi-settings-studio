@@ -1,3 +1,24 @@
+# Verification — every core Pi setting in the GUI, 2026-10-08
+
+Scope: startup tools checklist; extra resource folders and duplicate skill names; free-form default provider and model with warnings; Enabled models as a list; the model-invocation switch of a skill; each MCP tool's exposure; Pi's own key setup for providers that need more than a key.
+
+| Check | Result |
+|---|---|
+| `bun test` | 256 passed (40 files), including parity with Pi for `defaultTools` (Pi's `SettingsManager`, 12 cases) and model scope (Pi's `resolveModelScopeWithDiagnostics`, 11 cases), and a check that scoping runs no `!command` key |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run test:e2e` (axe on new views) | 63 passed: 9 new, 6 updated |
+
+Found while building, from Pi's source and the real configuration (copied to a temporary folder, secrets replaced):
+- Of two skills with one name Pi loads the first, and settings paths come before Pi's own folders. 24 of the 25 skills in `~/.claude/skills` share a name with one in `~/.pi/agent/skills`, so adding that folder would replace them; the app now says so when a folder is added and marks each skipped copy.
+- With a non-empty `enabledModels`, Pi starts new sessions with the default model only when the scope holds it, else with the first scoped model.
+- An empty `defaultTools` in a project is added to the global list (it changes nothing), while an empty global list turns every built-in tool off.
+
+Manual browser checks at 1280×800 against the temporary copy: each new view, the `~/.claude/skills` folder (25 skills found, 24 marked), Defaults with `claude-bridge`, Bedrock's key setup up to its first question (cancelled), and an MCP tool's exposure against the echo fixture. The real `~/.pi` was not written and no installed MCP server was started.
+
+Not verified: Pi's key setup with real Bedrock or Vertex accounts; providers whose keys come only from environment variables (the app does not see T3Code's environment).
+
+---
+
 # Verification — interface craft pass, 2026-10-08
 
 Scope: app shell, workbench panes for every list tab, toast confirmations, menus for secondary actions, the General index and save bar, focus, contrast and narrow-screen behaviour. Reviewed against the `better-accessibility`, `better-layout`, `better-writing`, `better-typography`, `better-colors` and `better-ui` skills, Emil Kowalski's motion rules and Impeccable's craft floor.

@@ -4,7 +4,7 @@
 
 Follows the shape of pi-web's settings panel, which the user already knows: a horizontal tab bar, then the tab's content. The header has two deliberate rows: the π wordmark and the project picker, then the tabs. `main` is the one scroller, so the header never moves.
 
-List tabs (MCP, Models, Skills, Sub-agents, Plugins, Instructions) share a workbench (`Workbench.tsx`): the list on the left, the chosen item's details on the right, each pane scrolling on its own inside one framed split view. Settings that are not list items sit pinned at the top of the list (Code mode, Defaults, Packages). Below 56rem the panes take turns: the list, then the chosen item with a way back. General is one long form with a section index beside it.
+List tabs (MCP, Models, Skills, Sub-agents, Plugins, Instructions) share a workbench (`Workbench.tsx`): the list on the left, the chosen item's details on the right, each pane scrolling on its own inside one framed split view. Settings that are not list items sit pinned at the top of the list (Code mode, Defaults, Packages, Folders). Below 56rem the panes take turns: the list, then the chosen item with a way back. General is one long form with a section index beside it.
 
 A dense, quiet workspace in [Flexoki](https://stephango.com/flexoki)'s ink-on-paper colours; light or dark follows the OS. No gradients, decorative metrics or icon-card grids.
 
@@ -48,6 +48,8 @@ shadcn (Base UI) Button, Switch, Tabs and Menu, styled by the tokens. Button siz
 - **Feedback**: confirmations are a toast (`Feedback.tsx`) in an always-present polite live region. It stays until dismissed or replaced and carries Undo for destructive actions. Errors are callouts beside what failed, with the recovery as a button.
 - **General**: the section index follows the reader and shows, per group, how many keys the file sets or a dot for unsaved edits. Rows at Pi's default stay quiet; a set row says so and offers "Use default". Unsaved changes keep a sticky bar with Discard and Save.
 - **Search**: `SearchField`; the page's main one answers to "/".
+- **Warnings**: a value Pi may not accept, or that the app cannot check (a provider from an extension, a default outside Enabled models), gets `.field-warning` under its field: the icon in the warning tone, the text in the body colour, linked with `aria-describedby`.
+- **Checklists**: a list setting with a known vocabulary (startup tools) is checkboxes with each item's purpose, never syntax to type.
 
 Secret values are never displayed; fields that hold them say "value hidden" and accept a replacement.
 

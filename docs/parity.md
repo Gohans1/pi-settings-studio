@@ -8,14 +8,15 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 
 | File or folder | Global | Project | Notes |
 |---|---|---|---|
-| `settings.json` | Done | Done | Every documented key (drift test), model maps as row editors, theme picker, raw JSON, global-only keys locked in projects |
-| `mcp.json` | Done | Done | Add/edit/remove/undo, switches, exposure, `toolExposure` rules, `oauth.*` (client secret write-only), `auth.provider` (global only, as Pi requires), Code mode per project, overrides per project, import from other clients, raw JSON with secrets masked, connection test, OAuth sign-in/out and sign-in state, `mcp.log` tail |
-| `auth.json` | Done | n/a | API keys (write-only), provider OAuth sign-in through Pi's runtime, `pi auth check` |
+| `settings.json` | Done | Done | Every documented key (drift test), startup tools as a checklist (Pi's `defaultTools` resolution, ported and compared with Pi), model maps as row editors, theme picker, raw JSON, global-only keys locked in projects |
+| `mcp.json` | Done | Done | Add/edit/remove/undo, switches, exposure, `toolExposure` rules and each tool's exposure after a connection test, `oauth.*` (client secret write-only), `auth.provider` (global only, as Pi requires), Code mode per project, overrides per project, import from other clients, raw JSON with secrets masked, connection test, OAuth sign-in/out and sign-in state, `mcp.log` tail |
+| `auth.json` | Done | n/a | API keys (write-only); Pi's own key setup for providers that need more than a key (Cloudflare account and gateway IDs, Bedrock profile, Vertex project and location); provider OAuth sign-in through Pi's runtime; `pi auth check`. Providers that extensions register (llama.cpp included) are not listed: the app runs no extension code |
 | `models.json` | Done | n/a | Custom providers and models, model list from the endpoint, raw JSON with keys masked (refused when Pi rejects the file) |
+| Defaults (`settings.json`) | Done | Done | Any provider and model can be typed, with Pi's catalog as suggestions and a warning when the catalog this app reads does not have it; Enabled models as a list matched as Pi matches it (ported, compared with Pi), with why a pattern selects nothing; a default outside a non-empty scope is added to it on save, as Pi does |
 | `keybindings.json` | Done | n/a | Every terminal action (no effect in T3Code) |
 | `AGENTS.md` / `CLAUDE.md` (context files) | Done | Done | Pi's candidate order, parent-folder files listed read-only |
 | `SYSTEM.md`, `APPEND_SYSTEM.md` | Done | Done | |
-| `extensions/`, `skills/`, `prompts/`, `themes/` | Done | Done | Switches, create, edit (a skill's whole folder); package files, built-ins and symbolic links read-only |
+| `extensions/`, `skills/`, `prompts/`, `themes/` | Done | Done | Switches, create, edit (a skill's whole folder); extra folders added to and removed from the settings paths; a skill Pi skips for a duplicate name is marked, with the winner (Pi's own `loadSkills`); the model-invocation switch of a skill; package files, built-ins and symbolic links read-only |
 | Packages | Done | Done | Install, update, remove through `pi`; resource filters per package |
 | Trust (`trust.json`) | n/a | Done | Pi's ProjectTrustStore; says whether T3Code loads `.pi` |
 | Sub-agent profiles (`agents/`) | Done | Done | Pi's example extension format |
@@ -39,6 +40,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 Listed in the app too (General, "Not editable here"):
 
 - Environment variables (`PI_*`, provider keys) of the process T3Code starts Pi in; Check credential sees this app's environment only.
+- Providers and models that extensions or packages register (claude-bridge, llama.cpp…): the app runs no extension code, so it cannot list or check them. Their names can still be typed as defaults and patterns, with a warning.
 - Command-line options of a run (`--model`, `--tools`, `--session-dir`, `--no-mcp`…).
 - Live state of running threads; files apply after `/reload` or in a new thread.
 - Sessions and chat history (T3Code), files inside installed packages, third-party extension settings, T3Code's own settings.
