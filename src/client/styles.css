@@ -1,31 +1,37 @@
 @import "tailwindcss";
+/* shadcn's animations and Base UI state variants (data-open, data-checked…), as its install guide sets up. */
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @import "./flexoki.css";
-/* From shadcn@4.21.4 dist/tailwind.css (MIT): Base UI marks orientation with data-orientation. */
-@custom-variant data-horizontal { &:where([data-orientation="horizontal"]) { @slot; } }
-@custom-variant data-vertical { &:where([data-orientation="vertical"]) { @slot; } }
 /* Semantic tokens, the only colours components use. light-dark() picks the light or dark Flexoki value
    from the OS colour scheme, the same signal Tailwind's dark: variant reads.
-   Roles follow Flexoki's mapping (bg, bg-2, ui, ui-2, tx) with three measured exceptions, each one step
+   Roles follow Flexoki's mapping (bg, bg-2, ui, ui-2, tx) with four measured exceptions, each one step
    stronger than upstream to reach WCAG AA: muted text (tx-2 is 4.47:1 on bg-2 in light), dark destructive
-   (red-400 is 4.42:1 on black) and input borders (3:1 for a control boundary). tests/design-tokens.test.ts
+   (red-400 is 4.42:1 on black), input borders (3:1 for a control boundary) and the primary blue (700 in
+   light, 300 in dark), whose text must stay 4.5:1 under shadcn's 80% hover. tests/design-tokens.test.ts
    checks every pair. */
 :root {
   color-scheme: light dark;
   --background: light-dark(var(--flexoki-paper), var(--flexoki-black));
   --foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
+  /* bg-2: the header, the list pane and callouts (shadcn's Alert sits on --card). */
   --sidebar: light-dark(var(--flexoki-base-50), var(--flexoki-base-950));
-  --muted: light-dark(var(--flexoki-base-50), var(--flexoki-base-950));
+  --card: light-dark(var(--flexoki-base-50), var(--flexoki-base-950));
+  --card-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
+  /* ui: shadcn hovers and highlights on --muted (ghost buttons) and --accent (menu and select items). */
+  --muted: light-dark(var(--flexoki-base-100), var(--flexoki-base-900));
   --muted-foreground: light-dark(var(--flexoki-base-700), var(--flexoki-base-400));
+  --accent: light-dark(var(--flexoki-base-100), var(--flexoki-base-900));
+  --accent-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
   --control: light-dark(var(--flexoki-paper), var(--flexoki-base-950));
   --popover: light-dark(var(--flexoki-paper), var(--flexoki-base-900));
+  --popover-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
   --border: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
   --input: light-dark(var(--flexoki-base-500), var(--flexoki-base-600));
-  --primary: light-dark(var(--flexoki-blue-600), var(--flexoki-blue-400));
-  --primary-hover: light-dark(var(--flexoki-blue-700), var(--flexoki-blue-300));
+  --primary: light-dark(var(--flexoki-blue-700), var(--flexoki-blue-300));
   --primary-foreground: light-dark(var(--flexoki-paper), var(--flexoki-black));
   --ring: light-dark(var(--flexoki-blue-600), var(--flexoki-blue-400));
   --secondary: light-dark(var(--flexoki-base-100), var(--flexoki-base-900));
-  --secondary-hover: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
   --secondary-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
   /* The chosen row of a list: Flexoki's ui-2, one step above the hover (ui). */
   --selected: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
@@ -61,18 +67,24 @@
 }
 @theme inline {
   --color-background: var(--background); --color-foreground: var(--foreground);
+  --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border); --color-input: var(--input); --color-popover: var(--popover);
-  --color-primary: var(--primary); --color-primary-hover: var(--primary-hover); --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary); --color-secondary-hover: var(--secondary-hover); --color-secondary-foreground: var(--secondary-foreground);
-  --color-ring: var(--ring); --color-destructive: var(--destructive); --color-destructive-surface: var(--destructive-surface);
+  --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive); --color-destructive-surface: var(--destructive-surface);
+  --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
+  --color-selected: var(--selected); --color-warning: var(--warning); --color-success: var(--success);
   --color-inverse: var(--inverse); --color-inverse-foreground: var(--inverse-foreground); --color-inverse-muted-foreground: var(--inverse-muted-foreground); --color-inverse-hover: var(--inverse-hover);
   /* shadcn's radius scale, derived from --radius. */
   --radius-sm: calc(var(--radius) * 0.6); --radius-md: calc(var(--radius) * 0.8); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8); --radius-3xl: calc(var(--radius) * 2.2); --radius-4xl: calc(var(--radius) * 2.6);
 }
-/* Type scale by role: UI sizes for a dense settings tool. Families, weights, line heights and tracking
-   are Tailwind's own tokens (--font-sans, --font-mono, --font-weight-*, --leading-*, --tracking-*). */
-@theme {
+/* Type scale by role: UI sizes for a dense settings tool, read by styles.css only. They stay out of @theme:
+   as text-* utilities, cn (shadcn's class merger) would take them for text colours and drop one of a pair.
+   Families, weights, line heights and tracking are Tailwind's own tokens (--font-sans, --font-weight-*…). */
+:root {
   --text-caption: 0.75rem;
   --text-small: 0.8125rem;
   --text-body: 0.875rem;
@@ -85,6 +97,8 @@
 }
 
 @layer base {
+  /* shadcn's base: borders default to the hairline token, outlines to the ring. */
+  * { @apply border-border outline-ring/50; }
   html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; scrollbar-color: var(--input) transparent; }
   body { margin: 0; background: var(--background); color: var(--foreground); font: var(--text-body)/var(--leading-normal) var(--font-sans); }
   ::selection { background: var(--primary); color: var(--primary-foreground); }
@@ -137,16 +151,14 @@
   .project-picker { margin-inline-start: auto; display: flex; align-items: center; gap: --spacing(2); min-width: 0; color: var(--muted-foreground); font-size: var(--text-small); }
   .project-picker svg { width: --spacing(4); height: --spacing(4); }
   .project-picker select { min-height: --spacing(8); width: 18rem; max-width: 100%; min-width: 0; padding-block: --spacing(1); font-size: var(--text-small); }
-  .tabbar { position: relative; background: var(--sidebar); border-bottom: 1px solid var(--border); }
-  /* Tabs past the edge fade out, so a narrow screen shows there is more to scroll to. */
-  .tabbar [role=tablist] { height: var(--tabbar-height); overflow-x: auto; scrollbar-width: none; padding-inline: calc(var(--gutter) - --spacing(2.5));
+  /* The tab list scrolls sideways on a narrow screen; tabs past the edge fade out to say there is more. */
+  .tabbar { display: flex; align-items: end; min-height: var(--tabbar-height); overflow-x: auto; scrollbar-width: none; padding-inline: calc(var(--gutter) - --spacing(1));
+    background: var(--sidebar); border-bottom: 1px solid var(--border);
     mask-image: linear-gradient(to right, transparent, black --spacing(5), black calc(100% - --spacing(5)), transparent); }
 
   main { overflow: auto; display: flex; flex-direction: column; padding: --spacing(6) var(--gutter); outline: none; }
   main > * { width: 100%; max-width: var(--page-width); margin-inline: auto; }
   @media (prefers-reduced-motion: no-preference) { main { scroll-behavior: smooth; } }
-  /* A tab panel fills main, so a workbench can take the height that is left. */
-  main > [role=tabpanel] { flex: 1 0 auto; display: flex; flex-direction: column; }
 
   /* Page header: what this page edits, in which file, and the page's own actions. */
   .page-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: --spacing(3) --spacing(6); margin-bottom: --spacing(5); }

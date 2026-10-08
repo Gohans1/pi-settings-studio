@@ -7,7 +7,7 @@ import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 import { JobPanel, useJob } from "./JobPanel";
-import { Menu, MenuContent, MenuItem, MenuTrigger } from "./components/ui/menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, Workbench } from "./Workbench";
@@ -130,11 +130,11 @@ export function PluginsTab({ project }: { project?: string }) {
   </section>;
   return <>
     <PageHeader title="Plugins" description="Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab."
-      actions={<Menu>
-        <MenuTrigger render={<Button variant="outline" />}><Plus aria-hidden="true" />New<ChevronDown aria-hidden="true" /></MenuTrigger>
-        <MenuContent>{(["prompts", "themes", "extensions"] as const).map(type =>
-          <MenuItem key={type} onClick={() => { setMode(type); setSelected(undefined); setPinned(undefined); }}>{newLabels[type]}</MenuItem>)}</MenuContent>
-      </Menu>} />
+      actions={<DropdownMenu>
+        <DropdownMenuTrigger render={<Button variant="outline" />}><Plus aria-hidden="true" />New<ChevronDown aria-hidden="true" /></DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-auto">{(["prompts", "themes", "extensions"] as const).map(type =>
+          <DropdownMenuItem key={type} onClick={() => { setMode(type); setSelected(undefined); setPinned(undefined); }}>{newLabels[type]}</DropdownMenuItem>)}</DropdownMenuContent>
+      </DropdownMenu>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => void restore(undo) }} />
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></div>}

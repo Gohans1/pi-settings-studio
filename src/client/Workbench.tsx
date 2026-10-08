@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { ChevronLeft, Ellipsis, type LucideIcon } from "lucide-react";
 import { Button } from "./components/ui/button";
-import { Menu, MenuContent, MenuTrigger } from "./components/ui/menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 
 /**
  * A list and the chosen item's details. Wide screens show both panes, each scrolling on its own;
@@ -32,10 +32,10 @@ export function Workbench({ list, detail, open, onBack, backLabel }: {
 
 /** A list group's less frequent actions, behind one button. */
 export function MoreMenu({ label, children }: { label: string; children: ReactNode }) {
-  return <Menu>
-    <MenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label={label} title={label} />}><Ellipsis aria-hidden="true" /></MenuTrigger>
-    <MenuContent>{children}</MenuContent>
-  </Menu>;
+  return <DropdownMenu>
+    <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label={label} title={label} />}><Ellipsis aria-hidden="true" /></DropdownMenuTrigger>
+    <DropdownMenuContent align="end" className="w-auto">{children}</DropdownMenuContent>
+  </DropdownMenu>;
 }
 
 /** The detail pane before anything is chosen: what goes here, and how to fill it. */

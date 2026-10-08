@@ -4,7 +4,7 @@ import { fields, sections, type SettingsChange, type SettingsView } from "../sha
 import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
-import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "./components/ui/menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { PiPanel } from "./PiPanel";
@@ -153,14 +153,14 @@ export function GeneralTab({ project }: { project?: string }) {
   return <>
     <PageHeader title="General" titleRef={title} description={description} files={[view?.path]} actions={<>
       <SearchField label="Search settings" placeholder="Search settings or keys…" value={query} onChange={setQuery} />
-      <Menu>
-        <MenuTrigger render={<Button variant="outline" />}><FileJson aria-hidden="true" />File<ChevronDown aria-hidden="true" /></MenuTrigger>
-        <MenuContent>
-          <MenuItem disabled={busy || !!changes.length} onClick={openRaw}><FileJson aria-hidden="true" />Edit as JSON</MenuItem>
-          <MenuItem disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</MenuItem>
-          {view?.hasBackup && <><MenuSeparator /><MenuItem disabled={busy || !!changes.length} onClick={() => setRestore(true)}><History aria-hidden="true" />Restore previous file</MenuItem></>}
-        </MenuContent>
-      </Menu>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button variant="outline" />}><FileJson aria-hidden="true" />File<ChevronDown aria-hidden="true" /></DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-auto">
+          <DropdownMenuItem disabled={busy || !!changes.length} onClick={openRaw}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem>
+          <DropdownMenuItem disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</DropdownMenuItem>
+          {view?.hasBackup && <><DropdownMenuSeparator /><DropdownMenuItem disabled={busy || !!changes.length} onClick={() => setRestore(true)}><History aria-hidden="true" />Restore previous file</DropdownMenuItem></>}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>} />
     {project && <fieldset className="scope-choice"><legend>Edit</legend>
       <label><input type="radio" name="general-scope" checked={scope === "global"} disabled={busy || !!changes.length} onChange={() => setScopeChoice("global")} />Global settings</label>

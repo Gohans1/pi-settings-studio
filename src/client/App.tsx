@@ -77,14 +77,14 @@ export function App() {
         <ProjectPicker projects={projects} project={project} onChoose={choose} />
       </div>
       <div className="tabbar">
-        <TabsList variant="line" aria-label="Settings sections" className="w-full">
+        <TabsList variant="line" aria-label="Settings sections">
           {tabs.map(({ id, label, icon: Icon }) => <TabsTrigger key={id} value={id}><Icon aria-hidden="true" />{label}</TabsTrigger>)}
         </TabsList>
       </div>
     </header>
     <main id="main" tabIndex={-1}>
       {current && <TrustPanel project={current.path} trust={current.trust} onChange={trust => updateTrust(current.path, trust)} />}
-      {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id}><Panel project={project} loadsInProject={current?.trust.loadsInT3Code} /></TabsContent>)}
+      {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id} className="flex flex-col"><Panel project={project} loadsInProject={current?.trust.loadsInT3Code} /></TabsContent>)}
     </main>
   </Tabs>;
 }

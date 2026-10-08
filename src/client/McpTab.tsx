@@ -10,7 +10,7 @@ import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
 import { Braces, FileJson, Import, Plus, PlugZap, ScrollText, Server } from "lucide-react";
 import { Button } from "./components/ui/button";
-import { MenuItem } from "./components/ui/menu";
+import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Switch } from "./components/ui/switch";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -280,8 +280,8 @@ export function McpTab({ project }: { project?: string }) {
   const back = () => { setSelected(undefined); setForm(undefined); setLog(undefined); };
   const add = (scope: "global" | "project") => { setForm({ mode: "add", scope }); setFormError(""); setSelected(undefined); setLog(undefined); };
   const fileMenu = (scope: "global" | "project", file: McpFileView) => <MoreMenu label={scope === "global" ? "More actions for the global mcp.json" : "More actions for the project's mcp.json"}>
-    <MenuItem disabled={busy || !!file.error} onClick={() => { setForm({ mode: "import", scope }); setSelected(undefined); setLog(undefined); }}><Import aria-hidden="true" />Import servers</MenuItem>
-    <MenuItem disabled={busy} onClick={() => setRawScope(scope)}><FileJson aria-hidden="true" />Edit as JSON</MenuItem>
+    <DropdownMenuItem disabled={busy || !!file.error} onClick={() => { setForm({ mode: "import", scope }); setSelected(undefined); setLog(undefined); }}><Import aria-hidden="true" />Import servers</DropdownMenuItem>
+    <DropdownMenuItem disabled={busy} onClick={() => setRawScope(scope)}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem>
   </MoreMenu>;
   const codemodeState = codemode ? codemode.disabledByExtensions ? "off" : (codemode.effective?.preference ?? codemode.preference) === "always" ? "always on" : "automatic" : "";
   return <>

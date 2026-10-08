@@ -1,23 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { cn } from "../src/client/lib/utils.ts";
 
 // Guardrails for the design system in src/client: Flexoki primitives -> semantic tokens -> components.
+// components/ui holds shadcn's registry code as installed, so these checks read the app's own CSS.
 const read = (path: string) => readFileSync(resolve(import.meta.dir, "..", path), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 const palette = read("src/client/flexoki.css");
 const styles = read("src/client/styles.css");
-const components = ["button", "switch", "tabs", "menu"].map((name) => read(`src/client/components/ui/${name}.tsx`)).join("\n");
 
 type Declaration = { selector: string; property: string; value: string };
 // Innermost `selector { declarations }` blocks; an enclosing @media prelude never reaches the selector.
 function declarations(css: string): Declaration[] {
   const found: Declaration[] = [];
   for (const block of css.matchAll(/(?<selector>[^{}]+)\{(?<body>[^{}]*)\}/g)) {
-    const { selector = "", body = "" } = block.groups ?? {};
+    const { body = "" } = block.groups ?? {};
+    // Statements such as @import end with ";" and are not part of the selector that follows them.
+    const selector = (block.groups?.selector ?? "").split(";").pop()!.trim();
     for (const part of body.split(";")) {
       const { property, value } = part.match(/^\s*(?<property>[\w-]+)\s*:\s*(?<value>[\s\S]+?)\s*$/)?.groups ?? {};
-      if (property && value) found.push({ selector: selector.trim(), property, value });
+      if (property && value) found.push({ selector, property, value });
     }
   }
   return found;
@@ -49,7 +50,6 @@ describe("colour system", () => {
   test("colours exist only as Flexoki primitives in flexoki.css", () => {
     const literal = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\(/i;
     expect(styles.split("\n").filter((line) => literal.test(line))).toEqual([]);
-    expect(components.split("\n").filter((line) => literal.test(line) || /-\[color-mix/.test(line))).toEqual([]);
     expect(declarations(palette).every((d) => /^--flexoki-[\w-]+$/.test(d.property) && /^#[0-9a-f]{6}$/i.test(d.value))).toBe(true);
   });
 
@@ -84,8 +84,10 @@ describe("colour system", () => {
     ["--foreground", "--background", 4.5], ["--foreground", "--sidebar", 4.5], ["--foreground", "--muted", 4.5], ["--foreground", "--control", 4.5],
     ["--muted-foreground", "--background", 4.5], ["--muted-foreground", "--sidebar", 4.5], ["--muted-foreground", "--muted", 4.5],
     ["--muted-foreground", "--secondary", 4.5], ["--muted-foreground", "--control", 4.5],
-    ["--primary-foreground", "--primary", 4.5], ["--primary-foreground", "--primary-hover", 4.5],
-    ["--secondary-foreground", "--secondary", 4.5], ["--secondary-foreground", "--secondary-hover", 4.5],
+    ["--primary-foreground", "--primary", 4.5], ["--secondary-foreground", "--secondary", 4.5],
+    // shadcn's surfaces: callouts on --card, menu and select highlights on --accent, floating layers on --popover.
+    ["--card-foreground", "--card", 4.5], ["--muted-foreground", "--card", 4.5], ["--destructive", "--card", 4.5],
+    ["--accent-foreground", "--accent", 4.5], ["--popover-foreground", "--popover", 4.5],
     ["--destructive", "--background", 4.5], ["--destructive", "--secondary", 4.5],
     ["--ring", "--background", 3], ["--ring", "--sidebar", 3],
     ["--input", "--control", 3], ["--warning", "--background", 3],
@@ -104,6 +106,16 @@ describe("colour system", () => {
       expect(contrast(hex(fg, scheme), hex(bg, scheme))).toBeGreaterThanOrEqual(minimum);
     });
   }
+
+  // shadcn's Button hovers with bg-primary/80: the primary colour at 80% over whatever is behind it.
+  const over = (top: string, under: string, alpha: number) => "#" + [1, 3, 5].map((at) =>
+    Math.round(alpha * parseInt(top.slice(at, at + 2), 16) + (1 - alpha) * parseInt(under.slice(at, at + 2), 16)).toString(16).padStart(2, "0")).join("");
+  for (const scheme of ["light", "dark"] as const) {
+    test.each(["--background", "--card", "--sidebar"])(`${scheme}: a hovered primary button on %s keeps 4.5:1`, (under) => {
+      const hovered = over(hex("--primary", scheme), hex(under, scheme), 0.8);
+      expect(contrast(hex("--primary-foreground", scheme), hovered)).toBeGreaterThanOrEqual(4.5);
+    });
+  }
 });
 
 describe("typography", () => {
@@ -113,18 +125,11 @@ describe("typography", () => {
     const sizes = rules.filter((d) => d.property === "font-size" || d.property === "font");
     expect(sizes.length).toBeGreaterThan(0);
     expect(sizes.filter((d) => d.value !== "inherit" && !d.value.includes("var(--text-"))).toEqual([]);
-    expect(components.match(/\btext-\[[\d.]/g)).toBeNull();
   });
 
   test("font weights and families come from tokens", () => {
     expect(rules.filter((d) => d.property === "font-weight" && !/^var\(--font-weight-[a-z]+\)$/.test(d.value))).toEqual([]);
     expect(rules.filter((d) => /system-ui|monospace|sans-serif/.test(d.value))).toEqual([]);
-  });
-
-  test("cn keeps a text colour beside every type-scale size", () => {
-    const steps = [...tokens.keys()].flatMap((name) => name.match(/^--text-([a-z]+)$/)?.[1] ?? []);
-    expect(steps.length).toBeGreaterThan(0);
-    for (const step of steps) expect(cn("text-primary-foreground", `text-${step}`)).toBe(`text-primary-foreground text-${step}`);
   });
 
   test("the scale descends from page title to caption", () => {
@@ -162,7 +167,6 @@ describe("cascade and motion", () => {
   });
 
   test("transitions name the properties they animate", () => {
-    expect(components.match(/\btransition-all\b/g)).toBeNull();
     expect(declarations(styles).filter((d) => /^transition(-property)?$/.test(d.property) && /\ball\b/.test(d.value))).toEqual([]);
   });
 });

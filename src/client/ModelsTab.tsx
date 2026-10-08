@@ -7,7 +7,7 @@ import { CustomProviderForm } from "./CustomProviderForm";
 import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
 import { Button } from "./components/ui/button";
-import { MenuItem } from "./components/ui/menu";
+import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { ModelDefaults } from "./ModelDefaults";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -166,7 +166,7 @@ export function ModelsTab({ project }: { project?: string }) {
       <section className="item-group" aria-label="Custom providers">
         <div className="list-header"><h2>models.json</h2><span>{custom?.providers.length ?? 0}</span>
           <Button variant="ghost" size="icon-xs" aria-label="Add custom provider" title="Add custom provider" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}><Plus aria-hidden="true" /></Button>
-          <MoreMenu label="More actions for models.json"><MenuItem disabled={busy} onClick={() => setRaw(true)}><FileJson aria-hidden="true" />Edit as JSON</MenuItem></MoreMenu>
+          <MoreMenu label="More actions for models.json"><DropdownMenuItem disabled={busy} onClick={() => setRaw(true)}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem></MoreMenu>
         </div>
         {custom?.error && <p className="field-error list-note">{custom.error}</p>}
         {custom && !custom.error && !custom.providers.length && <p className="muted list-note">Ollama, LM Studio, a proxy: any endpoint that speaks an API Pi knows.</p>}
