@@ -102,6 +102,15 @@
 }
 
 @layer components {
+  /* Pointer press feedback; leave popup anchors stationary and keyboard/touch scrolling undisturbed. */
+  @media (prefers-reduced-motion: no-preference) {
+    html[data-motion-input=pointer] .press-feedback:active:not(:disabled):not([aria-disabled=true]):not([aria-haspopup]) { transform: scale(0.97); }
+  }
+  /* Base UI owns mount/unmount and the trigger-relative origin; transitions can reverse mid-flight. */
+  .motion-popup { transition: transform 180ms var(--ease-out), opacity 180ms var(--ease-out); }
+  .motion-popup:is([data-starting-style], [data-ending-style]) { transform: scale(0.97); opacity: 0; }
+  .motion-popup[data-ending-style] { transition-duration: 125ms; }
+
   /* App shell: the top bar scrolls nothing; main is the one scroller, so the chrome never moves. */
   .app { display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); height: 100svh; }
   .skip-link { position: fixed; top: 0; inset-inline-start: --spacing(4); z-index: 50; translate: 0 -100%; padding: --spacing(2) --spacing(3); border-radius: var(--radius); background: var(--primary); color: var(--primary-foreground); }
@@ -365,4 +374,16 @@
 @media (forced-colors: active) {
   .item-list [aria-pressed=true], .section-nav a[aria-current=true] { outline: 2px solid Highlight; outline-offset: -2px; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) {
+  /* Unlayered policy wins over component/utility layers without specificity escalation. */
+  *, *::before, *::after { animation-duration: 0.01ms; animation-iteration-count: 1; transition-duration: 0.01ms; scroll-behavior: auto; }
+  /* Keep a gentle fade, but never interpolate the panel height. */
+  [data-slot=collapsible-content], .motion-popup { transition: opacity 125ms var(--ease-out); }
+  .motion-popup { transform: none; }
+}
+/* No delay on keyboard navigation, form edits or Escape, including portalled surfaces and pseudo-elements. */
+html[data-motion-input=keyboard] *, html[data-motion-input=keyboard] *::before, html[data-motion-input=keyboard] *::after {
+  transition: none;
+  animation: none;
+  scroll-behavior: auto;
+}

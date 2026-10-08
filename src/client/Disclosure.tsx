@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./component
 export function Disclosure({ label, defaultOpen, className, children }: { label: ReactNode; defaultOpen?: boolean; className?: string; children: ReactNode }) {
   return <Collapsible defaultOpen={defaultOpen} className={className}>
     <CollapsibleTrigger render={<Button variant="ghost" size="sm" className="-ms-2" />}>
-      <ChevronRight aria-hidden="true" className="transition-transform group-data-panel-open/button:rotate-90" />{label}
+      <ChevronRight aria-hidden="true" className="transition-transform duration-200 ease-out group-data-panel-open/button:rotate-90" />{label}
     </CollapsibleTrigger>
     <CollapsibleContent>{children}</CollapsibleContent>
   </Collapsible>;
