@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import type { McpFileView, McpServerInput, McpServerView } from "../shared/mcp";
+import { toolExposure, type McpFileView, type McpServerInput, type McpServerView } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import { addMcpServer, editMcpServer, loadCodemode, loadMcp, loadMcpLog, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget, loadMcpRaw, saveMcpRaw } from "./api";
 import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
@@ -37,6 +37,30 @@ function Names({ names }: { names: string[] }) {
   return <>{names.map(name => <code key={name} className="chip">{name}</code>)}<span className="muted"> values hidden</span></>;
 }
 
+/**
+ * The tools a connection test found, each with how it reaches the model. Choosing one writes an exact
+ * toolExposure rule; "Inherit" removes it, so the server's exposure (or a pattern rule) applies again.
+ */
+function ServerTools({ server, tools, busy, onTest, onToolExposure }: {
+  server: McpServerView; tools?: string[]; busy: boolean; onTest: () => void; onToolExposure?: (tool: string, exposure: string | null) => void;
+}) {
+  const label = (exposure: string) => exposureLabels[exposure]?.[0] ?? exposure;
+  return <section className="server-tools" aria-labelledby="server-tools-title">
+    <h3 id="server-tools-title">Tools</h3>
+    {tools === undefined ? <p className="muted">Test connections to list this server's tools and choose how each one reaches the model.{" "}
+      <Button variant="link" size="xs" className="px-0" onClick={onTest}>Test now</Button></p>
+      : !tools.length ? <p className="muted">The last test listed no tools{server.enabled ? "" : "; turn the server on and test again"}.</p>
+      : <ul className="tool-exposures">{tools.map(tool => {
+        const { [tool]: own, ...others } = server.toolExposure;
+        return <li key={tool}><code translate="no">{tool}</code>
+          <select aria-label={`Exposure of ${server.name}/${tool}`} value={own ?? ""} disabled={busy || !onToolExposure} onChange={event => onToolExposure?.(tool, event.target.value || null)}>
+            <option value="">Inherit: {label(toolExposure({ exposure: server.exposure, toolExposure: others }, tool))}</option>
+            {Object.entries(exposureLabels).map(([value, [text]]) => <option key={value} value={value}>{text}</option>)}
+          </select></li>;
+      })}</ul>}
+  </section>;
+}
+
 function ServerDetail({ server, busy, onExposure, actions, children }: {
   server: McpServerView; busy: boolean; onExposure?: (exposure: string) => void; actions?: ReactNode; children?: ReactNode;
 }) {
@@ -50,7 +74,7 @@ function ServerDetail({ server, busy, onExposure, actions, children }: {
   if (server.headers.length) rows.push(["Headers", <Names names={server.headers} />]);
   const auth = signIn(server);
   if (auth) rows.push(["Sign-in", auth]);
-  rows.push(["Tools", <>
+  rows.push(["Exposure", <>
     <select aria-label={`Tool exposure for ${server.name}`} value={server.exposure} disabled={busy || !!server.error || !onExposure} onChange={event => onExposure?.(event.target.value)}>
       {Object.entries(exposureLabels).map(([value, [label]]) => <option key={value} value={value}>{label}{value === "codemode" ? " (default)" : ""}</option>)}
     </select>
@@ -99,6 +123,7 @@ export function McpTab({ project }: { project?: string }) {
   const loadRaw = useCallback(() => loadMcpRaw(target(rawScope ?? "global")), [rawScope, project]);
   const saveRaw = useCallback((revision: string, text: string) => saveMcpRaw(target(rawScope ?? "global"), revision, text), [rawScope, project]);
   const signIn = useJob();
+  const test = () => void check.start({ action: "mcp-test", ...(project ? { project } : {}) });
 
   async function refresh() {
     setError("");
@@ -242,6 +267,10 @@ export function McpTab({ project }: { project?: string }) {
           <Button variant="destructive" disabled={busy} aria-label={`Remove ${current.name}`}
             onClick={() => void run(scope, revision => removeMcpServer(target(scope), current.name, revision), `Removed ${current.name} from ${label}.`, { undoable: true })}>Remove</Button>
         </>}>{scope === "global" ? projectControls(current.name) : undefined}
+          <ServerTools server={current} busy={busy} onTest={test}
+            tools={check.job && check.job.status !== "running" ? check.job.result?.servers.find(entry => entry.name === current.name)?.tools ?? [] : undefined}
+            onToolExposure={(tool, exposure) => void run(scope, revision => saveMcpServer(target(scope), current.name, revision, { tool: { name: tool, exposure } }),
+              exposure ? `${current.name}/${tool} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.` : `${current.name}/${tool} follows the server again.`)} />
           <JobPanel job={signIn.job} error={signIn.error} onAnswer={value => void signIn.answer(value)} onCancel={() => void signIn.cancel()} onDismiss={signIn.dismiss} />
         </ServerDetail>;
   }
@@ -258,7 +287,7 @@ export function McpTab({ project }: { project?: string }) {
   return <>
     <PageHeader title="MCP" description="Servers Pi connects to. Changes apply to new T3Code threads, or after /reload." files={[global?.path, local?.path]}
       actions={<>
-        <Button variant="outline" disabled={check.running} onClick={() => void check.start({ action: "mcp-test", ...(project ? { project } : {}) })}><PlugZap aria-hidden="true" />Test connections</Button>
+        <Button variant="outline" disabled={check.running} onClick={test}><PlugZap aria-hidden="true" />Test connections</Button>
         <Button variant="ghost" onClick={showLog}><ScrollText aria-hidden="true" />View mcp.log</Button>
       </>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}

@@ -50,3 +50,18 @@ test("the form edits rules, OAuth and provider auth; the secret is kept unless r
   assert.equal(refused.status, 422);
   assert.match((await refused.json()).error, /cimd/);
 });
+
+test("one tool's exposure is set as an exact rule and removed again, keeping the pattern rules", async (t) => {
+  const { file, request, view } = await fixture(t);
+  const tool = async (name: string, exposure: string | null) => request("/api/mcp/global/servers/gh", { method: "PATCH", headers: json,
+    body: JSON.stringify({ revision: (await view()).revision, tool: { name, exposure } }) });
+  const rules = async () => JSON.parse(await readFile(file, "utf8")).mcpServers.gh.toolExposure;
+  assert.equal((await tool("delete_repo", "direct")).status, 200);
+  assert.deepEqual(await rules(), { search_code: "direct", "delete_*": "hidden", delete_repo: "direct" });
+  assert.equal((await tool("search_code", null)).status, 200);
+  assert.equal((await tool("delete_repo", null)).status, 200);
+  assert.deepEqual(await rules(), { "delete_*": "hidden" });
+  // A tool name is exact; patterns are edited in the form.
+  assert.equal((await tool("delete_*", "direct")).status, 422);
+  assert.equal((await tool("x", "everywhere")).status, 422);
+});

@@ -109,11 +109,26 @@ export async function mcpView(store: ConfigStore, scope: Scope = "global", base?
   return { path, revision: document.revision, exists: document.exists, hasBackup, ...(error ? { error } : {}), autoEnableCodemode, servers: servers.map(entry => toView(entry, signedIn)) };
 }
 
+const EXPOSURE = z.enum(MCP_EXPOSURES as [string, ...string[]]);
 const serverPatch = z.object({
   revision: z.string().min(1).max(100),
   enabled: z.boolean().optional(),
-  exposure: z.enum(MCP_EXPOSURES as [string, ...string[]]).optional(),
-}).strict().refine(patch => patch.enabled !== undefined || patch.exposure !== undefined, "Nothing to change.");
+  exposure: EXPOSURE.optional(),
+  /** One tool's exact rule in toolExposure; null removes it. Patterns are edited in the form. */
+  tool: z.object({ name: z.string().min(1).max(200).refine(name => !name.includes("*"), "A tool name, not a pattern."), exposure: EXPOSURE.nullable() }).strict().optional(),
+}).strict().refine(patch => patch.enabled !== undefined || patch.exposure !== undefined || patch.tool !== undefined, "Nothing to change.");
+
+/** Sets or removes the exact toolExposure rule of one tool, keeping the server's other rules. */
+function setToolRule(file: Record<string, unknown>, name: string, tool: { name: string; exposure: string | null }, override: boolean) {
+  const servers = (isRecord(file.mcpServers) ? file.mcpServers : (file.mcpServers = {})) as Record<string, unknown>;
+  if (servers[name] === undefined && override) servers[name] = {};
+  const server = servers[name];
+  if (!isRecord(server)) throw new ConfigError(`mcp.json does not define MCP server "${name}".`);
+  const rules = isRecord(server.toolExposure) ? { ...server.toolExposure } : {};
+  if (tool.exposure === null) delete rules[tool.name]; else rules[tool.name] = tool.exposure;
+  if (Object.keys(rules).length) server.toolExposure = rules; else delete server.toolExposure;
+  return file;
+}
 
 const revisionOnly = z.object({ revision: z.string().min(1).max(100) }).strict();
 const named = z.array(z.object({ name: z.string().min(1).max(200), value: z.string().max(10_000).optional() }).strict()).max(100);
@@ -284,11 +299,12 @@ export function mcpRoutes(store: ConfigStore, registry: ProjectRegistry) {
     .get("/:scope", async c => c.json(await view(await ctx(c))))
     .patch("/:scope/servers/:name", async c => {
       const context = await ctx(c);
-      const { revision, ...patch } = serverPatch.parse(await c.req.json());
+      const { revision, tool, ...patch } = serverPatch.parse(await c.req.json());
       const name = c.req.param("name");
       await context.store.transform(context.scope, revision, value => {
         // In a project, a global server without a project entry gets an override, as /mcp does.
         const override = !!context.base?.has(name);
+        if (tool) return setToolRule(value, name, tool, override);
         try { return updateMcpServer(value, name, patch as Parameters<typeof updateMcpServer>[2], { override }); }
         catch (error) { throw new ConfigError(error instanceof Error ? error.message : "Cannot change this server."); }
       }, "mcp.json");

@@ -71,3 +71,19 @@ export type McpServerInput = {
 
 /** What a pasted configuration would add: Pi's verdict per server, values never included. */
 export type McpImportPreview = { format: string; notes: string[]; servers: { exists: boolean; server: McpServerView }[] };
+
+/**
+ * How one tool of a server reaches the model: an exact toolExposure rule, else the first `*` pattern
+ * that matches, else the server's exposure. Ported from @earendil-works/pi-coding-agent 1.1.0
+ * dist/core/mcp-servers.js `getMcpToolExposure` (MIT, Copyright Mario Zechner), which Pi does not export.
+ */
+export function toolExposure(server: { exposure?: string; toolExposure?: Record<string, string> }, tool: string): string {
+  const rules = server.toolExposure ?? {};
+  if (rules[tool] !== undefined) return rules[tool]!;
+  for (const [pattern, exposure] of Object.entries(rules)) {
+    if (!pattern.includes("*")) continue;
+    const source = pattern.split("*").map(part => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*");
+    if (new RegExp(`^${source}$`).test(tool)) return exposure;
+  }
+  return server.exposure ?? "codemode";
+}

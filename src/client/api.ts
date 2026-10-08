@@ -37,7 +37,7 @@ const GLOBAL: McpTarget = { scope: "global" };
 const mcpUrl = (target: McpTarget, path = "") => withProject(`/api/mcp/${target.scope}${path}`, target.scope === "project" ? target.project : undefined);
 const serverUrl = (target: McpTarget, name: string) => mcpUrl(target, `/servers/${encodeURIComponent(name)}`);
 export const loadMcp = (target = GLOBAL) => request<McpFileView>(mcpUrl(target));
-export const saveMcpServer = (target: McpTarget, name: string, revision: string, patch: { enabled?: boolean; exposure?: string }) =>
+export const saveMcpServer = (target: McpTarget, name: string, revision: string, patch: { enabled?: boolean; exposure?: string; tool?: { name: string; exposure: string | null } }) =>
   request<McpFileView>(serverUrl(target, name), "PATCH", { revision, ...patch });
 export const addMcpServer = (target: McpTarget, revision: string, name: string, server: McpServerInput) =>
   request<McpFileView>(mcpUrl(target, "/servers"), "POST", { revision, name, server });

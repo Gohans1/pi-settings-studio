@@ -278,6 +278,15 @@
   .resource-editor .file-list { display: flex; flex-wrap: wrap; gap: --spacing(1); }
   .raw-editor { max-width: 60rem; }
 
+  /* A server's tools from the last connection test, each with its exposure. */
+  .server-tools { display: grid; gap: --spacing(2); margin-top: --spacing(6); }
+  .server-tools h3 { margin: 0; }
+  .server-tools p { margin: 0; }
+  .tool-exposures { list-style: none; margin: 0; padding: 0; display: grid; }
+  .tool-exposures > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(1) --spacing(4); padding: --spacing(1.5) 0; border-top: 1px solid var(--border); }
+  .tool-exposures > li:last-child { border-bottom: 1px solid var(--border); }
+  .tool-exposures code { font-size: var(--text-small); overflow-wrap: anywhere; }
+  .tool-exposures select { min-width: 13rem; }
   /* Code mode. */
   .codemode { display: grid; gap: --spacing(5); max-width: 44rem; }
   .codemode fieldset:not(.scope-choice) { margin: 0; padding: --spacing(2) --spacing(4) --spacing(3); display: grid; gap: --spacing(0.5); border: 1px solid var(--border); border-radius: var(--radius); }
