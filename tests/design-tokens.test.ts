@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { cn } from "../src/client/lib/utils.ts";
 
 // Guardrails for the design system in src/client: Flexoki primitives -> semantic tokens -> components.
 const read = (path: string) => readFileSync(resolve(import.meta.dir, "..", path), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -94,4 +95,32 @@ describe("colour system", () => {
       expect(contrast(hex(fg, scheme), hex(bg, scheme))).toBeGreaterThanOrEqual(minimum);
     });
   }
+});
+
+describe("typography", () => {
+  const rules = declarations(styles);
+
+  test("font sizes come from the type scale", () => {
+    const sizes = rules.filter((d) => d.property === "font-size" || d.property === "font");
+    expect(sizes.length).toBeGreaterThan(0);
+    expect(sizes.filter((d) => d.value !== "inherit" && !d.value.includes("var(--text-"))).toEqual([]);
+    expect(components.match(/\btext-\[[\d.]/g)).toBeNull();
+  });
+
+  test("font weights and families come from tokens", () => {
+    expect(rules.filter((d) => d.property === "font-weight" && !/^var\(--font-weight-[a-z]+\)$/.test(d.value))).toEqual([]);
+    expect(rules.filter((d) => /system-ui|monospace|sans-serif/.test(d.value))).toEqual([]);
+  });
+
+  test("cn keeps a text colour beside every type-scale size", () => {
+    const steps = [...tokens.keys()].flatMap((name) => name.match(/^--text-([a-z]+)$/)?.[1] ?? []);
+    expect(steps.length).toBeGreaterThan(0);
+    for (const step of steps) expect(cn("text-primary-foreground", `text-${step}`)).toBe(`text-primary-foreground text-${step}`);
+  });
+
+  test("the scale descends from page title to caption", () => {
+    const steps = ["display", "heading", "body", "small", "caption"].map((step) => tokens.get(`--text-${step}`));
+    const rem = steps.map((value) => Number(value?.match(/^([\d.]+)rem$/)?.[1]));
+    expect(rem.every((size, i) => size > 0 && (i === 0 || size < (rem[i - 1] ?? 0)))).toBe(true);
+  });
 });
