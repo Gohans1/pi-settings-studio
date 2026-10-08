@@ -261,3 +261,16 @@ test("a project's own skills are removed the same way, and the project's skill p
   assert.match((await everything.json() as { error: string }).error, /place to find skills/);
   assert.equal(await readFile(join(project, "tools/kit/SKILL.md"), "utf8"), skill("kit", "Added by the project's settings."));
 });
+
+test("a SKILL.md with Windows line endings keeps them, and its invocation line can be taken out again", async (t) => {
+  const { agent, request, skills } = await fixture(t);
+  const file = join(agent, "skills/alpha/SKILL.md");
+  const crlf = skill("alpha", "Alpha does things.").replaceAll("\n", "\r\n");
+  await writeFile(file, crlf);
+  const path = String((await skills()).skills.find(entry => entry.name === "alpha")!.path);
+  const set = (modelInvocation: boolean) => request("/api/resource-files/invocation", { method: "PATCH", headers: json, body: JSON.stringify({ paths: [path], modelInvocation }) });
+  assert.equal((await set(false)).status, 200);
+  assert.equal(await readFile(file, "utf8"), crlf.replace("---\r\n# alpha", "disable-model-invocation: true\r\n---\r\n# alpha"));
+  assert.equal((await set(true)).status, 200);
+  assert.equal(await readFile(file, "utf8"), crlf);
+});

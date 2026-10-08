@@ -90,7 +90,8 @@ export default function (pi: ExtensionAPI) {
   }
 }
 
-const INVOCATION = /^disable-model-invocation\s*:.*\n/m;
+// `.` stops at \r, so a CRLF file needs its \r matched on its own.
+const INVOCATION = /^disable-model-invocation\s*:.*\r?\n/m;
 
 /**
  * A skill's SKILL.md with `disable-model-invocation: true` added or removed. Only that line changes;
