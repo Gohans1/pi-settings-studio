@@ -52,8 +52,8 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
 
   const known = models.some(entry => entry.id === model);
   return <section className="detail server-form" aria-labelledby="defaults-title">
-    <h2 id="defaults-title">Defaults</h2>
-    <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p>
+    <header><h2 id="defaults-title">Defaults</h2>
+      <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p></header>
     {project && <fieldset className="scope-choice"><legend>Edit</legend>
       <label><input type="radio" name="defaults-scope" checked={scope === "global"} disabled={busy} onChange={() => setScopeChoice("global")} />Global defaults</label>
       <label><input type="radio" name="defaults-scope" checked={scope === "project"} disabled={busy} onChange={() => setScopeChoice("project")} />This project</label>
@@ -76,7 +76,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
       </select><span className="muted">Pi limits the level to what the model supports.</span></label>
       <label>Enabled models<textarea rows={4} value={enabled} placeholder="All available models" spellCheck={false} onChange={event => setEnabled(event.target.value)} />
         <span className="muted">One pattern per line, in Pi's --models format, for startup selection and Ctrl+P cycling.</span></label>
-      <div className="actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save defaults"}</Button></div>
+      <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save defaults"}</Button></div>
     </form>}
   </section>;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CodemodeView } from "../shared/codemode";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
@@ -20,6 +20,7 @@ export function CodemodePanel({ view, autoEnable, busy, project, scope, onScope,
   useEffect(() => { if (!busy) setPending({}); }, [busy]);
   const preference = pending.preference ?? view.preference;
   const mode = pending.mode !== undefined ? pending.mode ?? "inherit" : inProject ? view.ownMode ?? "inherit" : view.mode;
+  const budgetField = useRef<HTMLInputElement>(null);
   const parsed = budget === "" ? null : Number(budget);
   const validBudget = parsed === null || (Number.isInteger(parsed) && parsed >= 0 && parsed <= 1_000_000);
   const where = inProject ? " in this project" : "";
@@ -28,8 +29,8 @@ export function CodemodePanel({ view, autoEnable, busy, project, scope, onScope,
       onChange={() => { setPending(patch); onChange(patch, done); }} /><span><strong>{label}</strong><span className="muted">{help}</span></span></label>;
   const effective = view.effective;
   return <section className="detail codemode" aria-labelledby="codemode-title">
-    <h2 id="codemode-title">Code mode</h2>
-    <p className="muted">The model calls tools from a short script; MCP tools use it by default.</p>
+    <header><h2 id="codemode-title">Code mode</h2>
+      <p className="muted">The model calls tools from a short script; MCP tools use it by default.</p></header>
     {project && <fieldset className="scope-choice"><legend>Edit</legend>
       <label><input type="radio" name="codemode-scope" checked={scope === "global"} disabled={busy} onChange={() => onScope("global")} />Global settings</label>
       <label><input type="radio" name="codemode-scope" checked={scope === "project"} disabled={busy} onChange={() => onScope("project")} />This project</label>
@@ -46,11 +47,15 @@ export function CodemodePanel({ view, autoEnable, busy, project, scope, onScope,
       {radio("mode", "on", mode, "Direct", "The model calls read, bash and the other tools directly.", { mode: "on" }, `Built-in tools are called directly${where}.`)}
       {radio("mode", "only", mode, "In scripts", "While Code mode is on, the model calls them only from scripts.", { mode: "only" }, `Built-in tools are called from scripts${where}.`)}
     </fieldset>
-    <form className="budget" onSubmit={event => { event.preventDefault(); onChange({ inlineBudget: parsed }, `Tool list budget saved${where}.`); }}>
-      <label>Tool list budget<input type="number" min={0} max={1_000_000} step={1} value={budget} placeholder={String(effective?.inlineBudget ?? view.defaultInlineBudget)}
+    <form className="budget" noValidate onSubmit={event => {
+      event.preventDefault();
+      if (!validBudget) { budgetField.current?.focus(); return; }
+      onChange({ inlineBudget: parsed }, `Tool list budget saved${where}.`);
+    }}>
+      <label>Tool list budget<input ref={budgetField} type="number" min={0} max={1_000_000} step={1} value={budget} placeholder={String(effective?.inlineBudget ?? view.defaultInlineBudget)}
         aria-invalid={!validBudget || undefined} aria-describedby="budget-help" onChange={event => setBudget(event.target.value)} /></label>
-      <Button type="submit" disabled={busy || !validBudget}>Save budget</Button>
-      <p id="budget-help" className="muted">{validBudget ? `Tokens the codemode description may spend listing tools; scripts find the rest with searchTools(). Empty means ${inProject ? "the global value" : `Pi's default, ${view.defaultInlineBudget}`}.` : "Enter a whole number from 0 to 1000000, or leave it empty."}</p>
+      <Button type="submit" disabled={busy}>Save budget</Button>
+      <p id="budget-help" className={validBudget ? "muted" : "field-error"}>{validBudget ? `Tokens the codemode description may spend listing tools; scripts find the rest with searchTools(). Empty means ${inProject ? "the global value" : `Pi's default, ${view.defaultInlineBudget}`}.` : "Enter a whole number from 0 to 1000000, or leave it empty."}</p>
     </form>
     {inProject ? <label className="switch-row">Turn Code mode on automatically
       <select aria-label="Turn Code mode on automatically" value={view.ownAutoEnable === undefined ? "inherit" : view.ownAutoEnable ? "on" : "off"} disabled={busy}

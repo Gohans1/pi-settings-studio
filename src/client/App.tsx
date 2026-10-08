@@ -29,6 +29,14 @@ function tabFromHash(): string {
   return tabs.some(tab => tab.id === id) ? id : tabs[0]!.id;
 }
 
+/** Pi's π as an ink stamp; the favicon in index.html draws the same mark. */
+function PiMark() {
+  return <svg viewBox="0 0 20 20" aria-hidden="true">
+    <rect width="20" height="20" rx="5" fill="currentColor" />
+    <path d="M5.5 7.25h9M8.25 7.25v7M12 7.25v5.25c0 1 .55 1.75 1.75 1.75" fill="none" strokeWidth="1.75" strokeLinecap="round" className="stroke-background" />
+  </svg>;
+}
+
 export function App() {
   const [active, setActive] = useState(tabFromHash);
   const { projects, project, choose, updateTrust } = useProject();
@@ -38,18 +46,27 @@ export function App() {
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
   }, []);
+  useEffect(() => {
+    document.title = `${tabs.find(tab => tab.id === active)?.label} · Pi Settings`;
+    // On a narrow screen the chosen tab may sit past the edge of the scrolling tab bar.
+    document.querySelector("[role=tab][aria-selected=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [active]);
   function select(id: string) {
     history.replaceState(null, "", "#" + id);
     setActive(id);
   }
-  return <Tabs className="app" value={active} onValueChange={value => select(String(value))}>
+  return <Tabs className="app grid gap-0" value={active} onValueChange={value => select(String(value))}>
     <a className="skip-link" href="#main">Skip to content</a>
-    <header className="app-header">
-      <strong className="identity">Settings</strong>
-      <TabsList variant="line" aria-label="Settings sections" className="tab-bar">
-        {tabs.map(({ id, label, icon: Icon }) => <TabsTrigger key={id} value={id}><Icon aria-hidden="true" />{label}</TabsTrigger>)}
-      </TabsList>
-      <ProjectPicker projects={projects} project={project} onChoose={choose} />
+    <header>
+      <div className="topbar">
+        <span className="brand"><PiMark /><span>Pi Settings</span></span>
+        <ProjectPicker projects={projects} project={project} onChoose={choose} />
+      </div>
+      <div className="tabbar">
+        <TabsList variant="line" aria-label="Settings sections" className="w-full">
+          {tabs.map(({ id, label, icon: Icon }) => <TabsTrigger key={id} value={id}><Icon aria-hidden="true" />{label}</TabsTrigger>)}
+        </TabsList>
+      </div>
     </header>
     <main id="main" tabIndex={-1}>
       {current && <TrustPanel project={current.path} trust={current.trust} onChange={trust => updateTrust(current.path, trust)} />}

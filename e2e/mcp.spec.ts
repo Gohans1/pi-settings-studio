@@ -117,7 +117,10 @@ test("Code mode choices save at once; the tool list budget saves on Save", async
   expect((await settings()).codemode).toEqual({ mode: "only" });
   const budget = panel.getByLabel("Tool list budget");
   await budget.fill("-1");
-  await expect(panel.getByRole("button", { name: "Save budget" })).toBeDisabled();
+  await panel.getByRole("button", { name: "Save budget" }).click();
+  await expect(budget).toBeFocused();
+  await expect(budget).toHaveAttribute("aria-invalid", "true");
+  expect((await settings()).codemode).toEqual({ mode: "only" });
   await budget.fill("1200");
   await panel.getByRole("button", { name: "Save budget" }).click();
   await expect(page.getByRole("status")).toContainText("Tool list budget saved");
@@ -166,7 +169,8 @@ test("tool exposure rules, OAuth settings and provider sign-in are edited in the
 test("servers pasted from another client are previewed, then the chosen ones imported", async ({ page }) => {
   const readServers = async () => JSON.parse(await readFile(file, "utf8")).mcpServers;
   await page.goto(server.url + "#mcp");
-  await page.getByRole("button", { name: "Import servers into the global mcp.json" }).click();
+  await page.getByRole("button", { name: "More actions for the global mcp.json" }).click();
+  await page.getByRole("menuitem", { name: "Import servers" }).click();
   const panel = page.getByRole("form", { name: "Import MCP servers" });
   await panel.getByLabel("Pasted configuration").fill(`[mcp_servers.context7]
 command = "npx"
@@ -206,7 +210,7 @@ test("an OAuth server shows its sign-in state, and mcp.log is shown with secrets
   await expect(page.getByRole("region", { name: "sentry" })).toContainText("Signed in.");
   await page.getByRole("button", { name: /^linear/ }).click();
   await expect(page.getByRole("region", { name: "linear" })).toContainText("Not signed in yet.");
-  await page.getByRole("button", { name: "Show mcp.log" }).click();
+  await page.getByRole("button", { name: "View mcp.log" }).click();
   const log = page.getByRole("region", { name: "mcp.log" });
   await expect(log).toContainText("[search] error key ‹hidden› rejected");
   expect(await page.content()).not.toMatch(/fixture-secret-value|fixture-oauth-token/);

@@ -108,7 +108,8 @@ test("models.json is edited as raw JSON; keys stay hidden and a file Pi rejects 
   const file = join(agent, "models.json");
   await writeFile(file, JSON.stringify({ providers: { o: { baseUrl: "http://localhost:1/v1", api: "openai-completions", apiKey: "fixture-raw-key", models: [{ id: "m" }] } } }));
   await page.goto(server.url + "#models");
-  await page.getByRole("button", { name: "Edit models.json as JSON" }).click();
+  await page.getByRole("button", { name: "More actions for models.json" }).click();
+  await page.getByRole("menuitem", { name: "Edit as JSON" }).click();
   const editor = page.getByLabel("models.json", { exact: true });
   await expect(editor).toHaveValue(/‹hidden 1›/);
   const broken = JSON.parse(await editor.inputValue());

@@ -48,7 +48,8 @@ test("mcp.json is edited as raw JSON with secrets shown as placeholders", async 
   const globalFile = join(root, "agent", "mcp.json");
   await writeFile(globalFile, JSON.stringify({ mcpServers: { docs: { url: "https://example.com/mcp", headers: { Authorization: "Bearer fixture-raw-secret" } } } }));
   await page.goto(server.url + "#mcp");
-  await page.getByRole("button", { name: "Edit global mcp.json as JSON" }).click();
+  await page.getByRole("button", { name: "More actions for the global mcp.json" }).click();
+  await page.getByRole("menuitem", { name: "Edit as JSON" }).click();
   const editor = page.getByLabel("mcp.json", { exact: true });
   await expect(editor).toHaveValue(/‹hidden 1›/);
   expect(await page.content()).not.toContain("fixture-raw-secret");

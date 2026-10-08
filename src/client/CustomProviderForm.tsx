@@ -108,7 +108,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
       <p className="muted">Other model fields (cost, compat, thinking maps) stay as they are in the file.</p>
     </fieldset>
     {provider && provider.otherKeys.length > 0 && <p className="muted">Kept as they are: {provider.otherKeys.join(", ")}.</p>}
-    <div className="actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save provider"}</Button>
+    <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save provider"}</Button>
       {onRemove && <Button type="button" variant="destructive" disabled={busy} onClick={onRemove} aria-label={`Remove ${provider?.id}`}>Remove</Button>}
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;

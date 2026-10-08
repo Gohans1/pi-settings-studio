@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import type { InstructionFile, InstructionsView } from "../shared/instructions";
 import { deleteInstruction, loadInstructions, restoreInstruction, saveInstruction } from "./api";
 import { Button } from "./components/ui/button";
+import { Feedback } from "./Feedback";
+import { FilePath, home, PageHeader } from "./PageHeader";
+import { Workbench } from "./Workbench";
 
 const baseName = (path: string) => path.split(/[\\/]/).pop() ?? path;
-const home = (path: string) => path.replace(/^\/home\/[^/]+/, "~");
 
 function title(file: InstructionFile): string {
   if (file.kind === "context") return `Instructions (${baseName(file.path)})`;
@@ -30,19 +32,18 @@ function Editor({ file, files, project, loadsInProject, busy, onSave, onDelete }
   const [text, setText] = useState(file.text ?? "");
   const changed = text !== (file.text ?? "");
   return <section className="detail instruction" aria-labelledby="instruction-title">
-    <h2 id="instruction-title">{title(file)}</h2>
-    <p className="muted">{role(file, files, loadsInProject)}</p>
-    <code className="scope-info">{home(file.path)}</code>
+    <header><h2 id="instruction-title">{title(file)}</h2>
+      <p className="muted">{role(file, files, loadsInProject)}{project && file.scope === "global" && " Applies to every project, not only the one chosen at the top."}</p>
+      <FilePath path={file.path} /></header>
     {file.error ? <div className="error"><strong>Cannot edit this file here</strong><p>{file.error}</p></div> : <>
       {!file.exists && <p className="notice">Not created yet. Saving creates it{file.kind === "context" ? " as AGENTS.md" : ""}.</p>}
       {file.others?.length ? <p className="notice">Pi ignores {file.others.join(", ")} in this folder, because {baseName(file.path)} comes first.</p> : null}
       <textarea aria-label={`Contents of ${baseName(file.path)}`} value={text} rows={22} spellCheck={false} onChange={event => setText(event.target.value)} />
-      <div className="actions">
+      <div className="form-actions">
         <Button disabled={busy || (file.exists && !changed)} onClick={() => onSave(text)}>{busy ? "Saving…" : file.exists ? "Save file" : "Create file"}</Button>
         {changed && <Button variant="outline" disabled={busy} onClick={() => setText(file.text ?? "")}>Discard changes</Button>}
         {file.exists && <Button variant="destructive" disabled={busy || changed} onClick={onDelete}>Delete file</Button>}
       </div>
-      {project && file.scope === "global" && <p className="muted">Applies to every project, not only the one chosen at the top.</p>}
     </>}
   </section>;
 }
@@ -54,6 +55,8 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
   const [message, setMessage] = useState("");
   const [undo, setUndo] = useState<string>();
   const [busy, setBusy] = useState(false);
+  // Narrow screens show the list until a file is picked; wide ones always show the chosen file.
+  const [picked, setPicked] = useState(false);
 
   async function refresh() {
     setError("");
@@ -73,28 +76,25 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
   const current = files.find(file => file.id === selected) ?? files[0];
   const extra = (view?.loaded ?? []).filter(path => !files.some(file => file.path === path));
   const list = (scope: "global" | "project") => <ul className="item-list">{files.filter(file => file.scope === scope).map(file => <li key={file.id}>
-    <button type="button" aria-pressed={file.id === current?.id} onClick={() => setSelected(file.id)}>
+    <button type="button" aria-pressed={file.id === current?.id} onClick={() => { setSelected(file.id); setPicked(true); }}>
       <span className="item-name">{title(file)}</span><span className="item-state">{file.error ? "unreadable" : file.exists ? "" : "not created"}</span>
     </button>
   </li>)}</ul>;
   return <>
-    <div className="page-heading"><div><h1>Instructions</h1><p>Text Pi puts in every system prompt: context files (AGENTS.md), SYSTEM.md and APPEND_SYSTEM.md.</p></div></div>
-    <div role="status" className="feedback">{message}{undo && <>{" "}<Button variant="outline" size="sm" disabled={busy}
-      onClick={() => { const id = undo; const name = baseName(files.find(file => file.id === id)?.path ?? id); void run(() => restoreInstruction(id, project), `Restored ${name}.`); }}>Undo</Button></>}</div>
+    <PageHeader title="Instructions" description="Text Pi puts in every system prompt: context files (AGENTS.md), SYSTEM.md and APPEND_SYSTEM.md." />
+    <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
+      action={!!undo && { label: "Undo", disabled: busy, onClick: () => { const id = undo; const name = baseName(files.find(file => file.id === id)?.path ?? id); void run(() => restoreInstruction(id, project), `Restored ${name}.`); } }} />
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p></div>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading instruction files…</div> : <div className="master-detail">
-      <div className="master">
-        <section className="item-group" aria-label="Global instruction files"><div className="list-header"><h2>Global</h2></div>{list("global")}</section>
-        {project && <section className="item-group" aria-label="This project's instruction files"><div className="list-header"><h2>This project</h2></div>{list("project")}</section>}
-        {project && extra.length > 0 && <section className="item-group" aria-label="Also loaded">
-          <div className="list-header"><h2>Also loaded here</h2></div>
-          <ul className="plain-list">{extra.map(path => <li key={path}><code>{home(path)}</code></li>)}</ul>
-          <p className="muted">Context files in parent folders. Edit them in their own folder.</p>
-        </section>}
-      </div>
-      {current && <Editor key={current.id + current.revision} file={current} files={files} project={project} loadsInProject={loadsInProject} busy={busy}
+    {!view ? !error && <div className="loading" aria-busy="true">Reading instruction files…</div> : <Workbench open={picked} onBack={() => setPicked(false)} backLabel="All files" list={<>
+      <section className="item-group" aria-label="Global instruction files"><div className="list-header"><h2>Global</h2></div>{list("global")}</section>
+      {project && <section className="item-group" aria-label="This project's instruction files"><div className="list-header"><h2>This project</h2></div>{list("project")}</section>}
+      {project && extra.length > 0 && <section className="item-group" aria-label="Also loaded">
+        <div className="list-header"><h2>Also loaded here</h2></div>
+        <ul className="plain-list">{extra.map(path => <li key={path}><code>{home(path)}</code></li>)}</ul>
+        <p className="muted list-note">Context files in parent folders. Edit them in their own folder.</p>
+      </section>}
+    </>} detail={current && <Editor key={current.id + current.revision} file={current} files={files} project={project} loadsInProject={loadsInProject} busy={busy}
         onSave={text => void run(() => saveInstruction(current.id, current.revision, text, project), `Saved ${baseName(current.path)}.`)}
-        onDelete={() => void run(() => deleteInstruction(current.id, current.revision, project), `Deleted ${baseName(current.path)}.`, current.id)} />}
-    </div>}
+        onDelete={() => void run(() => deleteInstruction(current.id, current.revision, project), `Deleted ${baseName(current.path)}.`, current.id)} />} />}
   </>;
 }

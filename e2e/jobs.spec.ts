@@ -38,6 +38,7 @@ test("a local package is installed and removed from the Plugins tab", async ({ p
   await writeFile(join(pkg, "package.json"), JSON.stringify({ name: "local-pkg", version: "1.0.0" }));
   await writeFile(join(pkg, "prompts", "hi.md"), "---\ndescription: Say hi\n---\nhi\n");
   await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: /^Packages/ }).click();
   await page.getByLabel("Package source").fill(pkg);
   await page.getByRole("button", { name: "Install", exact: true }).click();
   await expect(page.getByRole("region", { name: `Install ${pkg}` })).toContainText("Finished", { timeout: 60_000 });

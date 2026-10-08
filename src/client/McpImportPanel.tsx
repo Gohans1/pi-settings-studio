@@ -51,7 +51,7 @@ export function McpImportPanel({ target, revision, onImported, onCancel }: {
         {server.error && <span className="field-error">Pi refuses it: {server.error}</span>}
       </li>)}</ul>
     </section>}
-    <div className="actions">
+    <div className="form-actions">
       {preview ? <Button type="submit" disabled={busy || !chosen.size}>Import {chosen.size} server{chosen.size === 1 ? "" : "s"}</Button>
         : <Button type="button" disabled={busy || !text.trim()} onClick={() => void check()}>Preview</Button>}
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button>

@@ -3,6 +3,8 @@ import { Copy } from "lucide-react";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import { loadSessions, loadSystemPrompt } from "./api";
 import { Button } from "./components/ui/button";
+import { Feedback } from "./Feedback";
+import { PageHeader } from "./PageHeader";
 
 const count = (text: string) => `${text.length.toLocaleString("en")} characters`;
 
@@ -37,9 +39,8 @@ export function SystemPromptTab({ project }: { project?: string }) {
   }
 
   return <>
-    <div className="page-heading"><div><h1>System prompt</h1>
-      <p>Exactly what Pi recorded for a session: the prompt sections and tool declarations the model received. Read-only.</p></div></div>
-    <div role="status" className="feedback">{message}</div>
+    <PageHeader title="System prompt" description="Exactly what Pi recorded for a session: the prompt sections and tool declarations the model received. Read-only." />
+    <Feedback message={message} onDismiss={() => setMessage("")} />
     {error && <div role="alert" className="error"><strong>Could not show the prompt</strong><p>{error}</p></div>}
     {!sessions ? !error && <div className="loading" aria-busy="true">Reading sessions…</div>
       : !project ? <p className="notice">Choose a project at the top to see its sessions.</p>

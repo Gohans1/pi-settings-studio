@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { ResourceFileView, ResourceType } from "../shared/resources";
 import { createResource, loadResourceFile, saveResourceFile } from "./api";
 import { Button } from "./components/ui/button";
+import { FilePath } from "./PageHeader";
 
 /** Text editor for one resource; a skill's other files are listed beside it. Read-only views explain why. */
 export function ResourceEditor({ type, path, name, editable: hint, project, onMessage, onClose }: {
@@ -32,7 +33,7 @@ export function ResourceEditor({ type, path, name, editable: hint, project, onMe
   }
   const editable = view ? view.editable : hint;
   return <form className="detail resource-editor" aria-label={`${editable ? "Edit" : "View"} ${name}`} onSubmit={submit}>
-    <h2>{name}</h2>
+    <header><h2>{name}</h2><FilePath path={path} /></header>
     {view?.readOnly && <p className="notice">Read-only. {view.readOnly}</p>}
     {error && <div role="alert" className="error"><strong>Not saved</strong><p>{error}</p></div>}
     {view && view.files.length > 1 && <nav aria-label="Files" className="file-list">
@@ -42,8 +43,7 @@ export function ResourceEditor({ type, path, name, editable: hint, project, onMe
     {view && <label>{view.file}<textarea aria-label={`Content of ${view.file}`} value={text} readOnly={!view.editable} rows={22} spellCheck={false}
       onChange={event => setText(event.target.value)} /></label>}
     {!view && !error && <div className="loading" aria-busy="true">Reading…</div>}
-    <p className="muted"><code>{path}</code></p>
-    <div className="actions">
+    <div className="form-actions">
       {view?.editable && <Button type="submit" disabled={busy || !dirty}>Save</Button>}
       {dirty && <Button type="button" variant="outline" disabled={busy} onClick={() => setText(view!.text)}>Discard changes</Button>}
       <Button type="button" variant="outline" onClick={() => { if (!dirty || window.confirm("Discard the unsaved changes?")) onClose(); }}>Close</Button>
@@ -88,7 +88,7 @@ export function NewResourceForm({ type, project, onCreated, onCancel }: {
     {project && <label>Where<select aria-label="Where" value={scope} onChange={event => setScope(event.target.value as "global" | "project")}>
       <option value="global">Global: ~/.pi/agent/{type}/</option><option value="project">This project: .pi/{type}/</option>
     </select></label>}
-    <div className="actions"><Button type="submit" disabled={busy}>Create {label}</Button>
+    <div className="form-actions"><Button type="submit" disabled={busy}>Create {label}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;
 }

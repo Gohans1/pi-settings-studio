@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { ChevronDown, Package, Plus, Puzzle, Search } from "lucide-react";
 import type { PluginsView, ResourceType, ResourceView } from "../shared/resources";
 import { loadPlugins, savePackageFilters, savePlugins } from "./api";
 import { PackageFilterForm, type FilterPatch } from "./PackageFilterForm";
@@ -7,8 +7,13 @@ import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 import { JobPanel, useJob } from "./JobPanel";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "./components/ui/menu";
+import { Feedback } from "./Feedback";
+import { PageHeader } from "./PageHeader";
+import { EmptyDetail, Workbench } from "./Workbench";
 
 const typeLabels: Record<string, string> = { extensions: "extension", prompts: "prompt", themes: "theme" };
+const newLabels = { prompts: "Prompt template", themes: "Theme", extensions: "Extension" } as const;
 const builtinNotes: Record<string, string> = {
   mcp: "Turning it off turns off Pi's MCP support: no mcp.json server connects.",
   codemode: "Turning it off removes the codemode tool, so MCP tools with codemode exposure cannot be called.",
@@ -20,7 +25,8 @@ function PluginDetail({ item, onOpen }: { item: ResourceView; onOpen: () => void
   const builtin = item.group.startsWith("Built-in");
   const editable = item.origin === "top-level";
   return <section className="detail" aria-labelledby="plugin-title">
-    <h2 id="plugin-title">{item.name}</h2>
+    <header className="detail-header"><h2 id="plugin-title">{item.name}</h2>
+      {!builtin && <div className="actions"><Button variant="outline" aria-label={`${editable ? "Edit" : "View"} ${item.name}`} onClick={onOpen}>{editable ? "Edit" : "View"}</Button></div>}</header>
     {!item.enabled && <p className="notice">Turned off, so Pi does not load it.</p>}
     {builtin && builtinNotes[item.name] && <p className="notice">{builtinNotes[item.name]}</p>}
     <dl className="detail-list">
@@ -29,7 +35,6 @@ function PluginDetail({ item, onOpen }: { item: ResourceView; onOpen: () => void
       <div><dt>Source</dt><dd>{item.group}</dd></div>
       <div><dt>{builtin ? "Name" : "File"}</dt><dd><code>{item.path}</code></dd></div>
     </dl>
-    {!builtin && <div className="actions detail-actions"><Button variant="outline" aria-label={`${editable ? "Edit" : "View"} ${item.name}`} onClick={onOpen}>{editable ? "Edit" : "View"}</Button></div>}
   </section>;
 }
 
@@ -44,6 +49,7 @@ export function PluginsTab({ project }: { project?: string }) {
   const [filtering, setFiltering] = useState<string>();
   const [mode, setMode] = useState<"edit" | ResourceType>();
   const [installScope, setInstallScope] = useState<"global" | "project">("global");
+  const [packagesOpen, setPackagesOpen] = useState(false);
   // pi install / remove / update run on click; the list reloads when they finish.
   const job = useJob(() => void refresh());
 
@@ -52,7 +58,7 @@ export function PluginsTab({ project }: { project?: string }) {
     try { setView(await loadPlugins(project)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the plugins."); }
   }
-  useEffect(() => { setSelected(undefined); setMode(undefined); void refresh(); }, [project]);
+  useEffect(() => { setSelected(undefined); setMode(undefined); setPackagesOpen(false); void refresh(); }, [project]);
 
   async function toggle(items: ResourceView[], enabled: boolean, label = items[0]?.name) {
     if (!view || !items.length) return;
@@ -82,62 +88,66 @@ export function PluginsTab({ project }: { project?: string }) {
   const visible = resources.filter(item => !needle || `${item.name} ${item.description ?? ""} ${item.group}`.toLowerCase().includes(needle));
   const groups = [...new Set(resources.map(item => item.group))].filter(group => visible.some(item => item.group === group));
   const current = resources.find(item => item.path === selected);
+  const open = packagesOpen || !!mode || !!current;
+  const back = () => { setSelected(undefined); setMode(undefined); setPackagesOpen(false); };
+  const packages = view && <section className="detail packages" aria-labelledby="packages-title">
+    <header><h2 id="packages-title">Packages</h2>
+      <p className="muted">Installed with pi install in this environment. Packages can run code: install only sources you trust.</p></header>
+    <form className="install-form" onSubmit={event => { event.preventDefault(); void job.start({ action: "package-install", source: source.trim(), ...(installScope === "project" && project ? { project } : {}) }); }}>
+      <label>Package source<input value={source} placeholder="npm:@scope/name, git:github.com/user/repo or ./path" autoComplete="off" spellCheck={false} onChange={event => setSource(event.target.value)} /></label>
+      {project && <label>For<select aria-label="Install for" value={installScope} onChange={event => setInstallScope(event.target.value as "global" | "project")}>
+        <option value="global">Every project</option><option value="project">This project only</option></select></label>}
+      <Button type="submit" disabled={job.running || !source.trim()}>Install</Button>
+    </form>
+    <JobPanel job={job.job} error={job.error} onAnswer={value => void job.answer(value)} onCancel={() => void job.cancel()} onDismiss={job.dismiss} />
+    <div className="list-header package-list-header"><h3>In settings.json</h3><span>{view.packages.length}</span>
+      <Button variant="ghost" size="sm" disabled={job.running || !view.packages.length} onClick={() => void job.start({ action: "packages-update" })}>Update all</Button></div>
+    {view.packages.length ? <ul className="package-list">{view.packages.map(pkg => <li key={pkg.scope + pkg.source}>
+      <code translate="no">{pkg.source}</code>
+      <span className="muted">{pkg.scope === "project" ? "This project · " : ""}{pkg.installed ? "Installed" : "Not installed"}{pkg.filtered ? " · has resource filters" : ""}</span>
+      <span className="actions">
+        <Button variant="ghost" size="xs" disabled={busy} aria-label={`Filters for ${pkg.source}`} onClick={() => setFiltering(pkg.scope + pkg.source)}>Filters</Button>
+        <Button variant="ghost" size="xs" disabled={job.running} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source })}>Update</Button>
+        <Button variant="ghost" size="xs" className="text-destructive" disabled={job.running} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Remove</Button>
+      </span>
+      {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
+        onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}
+    </li>)}</ul> : <p className="empty">No packages yet. Install one by its npm name, git URL or folder.</p>}
+  </section>;
   return <>
-    <div className="page-heading"><div><h1>Plugins</h1><p>Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab.</p></div>
-      <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search plugins" placeholder="Search plugins…" value={query} onChange={event => setQuery(event.target.value)} /></div></div>
-    <div role="status" className="feedback">{message}</div>
-    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Reload</Button></div>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <>
-      <div className="master-detail">
-        <section className="master" aria-label="Plugin list">
-          <div className="actions add-button">{(["prompts", "themes", "extensions"] as const).map(type =>
-            <Button key={type} variant="outline" size="sm" onClick={() => setMode(type)}>New {typeLabels[type]}</Button>)}</div>
-          {!visible.length && <p className="empty">{resources.length ? "No matching plugins." : "No plugins found."}</p>}
-          {groups.map(group => {
-            const members = visible.filter(item => item.group === group);
-            return <div key={group} className="item-group">
-              <div className="list-header"><h2>{group}</h2>
-                <Switch aria-label={`Enable everything in ${group}`} checked={members.every(item => item.enabled)} disabled={busy}
-                  onCheckedChange={enabled => void toggle(members.filter(item => item.enabled !== enabled), enabled, `Everything in ${group}`)} /></div>
-              <ul className="item-list">{members.map(item => <li key={item.type + item.path}>
-                <button type="button" aria-pressed={item.path === selected} onClick={() => { setSelected(item.path); setMode(undefined); }}>
-                  <span className="item-name">{item.name}</span><span className="item-state">{item.enabled ? typeLabels[item.type] : "off"}</span>
-                </button>
-                <Switch aria-label={`Enable ${item.name}`} checked={item.enabled} disabled={busy} onCheckedChange={enabled => void toggle([item], enabled)} />
-              </li>)}</ul>
-            </div>;
-          })}
-        </section>
-        {mode && mode !== "edit" ? <NewResourceForm key={mode} type={mode} project={project} onCancel={() => setMode(undefined)}
-            onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
-          : current && mode === "edit" ? <ResourceEditor key={current.path} type={current.type} path={current.path} name={current.name} editable={current.origin === "top-level"}
-            project={project} onMessage={setMessage} onClose={() => { setMode(undefined); void refresh(); }} />
-          : current ? <PluginDetail item={current} onOpen={() => setMode("edit")} />
-          : <section className="detail"><p className="empty">Select a plugin to see its details.</p></section>}
-      </div>
-      <section className="packages" aria-labelledby="packages-title">
-        <h2 id="packages-title">Packages</h2>
-        <form className="install-form" onSubmit={event => { event.preventDefault(); void job.start({ action: "package-install", source: source.trim(), ...(installScope === "project" && project ? { project } : {}) }); }}>
-          <label>Package source<input value={source} placeholder="npm:@scope/name, git:github.com/user/repo or ./path" autoComplete="off" spellCheck={false} onChange={event => setSource(event.target.value)} /></label>
-          {project && <label>For<select aria-label="Install for" value={installScope} onChange={event => setInstallScope(event.target.value as "global" | "project")}>
-            <option value="global">Every project</option><option value="project">This project only</option></select></label>}
-          <Button type="submit" disabled={job.running || !source.trim()}>Install</Button>
-          <Button type="button" variant="outline" disabled={job.running || !view.packages.length} onClick={() => void job.start({ action: "packages-update" })}>Update all</Button>
-        </form>
-        <p className="muted">Runs pi install in this environment. Packages can run code: install only sources you trust.</p>
-        <JobPanel job={job.job} error={job.error} onAnswer={value => void job.answer(value)} onCancel={() => void job.cancel()} onDismiss={job.dismiss} />
-        {view.packages.length ? <ul className="package-list">{view.packages.map(pkg => <li key={pkg.scope + pkg.source}>
-          <code>{pkg.source}</code>
-          <span className="muted">{pkg.scope === "project" ? "This project · " : ""}{pkg.installed ? "Installed" : "Not installed"}{pkg.filtered ? " · has resource filters" : ""}</span>
-          <span className="actions">
-            <Button variant="ghost" size="sm" disabled={busy} aria-label={`Filters for ${pkg.source}`} onClick={() => setFiltering(pkg.scope + pkg.source)}>Filters</Button>
-            <Button variant="ghost" size="sm" disabled={job.running} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source })}>Update</Button>
-            <Button variant="ghost" size="sm" disabled={job.running} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Remove</Button>
-          </span>
-          {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
-            onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}
-        </li>)}</ul> : <p className="empty">No packages in settings.json.</p>}
-      </section>
-    </>}
+    <PageHeader title="Plugins" description="Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab."
+      actions={<Menu>
+        <MenuTrigger render={<Button variant="outline" />}><Plus aria-hidden="true" />New<ChevronDown aria-hidden="true" /></MenuTrigger>
+        <MenuContent>{(["prompts", "themes", "extensions"] as const).map(type =>
+          <MenuItem key={type} onClick={() => { setMode(type); setSelected(undefined); setPackagesOpen(false); }}>{newLabels[type]}</MenuItem>)}</MenuContent>
+      </Menu>} />
+    <Feedback message={message} onDismiss={() => setMessage("")} />
+    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></div>}
+    {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <Workbench open={open} onBack={back} backLabel="All plugins" list={<section aria-label="Plugin list">
+      <div className="list-search"><div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search plugins" placeholder="Search plugins…" value={query} onChange={event => setQuery(event.target.value)} /></div></div>
+      <ul className="item-list pinned"><li><button type="button" aria-pressed={packagesOpen} onClick={() => { setPackagesOpen(true); setSelected(undefined); setMode(undefined); }}>
+        <Package aria-hidden="true" /><span className="item-name">Packages</span><span className="item-state">{view.packages.length}</span></button></li></ul>
+      {!visible.length && <p className="empty">{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</p>}
+      {groups.map(group => {
+        const members = visible.filter(item => item.group === group);
+        return <div key={group} className="item-group">
+          <div className="list-header"><h2>{group}</h2>
+            <Switch aria-label={`Enable everything in ${group}`} checked={members.every(item => item.enabled)} disabled={busy}
+              onCheckedChange={enabled => void toggle(members.filter(item => item.enabled !== enabled), enabled, `Everything in ${group}`)} /></div>
+          <ul className="item-list">{members.map(item => <li key={item.type + item.path}>
+            <button type="button" aria-pressed={item.path === selected} onClick={() => { setSelected(item.path); setMode(undefined); setPackagesOpen(false); }}>
+              <span className="item-name">{item.name}</span><span className="item-state">{item.enabled ? typeLabels[item.type] : "off"}</span>
+            </button>
+            <Switch aria-label={`Enable ${item.name}`} checked={item.enabled} disabled={busy} onCheckedChange={enabled => void toggle([item], enabled)} />
+          </li>)}</ul>
+        </div>;
+      })}
+    </section>} detail={packagesOpen ? packages
+      : mode && mode !== "edit" ? <NewResourceForm key={mode} type={mode} project={project} onCancel={() => setMode(undefined)}
+          onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
+      : current && mode === "edit" ? <ResourceEditor key={current.path} type={current.type} path={current.path} name={current.name} editable={current.origin === "top-level"}
+          project={project} onMessage={setMessage} onClose={() => { setMode(undefined); void refresh(); }} />
+      : current ? <PluginDetail item={current} onOpen={() => setMode("edit")} />
+      : <EmptyDetail icon={Puzzle} title="No plugin selected">Choose an extension, prompt template or theme to see where it comes from, or open Packages to install more.</EmptyDetail>} />}
   </>;
 }

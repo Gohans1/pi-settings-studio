@@ -1,13 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Search, RotateCcw } from "lucide-react";
+import { ChevronDown, FileJson, History, RotateCcw, Search } from "lucide-react";
 import { fields, sections, type SettingsChange, type SettingsView } from "../shared/settings";
 import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "./components/ui/menu";
+import { Feedback } from "./Feedback";
+import { PageHeader } from "./PageHeader";
 import { PiPanel } from "./PiPanel";
 import { NotHere } from "./NotHere";
 import { RawJsonEditor } from "./RawJsonEditor";
 import { KeybindingsPanel } from "./KeybindingsPanel";
+
+const KEYBINDINGS = { id: "keybindings", title: "Keyboard shortcuts" };
+
+/** The group the reader is in: the last one whose top has passed the upper third of the scroller. */
+function useCurrentGroup(ids: string[]) {
+  const [current, setCurrent] = useState(ids[0]);
+  const key = ids.join(" ");
+  useEffect(() => {
+    const visible = new Set<string>();
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        const id = entry.target.id.slice("group-".length);
+        if (entry.isIntersecting) visible.add(id); else visible.delete(id);
+      }
+      const first = ids.find(id => visible.has(id));
+      if (first) setCurrent(first);
+    }, { root: document.getElementById("main"), rootMargin: "-8px 0px -66% 0px" });
+    for (const id of ids) { const element = document.getElementById("group-" + id); if (element) observer.observe(element); }
+    return () => observer.disconnect();
+  }, [key]);
+  return [current, setCurrent] as const;
+}
 
 export function GeneralTab({ project }: { project?: string }) {
   // The project's own .pi/settings.json overrides the global file key by key.
@@ -72,11 +97,16 @@ export function GeneralTab({ project }: { project?: string }) {
   }
   async function save() {
     if (!view) return;
+    // Pi would refuse the file: take the reader to the first value to fix, and write nothing.
+    if (invalidKeys.length) {
+      document.getElementById("row-" + invalidKeys[0])?.querySelector<HTMLElement>("input, select, textarea, [role=switch]")?.focus();
+      return;
+    }
     setBusy(true); setError(""); setMessage("");
     try {
       setView(await saveSettings(scope, view.revision, changes, target));
       setDraft({}); setMessage("Saved to file. Reload Pi or start a new session to apply supported settings.");
-      title.current?.focus();
+      title.current?.focus({ preventScroll: true });
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Save failed. Your draft is unchanged."); }
     finally { setBusy(false); }
   }
@@ -100,6 +130,8 @@ export function GeneralTab({ project }: { project?: string }) {
 
   const needle = query.trim().toLowerCase();
   const results = fields.filter(field => field.section !== "modelDefaults" && (!needle || (field.label + " " + field.key + " " + field.help).toLowerCase().includes(needle)));
+  const shownSections = [...sections.filter(section => results.some(field => field.section === section.id)), ...(scope === "global" && !needle ? [KEYBINDINGS] : [])];
+  const [currentGroup, setCurrentGroup] = useCurrentGroup(view && !restore ? shownSections.map(section => section.id) : []);
   async function closeRaw(saved: boolean) {
     setRaw(false);
     if (!saved) return;
@@ -110,55 +142,72 @@ export function GeneralTab({ project }: { project?: string }) {
     catch (cause) { setError(cause instanceof Error ? cause.message : "Reload failed."); }
     finally { setLoading(false); }
   }
-  const rawButton = <Button variant="outline" disabled={busy || !!changes.length} onClick={() => { setRaw(true); setMessage(""); }}>Edit raw JSON</Button>;
+  const openRaw = () => { setRaw(true); setMessage(""); };
+  const description = scope === "project" ? "Settings for this project only. They override the global ones while the project is trusted." : "Pi core settings shared by every project.";
   if (raw) return <>
-    <div className="page-heading"><div><h1>General</h1><p>Pi core settings shared by every project.</p></div></div>
+    <PageHeader title="General" description={description} />
     <RawJsonEditor file="settings.json" load={loadRaw} save={saveRaw} onClose={saved => void closeRaw(saved)} />
   </>;
   return <>
-    <div className="page-heading"><div><h1 ref={title} tabIndex={-1}>General</h1><p>{scope === "project" ? "Settings for this project only. They override the global ones while the project is trusted." : "Pi core settings shared by every project."}</p></div>
-      <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search settings" placeholder="Search settings or keys…" value={query} onChange={e => setQuery(e.target.value)} /></div></div>
+    <PageHeader title="General" titleRef={title} description={description} files={[view?.path]} actions={<>
+      <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search settings" placeholder="Search settings or keys…" value={query} onChange={e => setQuery(e.target.value)} /></div>
+      <Menu>
+        <MenuTrigger render={<Button variant="outline" />}><FileJson aria-hidden="true" />File<ChevronDown aria-hidden="true" /></MenuTrigger>
+        <MenuContent>
+          <MenuItem disabled={busy || !!changes.length} onClick={openRaw}><FileJson aria-hidden="true" />Edit as JSON</MenuItem>
+          <MenuItem disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</MenuItem>
+          {view?.hasBackup && <><MenuSeparator /><MenuItem disabled={busy || !!changes.length} onClick={() => setRestore(true)}><History aria-hidden="true" />Restore previous file</MenuItem></>}
+        </MenuContent>
+      </Menu>
+    </>} />
     {project && <fieldset className="scope-choice"><legend>Edit</legend>
       <label><input type="radio" name="general-scope" checked={scope === "global"} disabled={busy || !!changes.length} onChange={() => setScopeChoice("global")} />Global settings</label>
       <label><input type="radio" name="general-scope" checked={scope === "project"} disabled={busy || !!changes.length} onChange={() => setScopeChoice("project")} />This project</label>
     </fieldset>}
-    {view && <div className="scope-info"><code>{view.path}</code></div>}
     {scope === "global" && !needle && <PiPanel />}
-    {!needle && <nav className="section-links" aria-label="Setting groups">{sections.map(section => <a key={section.id} href={"#group-" + section.id}
-      onClick={event => { event.preventDefault(); document.getElementById("group-" + section.id)?.scrollIntoView({ behavior: "smooth" }); }}>{section.title}</a>)}
-      {scope === "global" && <a href="#group-keybindings" onClick={event => { event.preventDefault(); document.getElementById("group-keybindings")?.scrollIntoView({ behavior: "smooth" }); }}>Keyboard shortcuts</a>}</nav>}
-    <div role="status" className="feedback">{message}</div>
-    {error && <div role="alert" className="error"><strong>Could not complete the operation</strong><p>{error}</p><div className="actions"><Button variant="outline" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>{rawButton}</div></div>}
-    {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && <>
-      {restore ? <section className="review"><h2>Restore previous file?</h2><p>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</p><div className="actions"><Button variant="outline" disabled={busy} onClick={() => setRestore(false)}>Cancel</Button><Button disabled={busy} onClick={() => void recover()}>Confirm restore</Button></div></section> : <>
-        {sections.map(group => {
-          const items = results.filter(field => field.section === group.id);
-          return items.length > 0 && <section key={group.id} className="settings-group" aria-labelledby={"group-" + group.id}>
-            <h2 id={"group-" + group.id}>{group.title}</h2>
-            {"note" in group && <p className="notice">{group.note}</p>}
-            <div className="settings-list">{items.map(field => {
-              const edit = draft[field.key];
-              const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
-              const value = edit ? "value" in edit ? edit.value : view.inherited[field.key] : view.values[field.key] ?? view.inherited[field.key];
-              return <SettingField key={field.key} field={field} value={value} overridden={overridden} scope={scope} project={project}
-                disabled={scope === "project" && !!field.globalOnly}
-                invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
-                onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;
-            })}</div>
-          </section>;
-        })}
-        {!results.length && <p className="empty">No matching settings. Try a label such as “model” or “budget”.</p>}
-        <div className="save-bar"><p>{changes.length ? `${changes.length} unsaved ${changes.length === 1 ? "change" : "changes"}` : "No unsaved changes"}</p><div className="actions">
-          {changes.length > 0 && <Button variant="outline" onClick={() => { setDraft({}); setError(""); setMessage("Draft discarded. No file was changed."); }}>Discard draft</Button>}
-          <Button disabled={!changes.length || !!invalidKeys.length || busy} onClick={() => void save()}>{busy ? "Saving…" : "Save"}</Button>
-        </div></div>
-      </>}
-      {!restore && <section className="file-tools" aria-label="File actions">{rawButton}<Button variant="ghost" disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</Button>
-        {view.hasBackup && <Button variant="ghost" disabled={busy || !!changes.length} onClick={() => setRestore(true)}>Restore previous file</Button>}</section>}
-    </>}
+    <Feedback message={message} onDismiss={() => setMessage("")} />
+    {error && <div role="alert" className="error page-notice"><strong>Could not complete the operation</strong><p>{error}</p>
+      <div className="actions"><Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>
+        <Button variant="outline" size="sm" disabled={busy || !!changes.length} onClick={openRaw}>Edit as JSON</Button></div></div>}
+    {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && (restore
+      ? <section className="review" aria-labelledby="restore-title"><h2 id="restore-title">Restore previous file?</h2>
+        <p>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</p>
+        <div className="actions"><Button variant="outline" disabled={busy} onClick={() => setRestore(false)}>Cancel</Button><Button disabled={busy} onClick={() => void recover()}>Restore previous file</Button></div></section>
+      : <div className="settings-layout">
+        <nav className="section-nav" aria-label="Setting groups">{shownSections.map(section => <a key={section.id} href={"#group-" + section.id} aria-current={section.id === currentGroup ? "true" : undefined}
+          onClick={event => { event.preventDefault(); setCurrentGroup(section.id); document.getElementById("group-" + section.id)?.scrollIntoView({ block: "start" }); }}>{section.title}</a>)}</nav>
+        <div className="settings-content">
+          <div className="settings-groups">
+            {sections.map(group => {
+              const items = results.filter(field => field.section === group.id);
+              return items.length > 0 && <section key={group.id} id={"group-" + group.id} className="settings-group" aria-labelledby={"group-" + group.id + "-title"}>
+                <h2 id={"group-" + group.id + "-title"}>{group.title}</h2>
+                {"note" in group && <p className="notice">{group.note}</p>}
+                {items.map(field => {
+                  const edit = draft[field.key];
+                  const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
+                  const value = edit ? "value" in edit ? edit.value : view.inherited[field.key] : view.values[field.key] ?? view.inherited[field.key];
+                  return <SettingField key={field.key} field={field} value={value} overridden={overridden} scope={scope} project={project}
+                    disabled={scope === "project" && !!field.globalOnly}
+                    invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
+                    onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;
+                })}
+              </section>;
+            })}
+            {!results.length && <p className="empty">No settings match “{query.trim()}”. Try a label such as “model” or “budget”, or a key.</p>}
+            {changes.length > 0 && <div className="save-bar" role="region" aria-label="Unsaved changes">
+              <p>{changes.length} unsaved {changes.length === 1 ? "change" : "changes"}</p>
+              <div className="actions">
+                <Button variant="outline" disabled={busy} onClick={() => { setDraft({}); setError(""); setMessage("Draft discarded. No file was changed."); }}>Discard</Button>
+                <Button disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : "Save"}</Button>
+              </div>
+            </div>}
+          </div>
+          {scope === "global" && !needle && <KeybindingsPanel onMessage={setMessage} />}
+          {scope === "global" && !needle && <NotHere />}
+          <p className="scope-footnote">Saved values apply to new T3Code threads, or after /reload. Unknown keys in the file are kept as they are.</p>
+        </div>
+      </div>)}
     <datalist id="model-ids">{modelIds.map(id => <option key={id} value={id} />)}</datalist>
-    {scope === "global" && !needle && <KeybindingsPanel />}
-    {scope === "global" && !needle && <NotHere />}
-    <footer className="scope-footnote"><p>Saved values apply to new T3Code threads, or after /reload. Unknown keys in the file are kept as they are.</p></footer>
   </>;
 }

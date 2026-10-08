@@ -58,8 +58,9 @@ test("project model defaults and raw JSON write the project's settings.json", as
 
   await page.getByRole("tab", { name: "General" }).click();
   await page.getByRole("radio", { name: "This project" }).check();
-  await page.getByRole("button", { name: "Edit raw JSON" }).click();
-  await page.getByLabel("settings.json").fill('{ "defaultThinkingLevel": "low" }');
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Edit as JSON" }).click();
+  await page.getByLabel("settings.json", { exact: true }).fill('{ "defaultThinkingLevel": "low" }');
   await page.getByRole("button", { name: "Save JSON" }).click();
   await expect(page.getByRole("status")).toContainText("Saved");
   expect(await readFile(join(project, ".pi", "settings.json"), "utf8")).toBe('{ "defaultThinkingLevel": "low" }');

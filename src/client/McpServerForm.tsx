@@ -167,7 +167,7 @@ export function McpServerForm({ server, busy, error, title: heading, scope = "gl
     <fieldset><legend>Tool exposure rules</legend><RuleRows rules={draft.rules} onChange={rules => set({ rules })} /></fieldset>
     <label>Description<input value={draft.description} placeholder="What the server offers, in a sentence" onChange={event => set({ description: event.target.value })} /></label>
     <label>Timeout (seconds)<input type="number" min={1} step="any" value={draft.timeout} placeholder="60" onChange={event => set({ timeout: event.target.value })} /></label>
-    <div className="actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save server"}</Button>
+    <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save server"}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;
 }

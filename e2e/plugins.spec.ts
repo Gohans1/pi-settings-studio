@@ -37,6 +37,7 @@ test("plugins list built-ins, user files and packages, and switch them in settin
   await page.getByRole("switch", { name: "Enable tool.ts" }).click();
   await expect(page.getByRole("status")).toContainText("tool.ts turned off");
   expect((await settings()).packages[0]).toEqual({ source: "./pkgs/my-pack", extensions: ["-extensions/tool.ts"] });
+  await page.getByRole("button", { name: /^Packages/ }).click();
   const packages = page.getByRole("region", { name: "Packages" });
   await expect(packages).toContainText("./pkgs/my-pack");
   await expect(packages).toContainText("npm:not-installed-pkg");
@@ -47,6 +48,7 @@ test("plugins list built-ins, user files and packages, and switch them in settin
 test("a package's resource filters are edited in settings.json", async ({ page }) => {
   const settings = async () => JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
   await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: /^Packages/ }).click();
   await page.getByRole("button", { name: "Filters for ./pkgs/my-pack" }).click();
   const form = page.getByRole("form", { name: "Filters for ./pkgs/my-pack" });
   await form.getByLabel("Extensions", { exact: true }).selectOption("only");
@@ -81,7 +83,8 @@ test("prompts and extensions are edited or viewed, and a new theme is created", 
   await page.getByRole("button", { name: /^mcp/ }).click();
   await expect(page.getByRole("button", { name: /^(Edit|View) mcp$/ })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "New theme" }).click();
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Theme" }).click();
   const create = page.getByRole("form", { name: "New theme" });
   await create.getByLabel("Name").fill("ocean");
   await create.getByRole("button", { name: "Create theme" }).click();

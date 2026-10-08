@@ -8,8 +8,13 @@ import { exposureLabels, McpServerForm } from "./McpServerForm";
 import { McpImportPanel } from "./McpImportPanel";
 import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
+import { Braces, FileJson, Import, Plus, PlugZap, ScrollText, Server } from "lucide-react";
 import { Button } from "./components/ui/button";
+import { MenuItem } from "./components/ui/menu";
 import { Switch } from "./components/ui/switch";
+import { Feedback } from "./Feedback";
+import { PageHeader } from "./PageHeader";
+import { EmptyDetail, MoreMenu, Workbench } from "./Workbench";
 
 
 function shortState(server: McpServerView): string {
@@ -54,12 +59,11 @@ function ServerDetail({ server, busy, onExposure, actions, children }: {
   </>]);
   if (server.timeout) rows.push(["Timeout", `${server.timeout} s`]);
   return <section className="detail" aria-labelledby="server-title">
-    <h2 id="server-title">{server.name}</h2>
-    {server.error && <div className="error"><strong>Pi refuses this entry, so it never connects:</strong><p>{server.error}</p></div>}
+    <header className="detail-header"><h2 id="server-title">{server.name}</h2>{actions && <div className="actions">{actions}</div>}</header>
+    {server.error && <div className="error"><strong>Pi refuses this entry, so it never connects</strong><p>{server.error}</p></div>}
     {!server.error && !server.enabled && <p className="notice">Turned off in the file, so it does not connect.</p>}
-    {children}
     <dl className="detail-list">{rows.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
-    {actions && <div className="actions detail-actions">{actions}</div>}
+    {children}
   </section>;
 }
 
@@ -194,13 +198,13 @@ export function McpTab({ project }: { project?: string }) {
     })}</ul>;
   }
 
-  let detail: ReactNode = <section className="detail"><p className="empty">Select a server to see its details.</p></section>;
+  let detail: ReactNode = <EmptyDetail icon={Server} title="No server selected">Choose a server to see how Pi starts it and which tools it exposes, or add one.</EmptyDetail>;
   if (log && !form && !selected) {
     detail = <section className="detail" aria-labelledby="log-title">
-      <h2 id="log-title">mcp.log</h2>
+      <header className="detail-header"><h2 id="log-title">mcp.log</h2>
+        <div className="actions"><Button variant="outline" onClick={showLog}>Reload</Button><Button variant="ghost" onClick={() => setLog(undefined)}>Close</Button></div></header>
       <p className="muted">Messages servers log while Pi runs, newest last; known secrets are hidden. <code>{log.path}</code></p>
-      {log.exists ? <pre className="log-tail" tabIndex={0}>{log.text || "Empty."}</pre> : <p className="empty">No server has logged anything yet.</p>}
-      <div className="actions detail-actions"><Button variant="outline" onClick={showLog}>Reload</Button><Button variant="outline" onClick={() => setLog(undefined)}>Close</Button></div>
+      {log.exists ? <pre className="log-tail" tabIndex={0} aria-label="mcp.log contents">{log.text || "Empty."}</pre> : <p className="empty">No server has logged anything yet.</p>}
     </section>;
   } else if (form?.mode === "import" && views[form.scope]) {
     const scope = form.scope;
@@ -243,12 +247,23 @@ export function McpTab({ project }: { project?: string }) {
   }
 
   const on = globalServers.filter(server => server.enabled && !server.error).length;
+  const open = !!(log || form || selected);
+  const back = () => { setSelected(undefined); setForm(undefined); setLog(undefined); };
+  const add = (scope: "global" | "project") => { setForm({ mode: "add", scope }); setFormError(""); setSelected(undefined); setLog(undefined); };
+  const fileMenu = (scope: "global" | "project", file: McpFileView) => <MoreMenu label={scope === "global" ? "More actions for the global mcp.json" : "More actions for the project's mcp.json"}>
+    <MenuItem disabled={busy || !!file.error} onClick={() => { setForm({ mode: "import", scope }); setSelected(undefined); setLog(undefined); }}><Import aria-hidden="true" />Import servers</MenuItem>
+    <MenuItem disabled={busy} onClick={() => setRawScope(scope)}><FileJson aria-hidden="true" />Edit as JSON</MenuItem>
+  </MoreMenu>;
+  const codemodeState = codemode ? codemode.disabledByExtensions ? "off" : (codemode.effective?.preference ?? codemode.preference) === "always" ? "always on" : "automatic" : "";
   return <>
-    <div className="page-heading"><div><h1>MCP</h1><p>Servers Pi connects to. Changes apply to new T3Code threads, or after /reload.</p></div></div>
-    {global && <div className="scope-info"><code>{global.path}</code>{local && <><br /><code>{local.path}</code></>}</div>}
-    <div role="status" className="feedback">{message}{undo && <>{" "}<Button variant="outline" size="sm" disabled={busy}
-      onClick={() => { const scope = undo.scope; void run(scope, revision => restoreMcp(target(scope), revision), "Restored the previous file."); }}>Undo</Button></>}</div>
-    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><Button variant="outline" onClick={() => void refresh()}>Try again</Button></div>}
+    <PageHeader title="MCP" description="Servers Pi connects to. Changes apply to new T3Code threads, or after /reload." files={[global?.path, local?.path]}
+      actions={<>
+        <Button variant="outline" disabled={check.running} onClick={() => void check.start({ action: "mcp-test", ...(project ? { project } : {}) })}><PlugZap aria-hidden="true" />Test connections</Button>
+        <Button variant="ghost" onClick={showLog}><ScrollText aria-hidden="true" />View mcp.log</Button>
+      </>} />
+    <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
+      action={undo && { label: "Undo", disabled: busy, onClick: () => { const scope = undo.scope; void run(scope, revision => restoreMcp(target(scope), revision), "Restored the previous file."); } }} />
+    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Try again</Button></div></div>}
     {global?.error && <div role="alert" className="error"><strong>Pi loads none of the global servers</strong><p>{global.error}</p></div>}
     {local?.error && <div role="alert" className="error"><strong>Pi loads none of this project's servers</strong><p>{local.error}</p></div>}
     <JobPanel job={check.job} error={check.error} onAnswer={value => void check.answer(value)} onCancel={() => void check.cancel()} onDismiss={check.dismiss}>
@@ -257,33 +272,24 @@ export function McpTab({ project }: { project?: string }) {
     {rawScope ? <RawJsonEditor file="mcp.json" load={loadRaw} save={saveRaw}
       note={SECRET_NOTE}
       onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
-    : !global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <div className="master-detail">
-      <div className="master">
-        <ul className="item-list codemode-item"><li><button type="button" aria-pressed={selected === "codemode"} onClick={() => choose("codemode")}>
-          <span className="item-name">Code mode</span><span className="item-state">{codemode ? codemode.disabledByExtensions ? "off" : (codemode.effective?.preference ?? codemode.preference) === "always" ? "always on" : "automatic" : ""}</span>
-        </button></li></ul>
-        <section aria-labelledby="global-servers" className="item-group">
-          <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span></div>
-          <div className="actions add-button">
-            <Button variant="outline" size="sm" disabled={busy || !!global.error} onClick={() => { setForm({ mode: "add", scope: "global" }); setFormError(""); }}>Add server</Button>
-            <Button variant="outline" size="sm" disabled={busy || !!global.error} aria-label="Import servers into the global mcp.json" onClick={() => setForm({ mode: "import", scope: "global" })}>Import</Button>
-            <Button variant="outline" size="sm" disabled={check.running} onClick={() => void check.start({ action: "mcp-test", ...(project ? { project } : {}) })}>Test connections</Button>
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRawScope("global")} aria-label="Edit global mcp.json as JSON">Edit JSON</Button>
-            <Button variant="ghost" size="sm" onClick={showLog} aria-label="Show mcp.log">Log</Button>
-          </div>
-          {globalServers.length ? serverList("global", globalServers) : !global.error && <p className="empty">No MCP servers yet.</p>}
-        </section>
-        {project && local && <section aria-label="This project's servers" className="item-group">
-          <div className="list-header"><h2>This project</h2><span>{projectServers.length} in .pi/mcp.json</span></div>
-          <div className="actions add-button">
-            <Button variant="outline" size="sm" disabled={busy || !!local.error} onClick={() => { setForm({ mode: "add", scope: "project" }); setFormError(""); }}>Add server to project</Button>
-            <Button variant="outline" size="sm" disabled={busy || !!local.error} aria-label="Import servers into the project's mcp.json" onClick={() => setForm({ mode: "import", scope: "project" })}>Import</Button>
-            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRawScope("project")} aria-label="Edit the project's mcp.json as JSON">Edit JSON</Button>
-          </div>
-          {projectServers.length ? serverList("project", projectServers) : !local.error && <p className="empty">No servers in this project's .pi/mcp.json yet.</p>}
-        </section>}
-      </div>
-      {detail}
-    </div>}
+    : !global ? !error && <div className="loading" aria-busy="true">Reading MCP settings…</div> : <Workbench open={open} onBack={back} backLabel="All servers" detail={detail} list={<>
+      <ul className="item-list pinned"><li><button type="button" aria-pressed={selected === "codemode"} onClick={() => choose("codemode")}>
+        <Braces aria-hidden="true" /><span className="item-name">Code mode</span><span className="item-state">{codemodeState}</span>
+      </button></li></ul>
+      <section aria-labelledby="global-servers" className="item-group">
+        <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span>
+          <Button variant="ghost" size="icon-xs" aria-label="Add server" title="Add server" disabled={busy || !!global.error} onClick={() => add("global")}><Plus aria-hidden="true" /></Button>
+          {fileMenu("global", global)}
+        </div>
+        {globalServers.length ? serverList("global", globalServers) : !global.error && <p className="empty">No MCP servers yet. Add one, or import them from another client.</p>}
+      </section>
+      {project && local && <section aria-label="This project's servers" className="item-group">
+        <div className="list-header"><h2>This project</h2><span>{projectServers.length} in .pi/mcp.json</span>
+          <Button variant="ghost" size="icon-xs" aria-label="Add server to project" title="Add server to project" disabled={busy || !!local.error} onClick={() => add("project")}><Plus aria-hidden="true" /></Button>
+          {fileMenu("project", local)}
+        </div>
+        {projectServers.length ? serverList("project", projectServers) : !local.error && <p className="empty">No servers in this project's .pi/mcp.json yet.</p>}
+      </section>}
+    </>} />}
   </>;
 }
