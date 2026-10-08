@@ -1,14 +1,16 @@
 // Content of skills, prompts, themes and extensions. Only files Pi discovers are opened: the
 // requested path is matched against Pi's own resolution on every request. User and project
 // resources can be edited; package and built-in ones are shown read-only.
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readdir, readFile, realpath, stat } from "node:fs/promises";
+import { lstat, mkdir, readdir, readFile, realpath, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, normalize, relative, sep } from "node:path";
 import { Hono } from "hono";
 import { z } from "zod";
 import { parseFrontmatter, type ResolvedResource } from "@earendil-works/pi-coding-agent";
 import type { ResourceFileView, ResourceType } from "../shared/resources.ts";
 import type { ProjectRegistry } from "./projects.ts";
+import { addedPaths } from "./resource-paths.ts";
 import { resourceContext } from "./resources.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 import { BUILTIN_DIR } from "./themes.ts";
@@ -88,7 +90,8 @@ export default function (pi: ExtensionAPI) {
   }
 }
 
-const INVOCATION = /^disable-model-invocation\s*:.*\n/m;
+// `.` stops at \r, so a CRLF file needs its \r matched on its own.
+const INVOCATION = /^disable-model-invocation\s*:.*\r?\n/m;
 
 /**
  * A skill's SKILL.md with `disable-model-invocation: true` added or removed. Only that line changes;
@@ -114,6 +117,13 @@ export function resourceFileRoutes(store: ConfigStore, registry: ProjectRegistry
     return item;
   }
   const query = z.object({ type: z.enum(TYPES), path: z.string().min(1).max(4096), file: z.string().min(1).max(1024).optional() });
+  const skillPath = z.object({ path: z.string().min(1).max(4096) }).strict();
+  /**
+   * Where a removed skill waits for Undo: one copy per original place, in the agent folder, outside every folder
+   * Pi or another agent reads skills from.
+   */
+  const keptCopy = (unit: string) => join(agentDir, ".pi-settings-backup", "skills", createHash("sha256").update(unit).digest("hex").slice(0, 16));
+  const exists = (path: string) => lstat(path).then(() => true, () => false);
 
   return new Hono()
     .get("/", async c => {
@@ -148,13 +158,73 @@ export function resourceFileRoutes(store: ConfigStore, registry: ProjectRegistry
       return c.json({ revision: (await store.readPath(opened)).revision });
     })
     .patch("/invocation", async c => {
-      const { path, modelInvocation } = z.object({ path: z.string().min(1).max(4096), modelInvocation: z.boolean() }).strict().parse(await c.req.json());
-      const item = await find(c.req.query("project"), "skills", path);
+      const { paths, modelInvocation } = z.object({ paths: z.array(z.string().min(1).max(4096)).min(1).max(1000), modelInvocation: z.boolean() }).strict().parse(await c.req.json());
+      const { resolved } = await context.resolve(c.req.query("project"));
+      // Every file is checked before any is written, so a skill that cannot change leaves all of them as they were.
+      const edits: { path: string; revision: string; text: string }[] = [];
+      for (const path of paths) {
+        const item = resolved.skills.find(entry => entry.path === path);
+        if (!item) throw new ConfigError("Pi does not discover this skill. Reload the list.", 404);
+        const name = basename(folderOf("skills", path) ?? path);
+        const readOnly = readOnlyReason(item);
+        if (readOnly) throw new ConfigError(`${name}: ${readOnly}`, 422);
+        const { text, revision } = await store.readPath(path);
+        if (text === undefined) throw new ConfigError(`${name}: SKILL.md is gone. Reload the list.`, 404);
+        try {
+          // Already as asked: the file is left alone and not reported as changed.
+          if ((parseFrontmatter<Record<string, unknown>>(text).frontmatter["disable-model-invocation"] === true) !== modelInvocation) continue;
+          edits.push({ path, revision, text: setModelInvocation(text, modelInvocation) });
+        } catch (error) {
+          throw new ConfigError(`${name}: ${error instanceof ConfigError ? error.message : "Pi cannot read its frontmatter. Fix it in the file editor."}`, 422);
+        }
+      }
+      for (const edit of edits) await store.writePath(edit.path, edit.revision, edit.text);
+      return c.json({ changed: edits.map(edit => edit.path) });
+    })
+    .delete("/skill", async c => {
+      const { path } = skillPath.parse(await c.req.json());
+      const project = c.req.query("project");
+      const { resolved, settings } = await context.resolve(project);
+      const item = resolved.skills.find(entry => entry.path === path);
+      if (!item) throw new ConfigError("Pi does not discover this skill. Reload the list.", 404);
       const readOnly = readOnlyReason(item);
       if (readOnly) throw new ConfigError(readOnly, 422);
-      const { revision } = await store.readPath(item.path);
-      await store.writePath(item.path, revision, setModelInvocation(await readText(item.path), modelInvocation));
-      return c.json({ revision: (await store.readPath(item.path)).revision });
+      // A skill is its folder, or a Markdown file on its own.
+      const unit = folderOf("skills", path) ?? path;
+      const dir = project === undefined ? undefined : await registry.require(project);
+      // Folders Pi reads skills from: its own, the paths the settings add, and by name every .pi/skills or
+      // .agents/skills (a project's and its parents'). Removing one, or a folder holding one, is not removing a skill.
+      const places = [join(agentDir, "skills"), ...addedPaths(settings.global, "skills", agentDir), ...(dir ? addedPaths(settings.project, "skills", join(dir, ".pi")) : [])];
+      if (places.some(place => place === unit || place.startsWith(unit + sep)) || basename(unit) === "skills" && [".pi", ".agents"].includes(basename(dirname(unit)))) {
+        throw new ConfigError(`Pi reads ${unit} as a place to find skills, not as one skill inside it. Remove it under Folders, or delete it outside this app.`, 422);
+      }
+      // As with every other file here: never through a symbolic link.
+      if (await realpath(unit) !== unit) throw new ConfigError(`${unit} is a symbolic link or inside one. Delete it at its target, outside this app.`, 422);
+      const kept = keptCopy(unit);
+      await rm(kept, { recursive: true, force: true });
+      await mkdir(kept, { recursive: true, mode: 0o700 });
+      // ponytail: a rename, so nothing is half-moved; a skill on another drive than the agent folder is refused, copy then delete if that matters.
+      try { await rename(unit, join(kept, basename(unit))); }
+      catch (error) {
+        await rm(kept, { recursive: true, force: true });
+        if ((error as NodeJS.ErrnoException).code === "EXDEV") throw new ConfigError(`${unit} is on another drive than ${agentDir}, where removed skills are kept for Undo. Delete it outside this app.`, 422);
+        throw error;
+      }
+      return c.body(null, 204);
+    })
+    .post("/skill/restore", async c => {
+      const { path } = skillPath.parse(await c.req.json());
+      if (!isAbsolute(path) || normalize(path) !== path) throw new ConfigError("Unknown skill path.", 400);
+      // Only a place this app removed a skill from has a kept copy, so nothing else can be written here.
+      const unit = folderOf("skills", path) ?? path;
+      const kept = keptCopy(unit), copy = join(kept, basename(unit));
+      if (!await exists(copy)) throw new ConfigError("No removed copy of this skill is kept, so there is nothing to restore.", 404);
+      if (await exists(unit)) throw new ConfigError(`${unit} exists again; nothing to restore.`, 409);
+      const parent = await realpath(dirname(unit)).catch(() => undefined);
+      if (parent !== dirname(unit)) throw new ConfigError(`The folder ${dirname(unit)} is gone or is now a symbolic link. The removed copy is in ${kept}.`, 409);
+      await rename(copy, unit);
+      await rm(kept, { recursive: true, force: true });
+      return c.body(null, 204);
     })
     .post("/", async c => {
       const body = z.object({ scope: z.enum(["global", "project"]), type: z.enum(TYPES), name: z.string(), description: z.string().max(1024).optional() }).strict().parse(await c.req.json());

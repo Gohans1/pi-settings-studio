@@ -1,24 +1,32 @@
 import { useEffect, useState } from "react";
-import { CircleAlert, FolderOpen, Layers, Plus, TriangleAlert } from "lucide-react";
+import { Bot, CircleAlert, FolderOpen, Layers, Plus, SquareSlash, TriangleAlert } from "lucide-react";
 import type { ResourceView, SkillsView } from "../shared/resources";
-import { loadSkills, restoreSettings, saveSkills, setModelInvocation } from "./api";
+import { loadSkills, removeSkill, restoreSettings, restoreSkill, saveSkills, setModelInvocation } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Empty, EmptyDescription } from "./components/ui/empty";
 import { Switch } from "./components/ui/switch";
 import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, ListItem, Workbench } from "./Workbench";
+import { EmptyDetail, ListItem, MoreMenu, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
 import { FilePath } from "./PageHeader";
 import { ResourceFolders, type FolderChange } from "./ResourceFolders";
 
-function SkillDetail({ skill, busy, onEdit, onInvocation }: { skill: ResourceView; busy: boolean; onEdit: () => void; onInvocation: (allowed: boolean) => void }) {
+/** What Undo in the last message takes back: a settings.json write, a change of invocation, or a removed skill. */
+type Undo = { settings: NonNullable<FolderChange["undo"]> } | { paths: string[]; allowed: boolean } | { removed: ResourceView };
+const skillCount = (count: number) => `${count} ${count === 1 ? "skill" : "skills"}`;
+
+function SkillDetail({ skill, busy, onEdit, onInvocation, onRemove }: {
+  skill: ResourceView; busy: boolean; onEdit: () => void; onInvocation: (allowed: boolean) => void; onRemove: () => void;
+}) {
   const editable = skill.origin === "top-level";
   return <section className="detail" aria-labelledby="skill-title">
     <header className="detail-header"><h2 id="skill-title">{skill.name}</h2>
-      <div className="actions"><Button variant="outline" aria-label={`${editable ? "Edit" : "View"} files of ${skill.name}`} onClick={onEdit}>{editable ? "Edit files" : "View files"}</Button></div></header>
+      <div className="actions"><Button variant="outline" aria-label={`${editable ? "Edit" : "View"} files of ${skill.name}`} onClick={onEdit}>{editable ? "Edit files" : "View files"}</Button>
+        {editable && <Button variant="destructive" disabled={busy} aria-label={`Remove ${skill.name}`} onClick={onRemove}>Remove</Button>}</div></header>
     {!skill.enabled && <Alert role="note"><AlertDescription>Turned off, so Pi does not load it.</AlertDescription></Alert>}
     {skill.shadowedBy && <Alert role="note"><TriangleAlert aria-hidden="true" />
       <AlertTitle>Pi does not load this copy.</AlertTitle>
@@ -48,7 +56,7 @@ export function SkillsTab({ project }: { project?: string }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<"edit" | "new" | "folders">();
-  const [undo, setUndo] = useState<FolderChange["undo"]>();
+  const [undo, setUndo] = useState<Undo>();
   const [folders, setFolders] = useState(0);
 
   async function refresh() {
@@ -81,29 +89,55 @@ export function SkillsTab({ project }: { project?: string }) {
   const current = skills.find(skill => skill.path === selected);
   const open = !!mode || !!current;
   const shadowed = skills.filter(skill => skill.shadowedBy).length;
-  async function invocation(skill: ResourceView, allowed: boolean) {
+  /** One skill from its details, or a group's from its menu; a group's change can be undone. */
+  async function invocation(targets: ResourceView[], allowed: boolean, group?: string) {
     setBusy(true); setError(""); setMessage(""); setUndo(undefined);
     try {
-      await setModelInvocation(skill.path, allowed, project);
+      const { changed } = await setModelInvocation(targets.map(skill => skill.path), allowed, project);
       await refresh();
-      setMessage(`${allowed ? `The model may load ${skill.name} again when a task matches` : `Only /skill:${skill.name} loads ${skill.name} now`}. Applies to new T3Code threads, or after /reload.`);
+      const name = targets[0]!.name, count = changed.length;
+      if (!group) setMessage(`${allowed ? `The model may load ${name} again when a task matches` : `Only /skill:${name} loads ${name} now`}. Applies to new T3Code threads, or after /reload.`);
+      else {
+        setMessage(`${allowed ? `The model may now load ${skillCount(count)} in ${group} when a task matches` : `${skillCount(count)} in ${group} ${count === 1 ? "is" : "are"} command only now`}. Applies to new T3Code threads, or after /reload.`);
+        if (count) setUndo({ paths: changed, allowed: !allowed });
+      }
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not change SKILL.md."); }
     finally { setBusy(false); }
   }
-  const folderChanged = (change: FolderChange) => { setMessage(change.message); setUndo(change.undo); void refresh(); };
-  async function restore(target: NonNullable<FolderChange["undo"]>) {
+  async function remove(skill: ResourceView) {
+    setBusy(true); setError(""); setMessage(""); setUndo(undefined);
+    try {
+      await removeSkill(skill.path, project);
+      setSelected(undefined);
+      await refresh();
+      setMessage(`Removed ${skill.name}${/[\\/]SKILL\.md$/.test(skill.path) ? " and its folder" : ""}. Applies to new T3Code threads, or after /reload.`);
+      setUndo({ removed: skill });
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not remove the skill."); }
+    finally { setBusy(false); }
+  }
+  const folderChanged = (change: FolderChange) => { setMessage(change.message); setUndo(change.undo && { settings: change.undo }); void refresh(); };
+  async function revert(last: Undo) {
     setBusy(true);
     try {
-      await restoreSettings(target.scope, target.revision, target.scope === "project" ? project : undefined);
-      setUndo(undefined); setMessage("Restored the previous settings.json."); setFolders(version => version + 1); await refresh();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not restore the file."); }
+      if ("settings" in last) {
+        await restoreSettings(last.settings.scope, last.settings.revision, last.settings.scope === "project" ? project : undefined);
+        setMessage("Restored the previous settings.json."); setFolders(version => version + 1);
+      } else if ("removed" in last) {
+        await restoreSkill(last.removed.path, project);
+        setSelected(last.removed.path); setMode(undefined); setMessage(`Restored ${last.removed.name}.`);
+      } else {
+        await setModelInvocation(last.paths, last.allowed, project);
+        setMessage(`Restored how the model reaches ${skillCount(last.paths.length)}.`);
+      }
+      setUndo(undefined); await refresh();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not undo the change."); }
     finally { setBusy(false); }
   }
   return <>
     <PageHeader title="Skills" description="Skills Pi advertises to the model. Changes apply to new T3Code threads, or after /reload."
       actions={<Button variant="outline" onClick={() => { setMode("new"); setSelected(undefined); }}><Plus aria-hidden="true" />New skill</Button>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
-      action={undo && { label: "Undo", disabled: busy, onClick: () => void restore(undo) }} />
+      action={undo && { label: "Undo", disabled: busy, onClick: () => void revert(undo) }} />
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription>
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading skills…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode(undefined); }} backLabel="All skills" list={<section aria-label="Skills list">
@@ -114,8 +148,16 @@ export function SkillsTab({ project }: { project?: string }) {
       {groups.map(group => {
         const members = visible.filter(skill => skill.group === group);
         const allOn = members.every(skill => skill.enabled);
+        // Package and built-in SKILL.md files change at their source, so their groups have no menu.
+        const own = members.filter(skill => skill.origin === "top-level");
         return <div key={group} className="item-group">
           <div className="list-header"><h2>{group}</h2>
+            {own.length > 0 && <MoreMenu label={`More actions for ${group}`}>
+              <DropdownMenuItem disabled={busy || own.every(skill => !skill.disableModelInvocation)}
+                onClick={() => void invocation(own.filter(skill => skill.disableModelInvocation), true, group)}><Bot aria-hidden="true" />Let the model load all</DropdownMenuItem>
+              <DropdownMenuItem disabled={busy || own.every(skill => skill.disableModelInvocation)}
+                onClick={() => void invocation(own.filter(skill => !skill.disableModelInvocation), false, group)}><SquareSlash aria-hidden="true" />Make all command only</DropdownMenuItem>
+            </MoreMenu>}
             <Switch aria-label={`Enable every skill in ${group}`} checked={allOn} disabled={busy}
               onCheckedChange={enabled => void toggle(members.filter(skill => skill.enabled !== enabled), enabled, `All skills in ${group}`)} /></div>
           <ul className="item-list">{members.map(skill => <li key={skill.path}>
@@ -131,7 +173,7 @@ export function SkillsTab({ project }: { project?: string }) {
           onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
         : current && mode === "edit" ? <ResourceEditor key={current.path} type="skills" path={current.path} name={current.name} editable={current.origin === "top-level"}
           project={project} onMessage={setMessage} onClose={() => { setMode(undefined); void refresh(); }} />
-        : current ? <SkillDetail skill={current} busy={busy} onEdit={() => setMode("edit")} onInvocation={allowed => void invocation(current, allowed)} />
+        : current ? <SkillDetail skill={current} busy={busy} onEdit={() => setMode("edit")} onInvocation={allowed => void invocation([current], allowed)} onRemove={() => void remove(current)} />
         : <EmptyDetail icon={Layers} title="No skill selected">Choose a skill to read its description and how the model reaches it, or create a new one.</EmptyDetail>} />}
   </>;
 }

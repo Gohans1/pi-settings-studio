@@ -133,3 +133,55 @@ test("whether the model may load a skill on its own is a switch in the skill's d
   await page.getByRole("button", { name: /^gamma/ }).click();
   await expect(page.getByRole("region", { name: "gamma" }).getByRole("switch")).toHaveCount(0);
 });
+
+test("a group's skills become command only from its menu, and Undo restores each one as it was", async ({ page }) => {
+  const read = (name: string) => readFile(join(agent, "skills", name, "SKILL.md"), "utf8");
+  const before = { alpha: await read("alpha"), beta: await read("beta") };
+  // The Undo of the toast that names the change: a replaced toast keeps its own while it leaves.
+  const undo = (change: string) => page.getByRole("region", { name: "Notifications" }).getByRole("dialog").filter({ hasText: change }).getByRole("button", { name: "Undo" }).click();
+  await page.goto(server.url + "#skills");
+  const menu = page.getByRole("button", { name: /^More actions for User/ });
+  await expect(page.getByRole("button", { name: "More actions for ./pkgs/my-pack (user)" })).toHaveCount(0);
+  await menu.click();
+  await page.getByRole("menuitem", { name: "Make all command only" }).click();
+  // beta was command only already: one skill changes.
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("1 skill in User");
+  await expect(page.getByRole("button", { name: /^alpha.*command only/ })).toBeVisible();
+  expect(await read("alpha")).toContain("disable-model-invocation: true");
+  expect(await read("beta")).toBe(before.beta);
+  await menu.click();
+  await expect(page.getByRole("menuitem", { name: "Make all command only" })).toHaveAttribute("aria-disabled", "true");
+  await page.keyboard.press("Escape");
+  await undo("command only now");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored how the model reaches 1 skill");
+  expect(await read("alpha")).toBe(before.alpha);
+  await menu.click();
+  await page.getByRole("menuitem", { name: "Let the model load all" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("The model may now load 1 skill in User");
+  expect(await read("beta")).not.toContain("disable-model-invocation");
+  await undo("The model may now load");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored how the model reaches 1 skill");
+  expect({ alpha: await read("alpha"), beta: await read("beta") }).toEqual(before);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a user skill is removed with its folder and Undo brings it back; package skills cannot be removed", async ({ page }) => {
+  await mkdir(join(agent, "skills/alpha/references"), { recursive: true });
+  await writeFile(join(agent, "skills/alpha/references/notes.md"), "Notes.\n");
+  const original = await readFile(join(agent, "skills/alpha/SKILL.md"), "utf8");
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^gamma/ }).click();
+  await expect(page.getByRole("region", { name: "gamma" }).getByRole("button", { name: /^Remove/ })).toHaveCount(0);
+  await page.getByRole("button", { name: /^alpha/ }).click();
+  await page.getByRole("region", { name: "alpha" }).getByRole("button", { name: "Remove alpha" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Removed alpha and its folder");
+  await expect(page.getByRole("button", { name: /^alpha/ })).toBeHidden();
+  await expect(page.getByText("2 of 2 skills on")).toBeVisible();
+  await expect(readFile(join(agent, "skills/alpha/SKILL.md"), "utf8")).rejects.toThrow();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored alpha");
+  await expect(page.getByRole("region", { name: "alpha" })).toContainText("Alpha does things.");
+  expect(await readFile(join(agent, "skills/alpha/SKILL.md"), "utf8")).toBe(original);
+  expect(await readFile(join(agent, "skills/alpha/references/notes.md"), "utf8")).toBe("Notes.\n");
+});

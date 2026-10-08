@@ -1,3 +1,27 @@
+# Verification — remove a skill, model invocation by group, 2026-10-08
+
+Scope: Remove with Undo for user and project skills; "Let the model load all" and "Make all command only" in the menu of each group of the user's own skills; `PATCH /api/resource-files/invocation` takes `paths[]` and changes all or none.
+
+| Check | Result |
+|---|---|
+| `bun test` | 269 passed (43 files), up from 262. New: a batch names the files it changed and sending them back restores the bytes; one refused skill (package, undiscovered, no frontmatter) stops the batch before any write; a folder skill and a one-file skill are removed and restored byte for byte, one kept copy per place; refused with nothing moved: package skills, a settings path that is itself a skill, symbolic links, SKILL.md straight in Pi's or a project's skills folder; restore refuses a place never removed and a relative path; CRLF SKILL.md |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run build` | Passed; the existing >500 kB chunk warning remains |
+| `bun run test:e2e` | 82 passed, 2 new (the group menu both ways with Undo; Remove with Undo, and none for a package skill), axe clean |
+| Impeccable detector | No findings in `SkillsTab.tsx` |
+
+RED/GREEN: each server slice failed first on the missing contract (422 for `paths`, 404 for the new routes), the browser flows on the missing menu and button. The project guard was checked by mutation: without the project's settings paths, or without the `.pi/skills` name rule, the project test fails.
+
+Found in the browser and fixed with a test first: turning the model back on was refused for a SKILL.md with CRLF line endings (2 of the 5 copied real skills). A JavaScript regex `.` stops at `\r`, so the line was never matched. The single switch had the same bug before this change.
+
+Manual: T3 preview, then `agent-browser` in its own session when the preview host disconnected. A temporary agent folder held copies of five real skills (two with CRLF) and a package skill; 1280×800 light, 390 px dark, the group menu opened from the keyboard. "Make all command only" added exactly one line to each SKILL.md and left the package skill alone; "Let the model load all" returned all five byte for byte. Remove moved `impeccable` with its `scripts/` and `reference/` into `.pi-settings-backup/skills/<hash>` (mode 700); Undo brought the tree back identical and selected it again. No page errors. The real `~/.pi` was not written.
+
+Decisions: no confirmation dialog. Removal moves the skill aside and the toast carries Undo, like the other destructive actions here. The kept copy lives in the agent folder, not beside the skill: a hidden folder holding a SKILL.md next to the others could still be loaded by another agent that reads the same folder (`~/.agents/skills`).
+
+Limits: a skill on another drive than the agent folder is refused, because a rename keeps the move atomic. Removal leaves the skill's `+`/`-` entry in settings.json; it matches nothing unless a skill appears at that path again, which then starts in the same on/off state. Kept copies stay until the same place is removed again; nothing prunes them. Not verified: a real screen reader, forced colors, Windows.
+
+---
+
 # Merge readiness — package update notices, 2026-10-08
 
 Integrated main's project-trust banner fix (`1645d4f`) into the feature before deployment. The combined tree passed **252 unit/integration tests and 70 Playwright tests**, typecheck, lint and production build. No package versions or lockfile entries changed.

@@ -24,6 +24,10 @@ export function resolveEntry(entry: string, base: string, home = homedir()): str
   return isAbsolute(path) ? path : resolve(base, path);
 }
 
+/** The folders and files one settings file adds for a type, resolved as Pi resolves them. */
+export const addedPaths = (settings: Record<string, unknown> | undefined, type: ResourceType, base: string) =>
+  pathsOf(settings?.[type]).filter(entry => !isPattern(entry)).map(entry => resolveEntry(entry, base));
+
 function stat(path: string): { exists: boolean; kind?: "folder" | "file" } {
   try { return { exists: true, kind: statSync(path).isDirectory() ? "folder" : "file" }; }
   catch { return { exists: false }; }

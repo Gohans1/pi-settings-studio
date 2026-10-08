@@ -16,7 +16,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 | `keybindings.json` | Done | n/a | Every terminal action (no effect in T3Code) |
 | `AGENTS.md` / `CLAUDE.md` (context files) | Done | Done | Pi's candidate order, parent-folder files listed read-only |
 | `SYSTEM.md`, `APPEND_SYSTEM.md` | Done | Done | |
-| `extensions/`, `skills/`, `prompts/`, `themes/` | Done | Done | Switches, create, edit (a skill's whole folder); extra folders added to and removed from the settings paths; a skill Pi skips for a duplicate name is marked, with the winner (Pi's own `loadSkills`); the model-invocation switch of a skill; package files, built-ins and symbolic links read-only |
+| `extensions/`, `skills/`, `prompts/`, `themes/` | Done | Done | Switches, create, edit (a skill's whole folder); extra folders added to and removed from the settings paths; a skill Pi skips for a duplicate name is marked, with the winner (Pi's own `loadSkills`); the model invocation of a skill or a whole group (all or none, Undo); remove a user or project skill, kept in `.pi-settings-backup/skills` of the agent folder for Undo; package files, built-ins and symbolic links read-only |
 | Packages | Done | Done | Install, update, remove through `pi`; resource filters; on-demand update checks via Pi’s public `checkForAvailableUpdates`, per-package badges and last-check timestamp. No automatic polling; Pi silently skips pins/local paths/failed lookups, so an empty result is not a guarantee that everything is current |
 | Trust (`trust.json`) | n/a | Done | Pi's ProjectTrustStore; says whether T3Code loads `.pi` |
 | Sub-agent profiles (`agents/`) | Done | Done | Pi's example extension format |
@@ -29,7 +29,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 |---|---|
 | Models: providers, keys, OAuth, custom providers, defaults | Done, plus model discovery from a custom endpoint and credential check |
 | MCP: list, toggle, exposure, add/edit/remove, test, OAuth, codemode | Done, plus import from Claude, Cursor, VS Code, OpenCode and Codex |
-| Skills | Switches, details, file editor, new skills; install/update of skills comes from packages |
+| Skills | Switches, details, file editor, new skills, remove with Undo, model invocation per skill or group; install/update of skills comes from packages |
 | Plugins | Done, plus prompt, theme and extension editors; automatic runtime tool catalogue and direct model-declaration preview, scoped by the project picker ([details](plugin-tools.md)) |
 | Agents (sub-agents) | Done in Pi's example format, without pi-web-only fields (thinking, extensions…), which are kept as they are |
 | System prompt | From the session files T3Code writes, not a live chat |
