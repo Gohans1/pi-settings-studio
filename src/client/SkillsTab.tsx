@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FolderOpen, Layers, Plus, TriangleAlert } from "lucide-react";
 import type { ResourceView, SkillsView } from "../shared/resources";
-import { loadSkills, restoreSettings, saveSkills } from "./api";
+import { loadSkills, restoreSettings, saveSkills, setModelInvocation } from "./api";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
@@ -12,7 +12,7 @@ import { SearchField } from "./SearchField";
 import { FilePath } from "./PageHeader";
 import { ResourceFolders, type FolderChange } from "./ResourceFolders";
 
-function SkillDetail({ skill, onEdit }: { skill: ResourceView; onEdit: () => void }) {
+function SkillDetail({ skill, busy, onEdit, onInvocation }: { skill: ResourceView; busy: boolean; onEdit: () => void; onInvocation: (allowed: boolean) => void }) {
   const editable = skill.origin === "top-level";
   return <section className="detail" aria-labelledby="skill-title">
     <header className="detail-header"><h2 id="skill-title">{skill.name}</h2>
@@ -25,9 +25,13 @@ function SkillDetail({ skill, onEdit }: { skill: ResourceView; onEdit: () => voi
     </div>}
     <dl className="detail-list">
       <div><dt>Description</dt><dd>{skill.description ?? <span className="muted">None. Pi does not load skills without a description.</span>}</dd></div>
-      <div><dt>Invocation</dt><dd>{skill.disableModelInvocation
-        ? <>Only through <code>/skill:{skill.name}</code>. The model does not pick it on its own (disable-model-invocation).</>
-        : <>The model may load it when a task matches; <code>/skill:{skill.name}</code> forces it.</>}</dd></div>
+      <div><dt>Invocation</dt><dd>
+        {editable && <div className="switch-row"><Switch aria-labelledby="invocation-label" checked={!skill.disableModelInvocation} disabled={busy} onCheckedChange={onInvocation} />
+          <span id="invocation-label">Let the model load it</span></div>}
+        <p className={editable ? "muted" : undefined}>{skill.disableModelInvocation
+          ? <>Only <code>/skill:{skill.name}</code> loads it; the model does not pick it on its own (disable-model-invocation in SKILL.md).</>
+          : <>The model may load it when a task matches; <code>/skill:{skill.name}</code> forces it.</>}</p>
+      </dd></div>
       <div><dt>Source</dt><dd>{skill.group}</dd></div>
       <div><dt>File</dt><dd><code>{skill.path}</code></dd></div>
     </dl>
@@ -75,6 +79,15 @@ export function SkillsTab({ project }: { project?: string }) {
   const current = skills.find(skill => skill.path === selected);
   const open = !!mode || !!current;
   const shadowed = skills.filter(skill => skill.shadowedBy).length;
+  async function invocation(skill: ResourceView, allowed: boolean) {
+    setBusy(true); setError(""); setMessage(""); setUndo(undefined);
+    try {
+      await setModelInvocation(skill.path, allowed, project);
+      await refresh();
+      setMessage(`${allowed ? `The model may load ${skill.name} again when a task matches` : `Only /skill:${skill.name} loads ${skill.name} now`}. Applies to new T3Code threads, or after /reload.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not change SKILL.md."); }
+    finally { setBusy(false); }
+  }
   const folderChanged = (change: FolderChange) => { setMessage(change.message); setUndo(change.undo); void refresh(); };
   async function restore(target: NonNullable<FolderChange["undo"]>) {
     setBusy(true);
@@ -118,7 +131,7 @@ export function SkillsTab({ project }: { project?: string }) {
           onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
         : current && mode === "edit" ? <ResourceEditor key={current.path} type="skills" path={current.path} name={current.name} editable={current.origin === "top-level"}
           project={project} onMessage={setMessage} onClose={() => { setMode(undefined); void refresh(); }} />
-        : current ? <SkillDetail skill={current} onEdit={() => setMode("edit")} />
+        : current ? <SkillDetail skill={current} busy={busy} onEdit={() => setMode("edit")} onInvocation={allowed => void invocation(current, allowed)} />
         : <EmptyDetail icon={Layers} title="No skill selected">Choose a skill to read its description and how the model reaches it, or create a new one.</EmptyDetail>} />}
   </>;
 }

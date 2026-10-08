@@ -6,7 +6,7 @@ import { readdir, readFile, realpath, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, normalize, relative, sep } from "node:path";
 import { Hono } from "hono";
 import { z } from "zod";
-import type { ResolvedResource } from "@earendil-works/pi-coding-agent";
+import { parseFrontmatter, type ResolvedResource } from "@earendil-works/pi-coding-agent";
 import type { ResourceFileView, ResourceType } from "../shared/resources.ts";
 import type { ProjectRegistry } from "./projects.ts";
 import { resourceContext } from "./resources.ts";
@@ -88,6 +88,23 @@ export default function (pi: ExtensionAPI) {
   }
 }
 
+const INVOCATION = /^disable-model-invocation\s*:.*\n/m;
+
+/**
+ * A skill's SKILL.md with `disable-model-invocation: true` added or removed. Only that line changes;
+ * Pi's own frontmatter parser then has to agree, or the file is left for the editor.
+ */
+export function setModelInvocation(text: string, allowed: boolean): string {
+  const block = /^---\r?\n([\s\S]*?\r?\n)?---\r?\n/.exec(text);
+  if (!block) throw new ConfigError("SKILL.md has no frontmatter. Add it in the file editor.", 422);
+  const eol = block[0].includes("\r\n") ? "\r\n" : "\n";
+  const front = (block[1] ?? "").replace(INVOCATION, "");
+  const next = `---${eol}${front}${allowed ? "" : `disable-model-invocation: true${eol}`}---${eol}` + text.slice(block[0].length);
+  const { frontmatter } = parseFrontmatter<Record<string, unknown>>(next);
+  if ((frontmatter["disable-model-invocation"] === true) === allowed) throw new ConfigError("Could not change the frontmatter safely. Edit SKILL.md in the file editor.", 422);
+  return next;
+}
+
 export function resourceFileRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
   const context = resourceContext(store, registry, agentDir);
   async function find(project: string | undefined, type: ResourceType, path: string) {
@@ -129,6 +146,15 @@ export function resourceFileRoutes(store: ConfigStore, registry: ProjectRegistry
       }
       await store.writePath(opened, body.revision, body.text);
       return c.json({ revision: (await store.readPath(opened)).revision });
+    })
+    .patch("/invocation", async c => {
+      const { path, modelInvocation } = z.object({ path: z.string().min(1).max(4096), modelInvocation: z.boolean() }).strict().parse(await c.req.json());
+      const item = await find(c.req.query("project"), "skills", path);
+      const readOnly = readOnlyReason(item);
+      if (readOnly) throw new ConfigError(readOnly, 422);
+      const { revision } = await store.readPath(item.path);
+      await store.writePath(item.path, revision, setModelInvocation(await readText(item.path), modelInvocation));
+      return c.json({ revision: (await store.readPath(item.path)).revision });
     })
     .post("/", async c => {
       const body = z.object({ scope: z.enum(["global", "project"]), type: z.enum(TYPES), name: z.string(), description: z.string().max(1024).optional() }).strict().parse(await c.req.json());

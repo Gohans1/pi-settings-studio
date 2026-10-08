@@ -103,3 +103,25 @@ test("when two skills share a name, the copy Pi skips says which one Pi loads in
   await request("/api/skills", { method: "PATCH", headers: json, body: JSON.stringify({ revision: (await skills()).revision, paths: [winner.path], enabled: false }) });
   assert.ok((await skills()).skills.filter(entry => entry.name === "alpha").every(entry => !entry.shadowedBy));
 });
+
+test("whether the model may load a skill is one frontmatter line, and nothing else in the file changes", async (t) => {
+  const { agent, request, skills } = await fixture(t);
+  const file = join(agent, "skills/alpha/SKILL.md");
+  const before = await readFile(file, "utf8");
+  const set = async (name: string, modelInvocation: boolean) => {
+    const target = (await skills()).skills.find(entry => entry.name === name)!;
+    return request("/api/resource-files/invocation", { method: "PATCH", headers: json, body: JSON.stringify({ path: target.path, modelInvocation }) });
+  };
+  assert.equal((await set("alpha", false)).status, 200);
+  assert.equal(await readFile(file, "utf8"), before.replace("---\n# alpha", "disable-model-invocation: true\n---\n# alpha"));
+  assert.equal((await skills()).skills.find(entry => entry.name === "alpha")!.disableModelInvocation, true);
+  assert.equal((await set("alpha", true)).status, 200);
+  assert.equal(await readFile(file, "utf8"), before);
+  // beta was written with the key already; turning it on removes that line.
+  assert.equal((await set("beta", true)).status, 200);
+  assert.doesNotMatch(await readFile(join(agent, "skills/beta/SKILL.md"), "utf8"), /disable-model-invocation/);
+  // A package skill is changed at its source.
+  const gamma = join(agent, "pkgs/my-pack/skills/gamma/SKILL.md"), packaged = await readFile(gamma, "utf8");
+  assert.equal((await set("gamma", false)).status, 422);
+  assert.equal(await readFile(gamma, "utf8"), packaged);
+});

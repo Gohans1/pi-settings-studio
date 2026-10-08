@@ -29,7 +29,7 @@ test("skills can be inspected, searched and switched one by one or by group", as
   await page.goto(server.url + "#skills");
   await expect(page.getByText("3 of 3 skills on")).toBeVisible();
   await page.getByRole("button", { name: /^beta/ }).click();
-  await expect(page.getByRole("region", { name: "beta" })).toContainText("Only through /skill:beta");
+  await expect(page.getByRole("region", { name: "beta" })).toContainText("Only /skill:beta loads it");
   await page.getByRole("button", { name: /^alpha/ }).click();
   await expect(page.getByRole("region", { name: "alpha" })).toContainText("Alpha does things.");
   await page.getByRole("switch", { name: "Enable alpha" }).click();
@@ -119,4 +119,17 @@ test("a skill Pi skips because another of the same name comes first says so and 
   await expect(detail).toContainText("Pi does not load this copy");
   await expect(detail).toContainText(join(other, "alpha", "SKILL.md"));
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("whether the model may load a skill on its own is a switch in the skill's details", async ({ page }) => {
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^alpha/ }).click();
+  const detail = page.getByRole("region", { name: "alpha" });
+  await detail.getByRole("switch", { name: "Let the model load it" }).click();
+  await expect(page.getByRole("status")).toContainText("Only /skill:alpha loads alpha now");
+  expect(await readFile(join(agent, "skills/alpha/SKILL.md"), "utf8")).toContain("disable-model-invocation: true");
+  await expect(page.getByRole("button", { name: /^alpha.*command only/ })).toBeVisible();
+  await expect(detail.getByRole("switch", { name: "Let the model load it" })).not.toBeChecked();
+  await page.getByRole("button", { name: /^gamma/ }).click();
+  await expect(page.getByRole("region", { name: "gamma" }).getByRole("switch")).toHaveCount(0);
 });

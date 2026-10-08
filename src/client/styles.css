@@ -234,6 +234,7 @@
   .detail-list dd { min-width: 0; overflow-wrap: anywhere; }
   .detail-list dd select { min-width: 12rem; }
   .detail-list dd p { margin: --spacing(1.5) 0 0; }
+  .detail-list dd > p:first-child { margin-top: 0; }
   .detail-empty { display: grid; justify-items: center; align-content: center; gap: --spacing(1); min-height: 100%; padding: --spacing(10) --spacing(4); text-align: center; color: var(--muted-foreground); }
   .detail-empty > svg { width: --spacing(6); height: --spacing(6); margin-bottom: --spacing(2); }
   .detail-empty strong { color: var(--foreground); font-weight: var(--font-weight-semibold); }
