@@ -12,7 +12,7 @@ import { Textarea } from "./components/ui/textarea";
 import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, ListItem, Workbench } from "./Workbench";
+import { EmptyDetail, IconButton, ListItem, Workbench } from "./Workbench";
 
 function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
   agent?: AgentView; busy: boolean; error: string; title?: string; onSave: (input: AgentInput) => void; onCancel: () => void;
@@ -120,7 +120,7 @@ export function SubagentsTab({ project }: { project?: string }) {
       </section>
       {project && <section className="item-group" aria-label="This project's profiles">
         <div className="list-header"><h2>This project</h2><span>{agents.filter(agent => agent.scope === "project").length} in .pi/agents</span>
-          <Button variant="ghost" size="icon-xs" aria-label="Add profile to project" title="Add profile to project" disabled={busy} onClick={() => add("project")}><Plus aria-hidden="true" /></Button></div>
+          <IconButton label="Add profile to project" disabled={busy} onClick={() => add("project")}><Plus aria-hidden="true" /></IconButton></div>
         {agents.some(agent => agent.scope === "project") ? list("project") : <Empty><EmptyDescription>No profiles in this project yet.</EmptyDescription></Empty>}
       </section>}
     </>} detail={mode !== "view" ? <AgentForm key={mode + addScope + (selected?.file ?? "")} agent={mode === "edit" ? current : undefined} busy={busy} error={formError}

@@ -19,7 +19,7 @@ import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Switch } from "./components/ui/switch";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, ListItem, MoreMenu, Workbench } from "./Workbench";
+import { EmptyDetail, IconButton, ListItem, MoreMenu, Workbench } from "./Workbench";
 
 
 function shortState(server: McpServerView): string {
@@ -309,14 +309,14 @@ export function McpTab({ project }: { project?: string }) {
       <ul className="item-list pinned"><li><ListItem selected={selected === "codemode"} onSelect={() => choose("codemode")} icon={Braces} name="Code mode" state={codemodeState} /></li></ul>
       <section aria-labelledby="global-servers" className="item-group">
         <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span>
-          <Button variant="ghost" size="icon-xs" aria-label="Add server" title="Add server" disabled={busy || !!global.error} onClick={() => add("global")}><Plus aria-hidden="true" /></Button>
+          <IconButton label="Add server" disabled={busy || !!global.error} onClick={() => add("global")}><Plus aria-hidden="true" /></IconButton>
           {fileMenu("global", global)}
         </div>
         {globalServers.length ? serverList("global", globalServers) : !global.error && <Empty><EmptyDescription>No MCP servers yet. Add one, or import them from another client.</EmptyDescription></Empty>}
       </section>
       {project && local && <section aria-label="This project's servers" className="item-group">
         <div className="list-header"><h2>This project</h2><span>{projectServers.length} in .pi/mcp.json</span>
-          <Button variant="ghost" size="icon-xs" aria-label="Add server to project" title="Add server to project" disabled={busy || !!local.error} onClick={() => add("project")}><Plus aria-hidden="true" /></Button>
+          <IconButton label="Add server to project" disabled={busy || !!local.error} onClick={() => add("project")}><Plus aria-hidden="true" /></IconButton>
           {fileMenu("project", local)}
         </div>
         {projectServers.length ? serverList("project", projectServers) : !local.error && <Empty><EmptyDescription>No servers in this project's .pi/mcp.json yet.</EmptyDescription></Empty>}

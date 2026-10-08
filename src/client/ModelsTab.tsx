@@ -16,7 +16,7 @@ import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { ModelDefaults } from "./ModelDefaults";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, ListItem, MoreMenu, Workbench } from "./Workbench";
+import { EmptyDetail, IconButton, ListItem, MoreMenu, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
 
 const DEFAULTS = "#defaults";
@@ -174,7 +174,7 @@ export function ModelsTab({ project }: { project?: string }) {
       <ul className="item-list pinned"><li><ListItem selected={selected === DEFAULTS} onSelect={() => setSelected(DEFAULTS)} icon={SlidersHorizontal} name="Defaults" state="provider, model, thinking" /></li></ul>
       <section className="item-group" aria-label="Custom providers">
         <div className="list-header"><h2>Custom providers</h2><span>{custom?.providers.length ?? 0} in models.json</span>
-          <Button variant="ghost" size="icon-xs" aria-label="Add custom provider" title="Add custom provider" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}><Plus aria-hidden="true" /></Button>
+          <IconButton label="Add custom provider" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}><Plus aria-hidden="true" /></IconButton>
           <MoreMenu label="More actions for models.json"><DropdownMenuItem disabled={busy} onClick={() => setRaw(true)}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem></MoreMenu>
         </div>
         {custom?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertDescription>{custom.error}</AlertDescription></Alert>}

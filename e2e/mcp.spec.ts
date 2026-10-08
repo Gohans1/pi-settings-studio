@@ -20,6 +20,23 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+test("icon-only buttons and file paths say more in a tooltip", async ({ page }) => {
+  // Base UI's tooltip is for sighted users and has no role; the buttons carry their names themselves.
+  const tooltip = (text: string) => page.locator("[data-slot=tooltip-content]", { hasText: text });
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "Add server", exact: true }).hover();
+  await expect(tooltip("Add server")).toBeVisible();
+  // A tooltip on a menu's trigger: both still work.
+  const more = page.getByRole("button", { name: "More actions for the global mcp.json" });
+  await more.hover();
+  await expect(tooltip("More actions for the global mcp.json")).toBeVisible();
+  await more.click();
+  await expect(page.getByRole("menuitem", { name: "Edit as JSON" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.locator(".page-header .file-path").first().hover();
+  await expect(tooltip(file)).toBeVisible();
+});
+
 test("MCP tab lists servers and shows details without secret values", async ({ page }) => {
   await page.goto(server.url + "#mcp");
   await expect(page.getByRole("tab", { name: "MCP" })).toHaveAttribute("aria-selected", "true");

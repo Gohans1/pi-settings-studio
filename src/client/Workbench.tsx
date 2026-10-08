@@ -1,9 +1,10 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type ComponentProps, type ReactNode } from "react";
 import { ChevronLeft, Ellipsis, type LucideIcon } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./components/ui/empty";
 import { Item, ItemContent, ItemMedia, ItemTitle } from "./components/ui/item";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 
 /**
  * A list and the chosen item's details. Wide screens show both panes, each scrolling on its own;
@@ -49,10 +50,22 @@ export function ListItem({ selected, onSelect, icon: Icon, name, state, tone, qu
   </Item>;
 }
 
+/** An icon-only button: its label is its accessible name, and a tooltip shows it. */
+export function IconButton({ label, children, ...props }: Omit<ComponentProps<typeof Button>, "aria-label"> & { label: string }) {
+  return <Tooltip>
+    <TooltipTrigger render={<Button variant="ghost" size="icon-xs" aria-label={label} {...props} />}>{children}</TooltipTrigger>
+    <TooltipContent>{label}</TooltipContent>
+  </Tooltip>;
+}
+
 /** A list group's less frequent actions, behind one button. */
 export function MoreMenu({ label, children }: { label: string; children: ReactNode }) {
   return <DropdownMenu>
-    <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label={label} title={label} />}><Ellipsis aria-hidden="true" /></DropdownMenuTrigger>
+    {/* Base UI composes the tooltip's and the menu's triggers on one button. */}
+    <Tooltip>
+      <TooltipTrigger render={<DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label={label} />} />}><Ellipsis aria-hidden="true" /></TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
     <DropdownMenuContent align="end" className="w-auto">{children}</DropdownMenuContent>
   </DropdownMenu>;
 }

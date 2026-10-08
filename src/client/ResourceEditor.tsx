@@ -47,8 +47,9 @@ export function ResourceEditor({ type, path, name, editable: hint, project, onMe
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {view && view.files.length > 1 && <nav aria-label="Files" className="file-list">
       {view.files.map(file => <Button key={file} type="button" size="sm" variant={file === view.file ? "secondary" : "ghost"} aria-current={file === view.file ? "true" : undefined}
-        disabled={busy || (dirty && file !== view.file)} title={dirty ? "Save or discard the changes first" : undefined} onClick={() => void open(file)}>{file}</Button>)}
+        disabled={busy || (dirty && file !== view.file)} onClick={() => void open(file)}>{file}</Button>)}
     </nav>}
+    {view && view.files.length > 1 && dirty && <p className="muted">Save or discard the changes to open another file.</p>}
     {view && <Field><FieldLabel htmlFor={id}>{view.file}</FieldLabel>
       <Textarea id={id} aria-label={`Content of ${view.file}`} className="field-sizing-fixed font-mono" value={text} readOnly={!view.editable} rows={22} spellCheck={false}
         onChange={event => setText(event.target.value)} /></Field>}

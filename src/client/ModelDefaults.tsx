@@ -7,8 +7,10 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 import { OptionSelect } from "./OptionSelect";
 import { ScopeChoice } from "./ScopeChoice";
+import { IconButton } from "./Workbench";
 
 const LEVELS = [{ value: "", label: "Pi's default (medium)" }, ...["off", "minimal", "low", "medium", "high", "xhigh", "max"].map(level => ({ value: level, label: level }))];
 const hasGlob = (text: string) => /[*?[]/.test(text);
@@ -41,10 +43,13 @@ function EnabledModels({ patterns, scope, ids, inherited, onChange }: {
     <FieldLegend variant="label">Enabled models</FieldLegend>
     {patterns.length ? <ul className="pattern-list">{patterns.map(pattern => {
       const match = matched(pattern);
+      const count = match && (match.matches ? plural(match.matches, "model", "models") : misses[match.reason ?? "no-match"]);
       return <li key={pattern}>
         <code translate="no">{pattern}</code>
-        <span className="muted" title={match?.examples.join(", ") || undefined}>{match && (match.matches ? plural(match.matches, "model", "models") : misses[match.reason ?? "no-match"])}</span>
-        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove ${pattern}`} title="Remove" onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></Button>
+        {match?.examples.length
+          ? <Tooltip><TooltipTrigger render={<span className="muted" />}>{count}</TooltipTrigger><TooltipContent>{match.examples.join(", ")}</TooltipContent></Tooltip>
+          : <span className="muted">{count}</span>}
+        <IconButton type="button" label={`Remove ${pattern}`} onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></IconButton>
       </li>;
     })}</ul> : <FieldDescription>{inherited?.length ? `None here, so the global list applies: ${inherited.join(", ")}.` : "None: every model that has a credential."}</FieldDescription>}
     <div className="pattern-add">

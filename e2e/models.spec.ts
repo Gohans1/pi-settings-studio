@@ -70,6 +70,9 @@ test("defaults are chosen from Pi's catalog and saved to settings.json", async (
   await enabled.getByLabel("Model or pattern").fill("anthropic/*");
   await enabled.getByRole("button", { name: "Add" }).click();
   await expect(enabled.getByRole("listitem").filter({ hasText: "anthropic/*" })).toContainText(/\d+ models/);
+  // The count names a few of the models it matched.
+  await enabled.getByText(/^\d+ models$/).hover();
+  await expect(page.locator("[data-slot=tooltip-content]")).toContainText("claude");
   await panel.getByRole("button", { name: "Save defaults" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
   const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));

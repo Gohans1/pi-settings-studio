@@ -1,5 +1,6 @@
 import type { ReactNode, Ref } from "react";
 import { FileText, Folder } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 
 /** Home-relative paths, as a shell prints them. */
 export const home = (path: string) => path.replace(/^\/home\/[^/]+/, "~");
@@ -7,7 +8,10 @@ export const home = (path: string) => path.replace(/^\/home\/[^/]+/, "~");
 /** A file (or folder) this page reads or writes. */
 export function FilePath({ path, folder = false }: { path: string; folder?: boolean }) {
   const Icon = folder ? Folder : FileText;
-  return <span className="file-path" title={path}><Icon aria-hidden="true" /><code translate="no">{home(path)}</code></span>;
+  return <Tooltip>
+    <TooltipTrigger render={<span className="file-path" />}><Icon aria-hidden="true" /><code translate="no">{home(path)}</code></TooltipTrigger>
+    <TooltipContent>{path}</TooltipContent>
+  </Tooltip>;
 }
 
 /** What the page edits, in which files, and the page's own actions. */
