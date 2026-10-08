@@ -74,7 +74,8 @@ test("Code mode is set for one project, then back to the global choice", async (
   await panel.getByRole("radio", { name: /Always on/ }).check();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Code mode is always on in this project");
   expect(JSON.parse(await readFile(settings, "utf8"))).toEqual({ defaultTools: ["+codemode"] });
-  await panel.getByLabel("Turn Code mode on automatically").selectOption("off");
+  await panel.getByRole("combobox", { name: "Turn Code mode on automatically" }).click();
+  await page.getByRole("option", { name: "Off", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("no longer turns on automatically");
   expect(JSON.parse(await readFile(join(project, ".pi", "mcp.json"), "utf8")).autoEnableCodemode).toBe(false);
   await panel.getByRole("radio", { name: /Same as global/ }).first().check();

@@ -1,10 +1,15 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { X } from "lucide-react";
+import { useEffect, useId, useState, type FormEvent } from "react";
+import { CircleAlert, X } from "lucide-react";
 import type { McpExposure, McpServerInput, McpServerView } from "../shared/mcp";
 import { loadProviders } from "./api";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
-import { FieldDescription } from "./components/ui/field";
+import { Checkbox } from "./components/ui/checkbox";
+import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
+import { Textarea } from "./components/ui/textarea";
+import { Disclosure } from "./Disclosure";
+import { OptionSelect } from "./OptionSelect";
 
 export const exposureLabels: Record<string, [string, string]> = {
   codemode: ["Code mode", "Callable from codemode scripts; not declared to the model."],
@@ -85,44 +90,46 @@ function RuleRows({ rules, onChange }: { rules: Rule[]; onChange: (rules: Rule[]
   const update = (index: number, patch: Partial<Rule>) => onChange(rules.map((rule, i) => i === index ? { ...rule, ...patch } : rule));
   return <div className="named-rows">
     {rules.map((rule, index) => <div className="named-row" key={index}>
-      <input aria-label={`Tool or pattern ${index + 1}`} value={rule.tool} placeholder="search_* or exact_tool_name" autoComplete="off" spellCheck={false}
+      <Input aria-label={`Tool or pattern ${index + 1}`} value={rule.tool} placeholder="search_* or exact_tool_name" autoComplete="off" spellCheck={false}
         onChange={event => update(index, { tool: event.target.value })} />
-      <select aria-label={`Exposure of rule ${index + 1}`} value={rule.exposure} onChange={event => update(index, { exposure: event.target.value as McpExposure })}>
-        {Object.entries(exposureLabels).map(([value, [label]]) => <option key={value} value={value}>{label}</option>)}
-      </select>
+      <OptionSelect aria-label={`Exposure of rule ${index + 1}`} className="w-full" value={rule.exposure} onChange={exposure => update(index, { exposure })}
+        options={Object.entries(exposureLabels).map(([value, [label]]) => ({ value: value as McpExposure, label }))} />
       <Button type="button" variant="ghost" size="icon" aria-label={`Remove rule ${rule.tool || index + 1}`}
         onClick={() => onChange(rules.filter((_, i) => i !== index))}><X aria-hidden="true" /></Button>
     </div>)}
     <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rules, { tool: "", exposure: "direct" }])}>Add rule</Button>
-    <p className="muted">Server tool names, without the <code>mcp__server__</code> prefix. <code>*</code> matches any characters. Exact names win over patterns; among patterns, the first match wins.</p>
+    <FieldDescription>Server tool names, without the <code>mcp__server__</code> prefix. <code>*</code> matches any characters. Exact names win over patterns; among patterns, the first match wins.</FieldDescription>
   </div>;
 }
 
 function OAuthFields({ oauth, unused, onChange }: { oauth: OAuthDraft; unused?: string; onChange: (patch: Partial<OAuthDraft>) => void }) {
-  const input = (key: (typeof OAUTH_TEXT)[number], label: string, placeholder: string, hint?: string) => <label>{label}
-    <input aria-label={label} value={oauth[key]} placeholder={placeholder} autoComplete="off" spellCheck={false} inputMode={key === "callbackPort" ? "numeric" : undefined}
-      onChange={event => onChange({ [key]: event.target.value })} />{hint && <span className="muted">{hint}</span>}</label>;
+  const id = useId();
+  const input = (key: (typeof OAUTH_TEXT)[number], label: string, placeholder: string, hint?: string) => <Field>
+    <FieldLabel htmlFor={id + key}>{label}</FieldLabel>
+    <Input id={id + key} value={oauth[key]} placeholder={placeholder} autoComplete="off" spellCheck={false} inputMode={key === "callbackPort" ? "numeric" : undefined}
+      aria-describedby={hint ? id + key + "-hint" : undefined} onChange={event => onChange({ [key]: event.target.value })} />
+    {hint && <FieldDescription id={id + key + "-hint"}>{hint}</FieldDescription>}</Field>;
   // Open once when something is stored; later edits must not close it.
   const [open] = useState(() => OAUTH_TEXT.some(key => oauth[key]) || oauth.hasClientSecret || !!oauth.clientRegistration);
-  return <details className="oauth-fields" open={open}>
-    <summary>OAuth settings</summary>
-    {unused ? <p className="notice">OAuth is not used while {unused} is set.</p>
-      : <p className="muted">Only for servers without dynamic client registration, or with special needs. Leave empty for the default sign-in.</p>}
-    <label>Client registration<select aria-label="Client registration" value={oauth.clientRegistration} onChange={event => onChange({ clientRegistration: event.target.value })}>
-      <option value="">Default: register a client (dcr)</option><option value="dcr">dcr: dynamic client registration</option>
-      <option value="cimd">cimd: Pi's client ID metadata document on pi.dev</option>
-    </select></label>
+  return <Disclosure label="OAuth settings" defaultOpen={open}><div className="oauth-fields">
+    {unused ? <Alert role="note"><AlertDescription>OAuth is not used while {unused} is set.</AlertDescription></Alert>
+      : <FieldDescription>Only for servers without dynamic client registration, or with special needs. Leave empty for the default sign-in.</FieldDescription>}
+    <Field><FieldLabel htmlFor={id + "registration"}>Client registration</FieldLabel>
+      <OptionSelect id={id + "registration"} className="w-full" value={oauth.clientRegistration} onChange={clientRegistration => onChange({ clientRegistration })} options={[
+        { value: "", label: "Default: register a client (dcr)" }, { value: "dcr", label: "dcr: dynamic client registration" },
+        { value: "cimd", label: "cimd: Pi's client ID metadata document on pi.dev" }]} /></Field>
     {input("clientId", "Client ID", "Pre-registered client id", "Not with cimd.")}
-    <label>Client secret<input aria-label="Client secret" type="password" value={oauth.clientSecret} autoComplete="new-password" disabled={oauth.clearClientSecret}
-      placeholder={oauth.hasClientSecret ? "Hidden. Leave empty to keep." : "Optional; ${NAME} or !command work"} onChange={event => onChange({ clientSecret: event.target.value })} /></label>
-    {oauth.hasClientSecret && <label className="check"><input type="checkbox" checked={oauth.clearClientSecret}
-      onChange={event => onChange({ clearClientSecret: event.target.checked, clientSecret: "" })} />Remove the stored client secret</label>}
+    <Field><FieldLabel htmlFor={id + "secret"}>Client secret</FieldLabel>
+      <Input id={id + "secret"} type="password" value={oauth.clientSecret} autoComplete="new-password" disabled={oauth.clearClientSecret}
+        placeholder={oauth.hasClientSecret ? "Hidden. Leave empty to keep." : "Optional; ${NAME} or !command work"} onChange={event => onChange({ clientSecret: event.target.value })} /></Field>
+    {oauth.hasClientSecret && <Field orientation="horizontal"><Checkbox id={id + "clear"} checked={oauth.clearClientSecret}
+      onCheckedChange={checked => onChange({ clearClientSecret: checked, clientSecret: "" })} /><FieldLabel htmlFor={id + "clear"}>Remove the stored client secret</FieldLabel></Field>}
     {input("callbackPort", "Callback port", "Free port", "Redirect URI http://127.0.0.1:<port>/callback.")}
     {input("callbackUrl", "Callback URL", "http://localhost:8080/oauth/callback", "Only http on localhost, 127.0.0.1 or [::1].")}
     {input("scope", "Scope", "Scopes the server advertises", "Space-separated.")}
     {input("clientName", "Client name", "pi", "Sent when registering. Sign out first to register again under a new name. Not with cimd.")}
     {input("authServerMetadataUrl", "Authorization server metadata URL", "https://example.okta.com/.well-known/openid-configuration", "Replaces discovery and is trusted as written.")}
-  </details>;
+  </div></Disclosure>;
 }
 
 export function McpServerForm({ server, busy, error, title: heading, scope = "global", onSave, onCancel }: {
@@ -136,39 +143,42 @@ export function McpServerForm({ server, busy, error, title: heading, scope = "gl
   }, [scope]);
   const set = (patch: Partial<Draft>) => setDraft(current => ({ ...current, ...patch }));
   const title = heading ?? (server ? `Edit ${server.name}` : "Add MCP server");
+  const id = useId();
   function submit(event: FormEvent) {
     event.preventDefault();
     onSave(draft.name.trim(), toInput(draft, scope));
   }
   return <form className="detail server-form" aria-label={title} onSubmit={submit}>
     <h2>{title}</h2>
-    {error && <div role="alert" className="error"><strong>Not saved</strong><p>{error}</p></div>}
-    {!server && <label>Name<input value={draft.name} required pattern="[A-Za-z0-9_-]+" title="Letters, digits, _ and -" autoComplete="off" spellCheck={false}
-      onChange={event => set({ name: event.target.value })} /></label>}
-    <label>Transport<select value={draft.transport} onChange={event => set({ transport: event.target.value as Draft["transport"] })}>
-      <option value="stdio">Command (stdio)</option><option value="http">URL (streamable HTTP)</option>
-    </select></label>
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    {!server && <Field><FieldLabel htmlFor={id + "name"}>Name</FieldLabel><Input id={id + "name"} value={draft.name} required pattern="[A-Za-z0-9_-]+" title="Letters, digits, _ and -" autoComplete="off" spellCheck={false}
+      onChange={event => set({ name: event.target.value })} /></Field>}
+    <Field><FieldLabel htmlFor={id + "transport"}>Transport</FieldLabel>
+      <OptionSelect id={id + "transport"} className="w-full" value={draft.transport} onChange={transport => set({ transport })}
+        options={[{ value: "stdio", label: "Command (stdio)" }, { value: "http", label: "URL (streamable HTTP)" }] as const} /></Field>
     {draft.transport === "stdio" ? <>
-      <label>Command<input value={draft.command} required placeholder="npx" autoComplete="off" spellCheck={false} onChange={event => set({ command: event.target.value })} /></label>
-      <label>Arguments<textarea rows={3} value={draft.args} placeholder={"-y\n@modelcontextprotocol/server-filesystem"} spellCheck={false} onChange={event => set({ args: event.target.value })} />
-        <span className="muted">One argument per line. Not a shell command. ‹hidden N› stands for a stored secret: keep it to keep the value.</span></label>
-      <label>Working directory<input value={draft.cwd} placeholder="Session directory" autoComplete="off" spellCheck={false} onChange={event => set({ cwd: event.target.value })} /></label>
-      <fieldset><legend>Environment</legend><NamedRows kind="variable" rows={draft.env} onChange={env => set({ env })} /></fieldset>
+      <Field><FieldLabel htmlFor={id + "command"}>Command</FieldLabel><Input id={id + "command"} value={draft.command} required placeholder="npx" autoComplete="off" spellCheck={false} onChange={event => set({ command: event.target.value })} /></Field>
+      <Field><FieldLabel htmlFor={id + "args"}>Arguments</FieldLabel>
+        <Textarea id={id + "args"} rows={3} value={draft.args} placeholder={"-y\n@modelcontextprotocol/server-filesystem"} spellCheck={false} aria-describedby={id + "args-hint"} onChange={event => set({ args: event.target.value })} />
+        <FieldDescription id={id + "args-hint"}>One argument per line. Not a shell command. ‹hidden N› stands for a stored secret: keep it to keep the value.</FieldDescription></Field>
+      <Field><FieldLabel htmlFor={id + "cwd"}>Working directory</FieldLabel><Input id={id + "cwd"} value={draft.cwd} placeholder="Session directory" autoComplete="off" spellCheck={false} onChange={event => set({ cwd: event.target.value })} /></Field>
+      <FieldSet><FieldLegend variant="label">Environment</FieldLegend><NamedRows kind="variable" rows={draft.env} onChange={env => set({ env })} /></FieldSet>
     </> : <>
-      <label>URL<input value={draft.url} required type="text" placeholder="https://example.com/mcp" autoComplete="off" spellCheck={false} onChange={event => set({ url: event.target.value })} /></label>
-      <fieldset><legend>Headers</legend><NamedRows kind="header" rows={draft.headers} onChange={headers => set({ headers })} /></fieldset>
-      <fieldset><legend>Sign-in</legend>
-        {scope === "global" ? <label>Pi provider<input aria-label="Pi provider" value={draft.authProvider} placeholder="Empty: OAuth, or the Authorization header" list="mcp-providers" autoComplete="off" spellCheck={false}
-          onChange={event => set({ authProvider: event.target.value })} />
-          <span className="muted">Sends the token of a Pi provider you signed in to with /login instead of OAuth. Needs https except on loopback hosts.</span></label>
-          : <p className="muted">A Pi provider token can only be set in the global mcp.json.</p>}
-        <datalist id="mcp-providers">{providers.map(id => <option key={id} value={id} />)}</datalist>
+      <Field><FieldLabel htmlFor={id + "url"}>URL</FieldLabel><Input id={id + "url"} value={draft.url} required type="text" placeholder="https://example.com/mcp" autoComplete="off" spellCheck={false} onChange={event => set({ url: event.target.value })} /></Field>
+      <FieldSet><FieldLegend variant="label">Headers</FieldLegend><NamedRows kind="header" rows={draft.headers} onChange={headers => set({ headers })} /></FieldSet>
+      <FieldSet><FieldLegend variant="label">Sign-in</FieldLegend>
+        {scope === "global" ? <Field><FieldLabel htmlFor={id + "provider"}>Pi provider</FieldLabel>
+          <Input id={id + "provider"} value={draft.authProvider} placeholder="Empty: OAuth, or the Authorization header" list="mcp-providers" autoComplete="off" spellCheck={false}
+            aria-describedby={id + "provider-hint"} onChange={event => set({ authProvider: event.target.value })} />
+          <FieldDescription id={id + "provider-hint"}>Sends the token of a Pi provider you signed in to with /login instead of OAuth. Needs https except on loopback hosts.</FieldDescription></Field>
+          : <FieldDescription>A Pi provider token can only be set in the global mcp.json.</FieldDescription>}
+        <datalist id="mcp-providers">{providers.map(provider => <option key={provider} value={provider} />)}</datalist>
         <OAuthFields oauth={draft.oauth} unused={draft.authProvider.trim() ? "a Pi provider" : draft.headers.some(row => row.name.trim().toLowerCase() === "authorization") ? "an Authorization header" : undefined} onChange={patch => set({ oauth: { ...draft.oauth, ...patch } })} />
-      </fieldset>
+      </FieldSet>
     </>}
-    <fieldset><legend>Tool exposure rules</legend><RuleRows rules={draft.rules} onChange={rules => set({ rules })} /></fieldset>
-    <label>Description<input value={draft.description} placeholder="What the server offers, in a sentence" onChange={event => set({ description: event.target.value })} /></label>
-    <label>Timeout (seconds)<input type="number" min={1} step="any" value={draft.timeout} placeholder="60" onChange={event => set({ timeout: event.target.value })} /></label>
+    <FieldSet><FieldLegend variant="label">Tool exposure rules</FieldLegend><RuleRows rules={draft.rules} onChange={rules => set({ rules })} /></FieldSet>
+    <Field><FieldLabel htmlFor={id + "description"}>Description</FieldLabel><Input id={id + "description"} value={draft.description} placeholder="What the server offers, in a sentence" onChange={event => set({ description: event.target.value })} /></Field>
+    <Field><FieldLabel htmlFor={id + "timeout"}>Timeout (seconds)</FieldLabel><Input id={id + "timeout"} type="number" min={1} step="any" value={draft.timeout} placeholder="60" onChange={event => set({ timeout: event.target.value })} /></Field>
     <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save server"}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;

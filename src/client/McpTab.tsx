@@ -8,8 +8,13 @@ import { exposureLabels, McpServerForm } from "./McpServerForm";
 import { McpImportPanel } from "./McpImportPanel";
 import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
-import { Braces, FileJson, Import, Plus, PlugZap, ScrollText, Server } from "lucide-react";
+import { Braces, CircleAlert, FileJson, Import, Plus, PlugZap, ScrollText, Server } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
+import { Empty, EmptyDescription } from "./components/ui/empty";
+import { FieldDescription, FieldLegend, FieldSet } from "./components/ui/field";
+import { OptionSelect } from "./OptionSelect";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Switch } from "./components/ui/switch";
 import { Feedback } from "./Feedback";
@@ -34,7 +39,7 @@ function signIn(server: McpServerView): string | undefined {
 }
 
 function Names({ names }: { names: string[] }) {
-  return <>{names.map(name => <code key={name} className="chip">{name}</code>)}<span className="muted"> values hidden</span></>;
+  return <span className="flex flex-wrap items-center gap-1.5">{names.map(name => <Badge key={name} variant="outline" render={<code />}>{name}</Badge>)}<span className="muted">values hidden</span></span>;
 }
 
 /**
@@ -52,11 +57,11 @@ function ServerTools({ server, tools, busy, onTest, onToolExposure }: {
       : !tools.length ? <p className="muted">The last test listed no tools{server.enabled ? "" : "; turn the server on and test again"}.</p>
       : <ul className="tool-exposures">{tools.map(tool => {
         const { [tool]: own, ...others } = server.toolExposure;
+        const options = [{ value: "", label: `Inherit: ${label(toolExposure({ exposure: server.exposure, toolExposure: others }, tool))}` },
+          ...Object.entries(exposureLabels).map(([value, [text]]) => ({ value, label: text }))];
         return <li key={tool}><code translate="no">{tool}</code>
-          <select aria-label={`Exposure of ${server.name}/${tool}`} value={own ?? ""} disabled={busy || !onToolExposure} onChange={event => onToolExposure?.(tool, event.target.value || null)}>
-            <option value="">Inherit: {label(toolExposure({ exposure: server.exposure, toolExposure: others }, tool))}</option>
-            {Object.entries(exposureLabels).map(([value, [text]]) => <option key={value} value={value}>{text}</option>)}
-          </select></li>;
+          <OptionSelect aria-label={`Exposure of ${server.name}/${tool}`} className="w-52" options={options} value={own ?? ""} disabled={busy || !onToolExposure}
+            onChange={value => onToolExposure?.(tool, value || null)} /></li>;
       })}</ul>}
   </section>;
 }
@@ -75,17 +80,16 @@ function ServerDetail({ server, busy, onExposure, actions, children }: {
   const auth = signIn(server);
   if (auth) rows.push(["Sign-in", auth]);
   rows.push(["Exposure", <>
-    <select aria-label={`Tool exposure for ${server.name}`} value={server.exposure} disabled={busy || !!server.error || !onExposure} onChange={event => onExposure?.(event.target.value)}>
-      {Object.entries(exposureLabels).map(([value, [label]]) => <option key={value} value={value}>{label}{value === "codemode" ? " (default)" : ""}</option>)}
-    </select>
+    <OptionSelect aria-label={`Tool exposure for ${server.name}`} className="w-52" value={server.exposure} disabled={busy || !!server.error || !onExposure} onChange={exposure => onExposure?.(exposure)}
+      options={Object.entries(exposureLabels).map(([value, [label]]) => ({ value, label: label + (value === "codemode" ? " (default)" : "") }))} />
     <p className="muted">{exposureLabels[server.exposure]?.[1]}</p>
     {Object.keys(server.toolExposure).length > 0 && <p className="muted">Own exposure: {Object.entries(server.toolExposure).map(([tool, exposure]) => `${tool} → ${exposureLabels[exposure]?.[0] ?? exposure}`).join(", ")}</p>}
   </>]);
   if (server.timeout) rows.push(["Timeout", `${server.timeout} s`]);
   return <section className="detail" aria-labelledby="server-title">
     <header className="detail-header"><h2 id="server-title">{server.name}</h2>{actions && <div className="actions">{actions}</div>}</header>
-    {server.error && <div className="error"><strong>Pi refuses this entry, so it never connects</strong><p>{server.error}</p></div>}
-    {!server.error && !server.enabled && <p className="notice">Turned off in the file, so it does not connect.</p>}
+    {server.error && <Alert role="note" variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Pi refuses this entry, so it never connects</AlertTitle><AlertDescription>{server.error}</AlertDescription></Alert>}
+    {!server.error && !server.enabled && <Alert role="note"><AlertDescription>Turned off in the file, so it does not connect.</AlertDescription></Alert>}
     <dl className="detail-list">{rows.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
     {children}
   </section>;
@@ -97,7 +101,7 @@ function TestResults({ job }: { job: JobView }) {
     <strong>{server.name}</strong>
     <span>{server.state}{server.state === "connected" ? ` · ${server.tools.length} tool${server.tools.length === 1 ? "" : "s"}` : ""}</span>
     {server.error && <span className="muted">{server.error}</span>}
-  </li>)}{job.result.errors.map(error => <li key={error} className="field-error">{error}</li>)}</ul>;
+  </li>)}{job.result.errors.map(error => <li key={error} className="text-destructive">{error}</li>)}</ul>;
 }
 
 type Selection = { scope: "global" | "project"; name: string } | "codemode";
@@ -196,15 +200,15 @@ export function McpTab({ project }: { project?: string }) {
     if (!project || !local || local.error) return undefined;
     const entry = inProject(name);
     const globalEntry = globalServers.find(server => server.name === name);
-    if (entry && !entry.override) return <p className="notice">This project's .pi/mcp.json defines its own "{name}" server, which replaces the global one there.</p>;
+    if (entry && !entry.override) return <Alert role="note"><AlertDescription>This project's .pi/mcp.json defines its own "{name}" server, which replaces the global one there.</AlertDescription></Alert>;
     const enabled = entry ? entry.enabled : !!globalEntry?.enabled;
-    return <fieldset className="in-project" aria-label="In this project"><legend>In this project</legend>
+    return <FieldSet className="in-project items-start gap-3 rounded-lg border p-4" aria-label="In this project"><FieldLegend variant="label">In this project</FieldLegend>
       <div className="switch-row"><Switch aria-label={`Enable ${name} in this project`} checked={enabled} disabled={busy || !globalEntry}
         onCheckedChange={on => void run("project", revision => saveMcpServer(target("project"), name, revision, { enabled: on }), `${name} turned ${on ? "on" : "off"} in this project.`)} />
         <span>{entry ? `${enabled ? "On" : "Off"} here (override in .pi/mcp.json)` : "Same as global"}</span></div>
       {entry && <Button variant="outline" size="sm" disabled={busy}
         onClick={() => void run("project", revision => removeMcpServer(target("project"), name, revision), `${name} follows the global setting again in this project.`)}>Use the global setting</Button>}
-    </fieldset>;
+    </FieldSet>;
   }
 
   function serverList(scope: "global" | "project", list: McpServerView[]) {
@@ -228,7 +232,7 @@ export function McpTab({ project }: { project?: string }) {
       <header className="detail-header"><h2 id="log-title">mcp.log</h2>
         <div className="actions"><Button variant="outline" onClick={showLog}>Reload</Button><Button variant="ghost" onClick={() => setLog(undefined)}>Close</Button></div></header>
       <p className="muted">Messages servers log while Pi runs, newest last; known secrets are hidden. <code>{log.path}</code></p>
-      {log.exists ? <pre className="log-tail" tabIndex={0} aria-label="mcp.log contents">{log.text || "Empty."}</pre> : <p className="empty">No server has logged anything yet.</p>}
+      {log.exists ? <pre className="log-tail" tabIndex={0} aria-label="mcp.log contents">{log.text || "Empty."}</pre> : <Empty><EmptyDescription>No server has logged anything yet.</EmptyDescription></Empty>}
     </section>;
   } else if (form?.mode === "import" && views[form.scope]) {
     const scope = form.scope;
@@ -254,7 +258,7 @@ export function McpTab({ project }: { project?: string }) {
     const scope = selected.scope;
     const label = scope === "project" ? "the project's .pi/mcp.json" : "mcp.json";
     detail = current.override
-      ? <ServerDetail server={current} busy={busy}>{projectControls(current.name)}<p className="muted">Other settings come from the global server.</p></ServerDetail>
+      ? <ServerDetail server={current} busy={busy}>{projectControls(current.name)}<FieldDescription>Other settings come from the global server.</FieldDescription></ServerDetail>
       : <ServerDetail server={current} busy={busy}
         onExposure={exposure => void run(scope, revision => saveMcpServer(target(scope), current.name, revision, { exposure }), `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`)}
         actions={<>
@@ -291,9 +295,10 @@ export function McpTab({ project }: { project?: string }) {
       </>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => { const scope = undo.scope; void run(scope, revision => restoreMcp(target(scope), revision), "Restored the previous file."); } }} />
-    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Try again</Button></div></div>}
-    {global?.error && <div role="alert" className="error"><strong>Pi loads none of the global servers</strong><p>{global.error}</p></div>}
-    {local?.error && <div role="alert" className="error"><strong>Pi loads none of this project's servers</strong><p>{local.error}</p></div>}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription>
+      <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Try again</Button></div></Alert>}
+    {global?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Pi loads none of the global servers</AlertTitle><AlertDescription>{global.error}</AlertDescription></Alert>}
+    {local?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Pi loads none of this project's servers</AlertTitle><AlertDescription>{local.error}</AlertDescription></Alert>}
     <JobPanel job={check.job} error={check.error} onAnswer={value => void check.answer(value)} onCancel={() => void check.cancel()} onDismiss={check.dismiss}>
       {check.job && <TestResults job={check.job} />}
     </JobPanel>
@@ -307,14 +312,14 @@ export function McpTab({ project }: { project?: string }) {
           <Button variant="ghost" size="icon-xs" aria-label="Add server" title="Add server" disabled={busy || !!global.error} onClick={() => add("global")}><Plus aria-hidden="true" /></Button>
           {fileMenu("global", global)}
         </div>
-        {globalServers.length ? serverList("global", globalServers) : !global.error && <p className="empty">No MCP servers yet. Add one, or import them from another client.</p>}
+        {globalServers.length ? serverList("global", globalServers) : !global.error && <Empty><EmptyDescription>No MCP servers yet. Add one, or import them from another client.</EmptyDescription></Empty>}
       </section>
       {project && local && <section aria-label="This project's servers" className="item-group">
         <div className="list-header"><h2>This project</h2><span>{projectServers.length} in .pi/mcp.json</span>
           <Button variant="ghost" size="icon-xs" aria-label="Add server to project" title="Add server to project" disabled={busy || !!local.error} onClick={() => add("project")}><Plus aria-hidden="true" /></Button>
           {fileMenu("project", local)}
         </div>
-        {projectServers.length ? serverList("project", projectServers) : !local.error && <p className="empty">No servers in this project's .pi/mcp.json yet.</p>}
+        {projectServers.length ? serverList("project", projectServers) : !local.error && <Empty><EmptyDescription>No servers in this project's .pi/mcp.json yet.</EmptyDescription></Empty>}
       </section>}
     </>} />}
   </>;
