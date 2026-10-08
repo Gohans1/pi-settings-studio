@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import type { PluginsView, ResourceView } from "../shared/resources";
-import { loadPlugins, savePlugins } from "./api";
+import { loadPlugins, savePackageFilters, savePlugins } from "./api";
+import { PackageFilterForm, type FilterPatch } from "./PackageFilterForm";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 import { JobPanel, useJob } from "./JobPanel";
@@ -37,6 +38,7 @@ export function PluginsTab({ project }: { project?: string }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [source, setSource] = useState("");
+  const [filtering, setFiltering] = useState<string>();
   const [installScope, setInstallScope] = useState<"global" | "project">("global");
   // pi install / remove / update run on click; the list reloads when they finish.
   const job = useJob(() => void refresh());
@@ -61,6 +63,16 @@ export function PluginsTab({ project }: { project?: string }) {
     } finally { setBusy(false); }
   }
 
+  async function saveFilters(scope: "global" | "project", pkgSource: string, filters: FilterPatch) {
+    if (!view) return;
+    setBusy(true); setError(""); setMessage("");
+    try {
+      setView(await savePackageFilters(scope, scope === "project" ? view.projectRevision! : view.revision, pkgSource, filters, project));
+      setFiltering(undefined);
+      setMessage(`Filters saved for ${pkgSource}. Applies to new T3Code threads, or after /reload.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save the filters."); }
+    finally { setBusy(false); }
+  }
   const resources = view?.resources ?? [];
   const needle = query.trim().toLowerCase();
   const visible = resources.filter(item => !needle || `${item.name} ${item.description ?? ""} ${item.group}`.toLowerCase().includes(needle));
@@ -103,13 +115,16 @@ export function PluginsTab({ project }: { project?: string }) {
         </form>
         <p className="muted">Runs pi install in this environment. Packages can run code: install only sources you trust.</p>
         <JobPanel job={job.job} error={job.error} onAnswer={value => void job.answer(value)} onCancel={() => void job.cancel()} onDismiss={job.dismiss} />
-        {view.packages.length ? <ul className="package-list">{view.packages.map(pkg => <li key={pkg.source}>
+        {view.packages.length ? <ul className="package-list">{view.packages.map(pkg => <li key={pkg.scope + pkg.source}>
           <code>{pkg.source}</code>
-          <span className="muted">{pkg.installed ? "Installed" : "Not installed"}{pkg.filtered ? " · has resource filters" : ""}</span>
+          <span className="muted">{pkg.scope === "project" ? "This project · " : ""}{pkg.installed ? "Installed" : "Not installed"}{pkg.filtered ? " · has resource filters" : ""}</span>
           <span className="actions">
+            <Button variant="ghost" size="sm" disabled={busy} aria-label={`Filters for ${pkg.source}`} onClick={() => setFiltering(pkg.scope + pkg.source)}>Filters</Button>
             <Button variant="ghost" size="sm" disabled={job.running} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source })}>Update</Button>
-            <Button variant="ghost" size="sm" disabled={job.running} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source })}>Remove</Button>
+            <Button variant="ghost" size="sm" disabled={job.running} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Remove</Button>
           </span>
+          {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
+            onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}
         </li>)}</ul> : <p className="empty">No packages in settings.json.</p>}
       </section>
     </>}

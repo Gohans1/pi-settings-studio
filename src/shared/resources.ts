@@ -16,5 +16,6 @@ export type ResourceView = {
 
 export type SkillsView = { revision: string; projectRevision?: string; skills: ResourceView[] };
 
-export type PackageView = { source: string; installed: boolean; filtered: boolean };
+export type PackageFilters = { autoload?: boolean; extensions?: string[]; skills?: string[]; prompts?: string[]; themes?: string[] };
+export type PackageView = { scope: "global" | "project"; source: string; installed: boolean; filtered: boolean; filters: PackageFilters };
 export type PluginsView = { revision: string; projectRevision?: string; resources: ResourceView[]; packages: PackageView[] };

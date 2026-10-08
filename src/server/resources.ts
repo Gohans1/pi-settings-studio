@@ -133,7 +133,8 @@ function resourceContext(store: ConfigStore, registry: ProjectRegistry, agentDir
   async function resolve(project: string | undefined) {
     const { dir, global, local } = await load(project);
     const resolved = await resolveResources(agentDir, global.value, dir ? { dir, settings: local!.value } : undefined);
-    return { resolved, revision: global.revision, ...(local ? { projectRevision: local.revision } : {}), manager: packageManager(agentDir, global.value, dir ? { dir, settings: local!.value } : undefined) };
+    return { resolved, revision: global.revision, ...(local ? { projectRevision: local.revision } : {}), manager: packageManager(agentDir, global.value, dir ? { dir, settings: local!.value } : undefined),
+      settings: { global: global.value, ...(local ? { project: local.value } : {}) } };
   }
   async function toggle(project: string | undefined, scope: ScopeName, revision: string, enabled: boolean, items: { type: ResourceType; path: string }[]) {
     const { dir, projectStore, global } = await load(project);
@@ -175,23 +176,51 @@ export function skillRoutes(store: ConfigStore, registry: ProjectRegistry, agent
 }
 
 const PLUGIN_TYPES = ["extensions", "prompts", "themes"] as const;
+const FILTER_KEYS = ["autoload", "extensions", "skills", "prompts", "themes"];
 
 export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
   const context = resourceContext(store, registry, agentDir);
   async function view(project: string | undefined): Promise<PluginsView> {
-    const { resolved, revision, projectRevision, manager } = await context.resolve(project);
+    const { resolved, revision, projectRevision, manager, settings } = await context.resolve(project);
     const resources = (await Promise.all(PLUGIN_TYPES.map(type => Promise.all(resolved[type].map(item => describe(type, item, agentDir)))))).flat();
-    const { value } = await store.read("global");
-    const packages: PackageView[] = (Array.isArray(value.packages) ? value.packages : []).flatMap(pkg => {
-      const source = typeof pkg === "string" ? pkg : isRecord(pkg) && typeof pkg.source === "string" ? pkg.source : undefined;
-      if (!source) return [];
-      const path = manager.getInstalledPath(source, "user");
-      return [{ source, installed: !!path && existsSync(path), filtered: typeof pkg !== "string" }];
+    const packages: PackageView[] = (["global", "project"] as const).flatMap(scope => {
+      const list = settings[scope]?.packages;
+      return (Array.isArray(list) ? list : []).flatMap(pkg => {
+        const source = typeof pkg === "string" ? pkg : isRecord(pkg) && typeof pkg.source === "string" ? pkg.source : undefined;
+        if (!source) return [];
+        const path = manager.getInstalledPath(source, scope === "global" ? "user" : "project");
+        const filters = isRecord(pkg) ? Object.fromEntries(Object.entries(pkg).filter(([key]) => FILTER_KEYS.includes(key))) : {};
+        return [{ scope, source, installed: !!path && existsSync(path), filtered: typeof pkg !== "string", filters }];
+      });
     });
     return { revision, ...(projectRevision ? { projectRevision } : {}), resources, packages };
   }
   return new Hono()
     .get("/", async c => c.json(await view(c.req.query("project"))))
+    .put("/packages", async c => {
+      const project = c.req.query("project");
+      const list = z.array(z.string().max(500)).max(200).nullable().optional();
+      const { scope, revision, source, filters } = z.object({
+        scope: z.enum(["global", "project"]), revision: z.string().min(1).max(100), source: z.string().max(500),
+        filters: z.object({ autoload: z.boolean().nullable().optional(), extensions: list, skills: list, prompts: list, themes: list }).strict(),
+      }).strict().parse(await c.req.json());
+      const target = scope === "global" ? store : registry.storeFor(await registry.require(project));
+      await target.transform(scope, revision, settings => {
+        const packages = Array.isArray(settings.packages) ? [...settings.packages] : [];
+        const index = packages.findIndex(pkg => (typeof pkg === "string" ? pkg : isRecord(pkg) ? pkg.source : undefined) === source);
+        if (index === -1) throw new ConfigError(`settings.json has no package ${source}.`);
+        const entry: Record<string, unknown> = typeof packages[index] === "string" ? { source } : { ...(packages[index] as Record<string, unknown>) };
+        // null removes a filter (load everything the package allows); [] loads none of that type.
+        for (const [key, value] of Object.entries(filters)) {
+          if (value === null) delete entry[key];
+          else if (value !== undefined) entry[key] = value;
+        }
+        packages[index] = Object.keys(entry).some(key => key !== "source") ? entry : source;
+        settings.packages = packages;
+        return settings;
+      });
+      return c.json(await view(project));
+    })
     .patch("/", async c => {
       const project = c.req.query("project");
       const { scope, revision, items, enabled } = z.object({

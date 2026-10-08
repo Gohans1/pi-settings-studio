@@ -107,3 +107,5 @@ export const cancelJob = (id: string) => request<JobView>(`/api/jobs/${id}/cance
 export const loadModelsRaw = () => request<RawSettings>("/api/models/custom/raw");
 export const saveModelsRaw = (revision: string, text: string) => request<RawSettings>("/api/models/custom/raw", "PUT", { revision, text });
 export const loadModelIds = () => request<string[]>("/api/models/ids");
+export const savePackageFilters = (scope: Scope, revision: string, source: string, filters: Record<string, unknown>, project?: string) =>
+  request<PluginsView>(withProject("/api/plugins/packages", project), "PUT", { scope, revision, source, filters });

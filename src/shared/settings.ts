@@ -132,7 +132,7 @@ export const settingHomes: Record<string, string> = {
   "codemode.mode": "MCP tab",
   "codemode.inlineBudget": "MCP tab",
   skills: "Skills tab",
-  packages: "Plugins tab (filters and paths: raw JSON)",
+  packages: "Plugins tab",
   extensions: "Plugins tab (filters and paths: raw JSON)",
   prompts: "Plugins tab (filters and paths: raw JSON)",
   themes: "Plugins tab (filters and paths: raw JSON)",

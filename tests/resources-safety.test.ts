@@ -28,5 +28,7 @@ test("listing never runs a command, not even an npmCommand from an untrusted pro
     const response = await request(path);
     assert.equal(response.status, 200, path);
   }
+  const plugins = await (await request(`/api/plugins${q}`)).json();
+  assert.deepEqual(plugins.packages.map((pkg: { source: string; installed: boolean }) => [pkg.source, pkg.installed]), [["npm:also-missing", false], ["npm:not-installed-anywhere", false]]);
   assert.equal(existsSync(marker), false);
 });

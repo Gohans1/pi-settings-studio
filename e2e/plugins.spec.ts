@@ -43,3 +43,22 @@ test("plugins list built-ins, user files and packages, and switch them in settin
   await expect(packages).toContainText("Not installed");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("a package's resource filters are edited in settings.json", async ({ page }) => {
+  const settings = async () => JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: "Filters for ./pkgs/my-pack" }).click();
+  const form = page.getByRole("form", { name: "Filters for ./pkgs/my-pack" });
+  await form.getByLabel("Extensions", { exact: true }).selectOption("only");
+  await form.getByLabel("Extension patterns").fill("extensions/*.ts\n!extensions/legacy.ts");
+  await form.getByLabel("Prompts", { exact: true }).selectOption("none");
+  await form.getByRole("button", { name: "Save filters" }).click();
+  await expect(page.getByRole("status").first()).toContainText("Filters saved for ./pkgs/my-pack");
+  expect((await settings()).packages[0]).toEqual({ source: "./pkgs/my-pack", extensions: ["extensions/*.ts", "!extensions/legacy.ts"], prompts: [] });
+  await page.getByRole("button", { name: "Filters for ./pkgs/my-pack" }).click();
+  await form.getByLabel("Extensions", { exact: true }).selectOption("all");
+  await form.getByLabel("Prompts", { exact: true }).selectOption("all");
+  await form.getByRole("button", { name: "Save filters" }).click();
+  await expect(page.getByRole("status").first()).toContainText("Filters saved");
+  expect((await settings()).packages[0]).toBe("./pkgs/my-pack");
+});

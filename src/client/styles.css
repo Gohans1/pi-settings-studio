@@ -206,6 +206,12 @@ textarea { resize: vertical; }
 .model-map { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; justify-items: start; }
 .model-map-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 6px; width: 100%; }
 .model-map-row input[type=number] { width: 110px; }
+.package-list li { flex-wrap: wrap; }
+.package-filters { flex-basis: 100%; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); margin: 4px 0 8px; }
+.package-filters h3 { margin: 0; font-size: 14px; }
+.package-filters label { display: grid; gap: 4px; font-weight: 560; }
+.package-filters select, .package-filters textarea { font-weight: 400; }
+.filter-row { display: grid; gap: 6px; }
 .skip-link { position: fixed; top: -100px; left: 16px; padding: 12px; background: var(--primary); color: var(--primary-foreground); z-index: 20; }
 .skip-link:focus { top: 8px; }
 @media (max-width: 1000px) {
