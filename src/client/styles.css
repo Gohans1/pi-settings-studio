@@ -23,7 +23,6 @@
   --muted-foreground: light-dark(var(--flexoki-base-700), var(--flexoki-base-400));
   --accent: light-dark(var(--flexoki-base-100), var(--flexoki-base-900));
   --accent-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
-  --control: light-dark(var(--flexoki-paper), var(--flexoki-base-950));
   --popover: light-dark(var(--flexoki-paper), var(--flexoki-base-900));
   --popover-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
   --border: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
@@ -36,16 +35,11 @@
   /* The chosen row of a list: Flexoki's ui-2, one step above the hover (ui). */
   --selected: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
   --destructive: light-dark(var(--flexoki-red-600), var(--flexoki-red-300));
-  --destructive-surface: light-dark(var(--flexoki-red-50), var(--flexoki-red-950));
   --warning: light-dark(var(--flexoki-orange-600), var(--flexoki-orange-400));
-  --warning-surface: light-dark(var(--flexoki-orange-50), var(--flexoki-orange-950));
-  --success: light-dark(var(--flexoki-green-600), var(--flexoki-green-400));
-  --success-surface: light-dark(var(--flexoki-green-50), var(--flexoki-green-950));
   --radius: .375rem;
   /* A frame's corner is its inset row's corner plus the inset, so nested corners stay concentric. */
   --radius-frame: calc(var(--radius-md) + --spacing(2));
-  /* Layout: one height for form controls and buttons; the app chrome; reading and list widths. */
-  --control-height: --spacing(9);
+  /* Layout: the app chrome; reading and list widths. */
   --topbar-height: --spacing(12);
   --tabbar-height: --spacing(11);
   --gutter: --spacing(8);
@@ -64,9 +58,9 @@
   --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive); --color-destructive-surface: var(--destructive-surface);
+  --color-destructive: var(--destructive);
   --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
-  --color-selected: var(--selected); --color-warning: var(--warning); --color-success: var(--success);
+  --color-selected: var(--selected); --color-warning: var(--warning);
   /* shadcn's radius scale, derived from --radius. */
   --radius-sm: calc(var(--radius) * 0.6); --radius-md: calc(var(--radius) * 0.8); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8); --radius-3xl: calc(var(--radius) * 2.2); --radius-4xl: calc(var(--radius) * 2.6);
@@ -100,34 +94,11 @@
   a { color: var(--primary); text-underline-offset: 0.2em; text-decoration-thickness: from-font; }
   code { font-size: var(--text-caption); overflow-wrap: anywhere; }
   svg { flex-shrink: 0; }
-  button, summary, select, label:has(> input:is([type=checkbox], [type=radio])) { cursor: pointer; }
-  button, a, summary, select, input, textarea, label { touch-action: manipulation; }
-  :disabled { cursor: not-allowed; }
-  summary { width: fit-content; display: flex; align-items: center; gap: --spacing(1.5); list-style: none; }
-  summary::-webkit-details-marker { display: none; }
-  /* Lucide's chevron-right as a mask, so it takes the text colour. */
-  summary::before { content: ""; flex: none; width: --spacing(3.5); height: --spacing(3.5); background: currentColor; opacity: .6;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat; }
-  details[open] > summary::before { rotate: 90deg; }
-  @media (prefers-reduced-motion: no-preference) { summary::before { transition: rotate 150ms var(--ease-out); } }
-  /* Form controls: one height, one border, one radius. */
-  :where(input:not([type=checkbox], [type=radio]), select, textarea) {
-    min-height: var(--control-height); padding: --spacing(1.5) --spacing(3);
-    border: 1px solid var(--input); border-radius: var(--radius); background: var(--control); color: var(--foreground);
-  }
-  /* Preflight's font: inherit would pass a semibold label's weight into the control. */
-  input, select, textarea { font-weight: var(--font-weight-normal); }
-  textarea { padding-block: --spacing(2); line-height: var(--leading-normal); resize: vertical; }
-  input, textarea { caret-color: var(--primary); }
-  input, select, textarea { accent-color: var(--primary); }
-  :is(input, select, textarea):disabled { opacity: .6; }
-  input::placeholder, textarea::placeholder { color: var(--muted-foreground); }
-  :is(input, select, textarea)[aria-invalid=true] { border-color: var(--destructive); }
-  input:is([type=checkbox], [type=radio]) { width: --spacing(4); height: --spacing(4); margin: 0; }
+  /* Tailwind 4 gives buttons the default cursor; shadcn's pointer option brings the hand back. */
+  button:not(:disabled), [role=button]:not(:disabled) { cursor: pointer; }
+  button, a, input, textarea, label { touch-action: manipulation; }
   fieldset { min-width: 0; }
   dd { margin: 0; }
-  /* iOS zooms into inputs under 16px; touch screens get the readable size. */
-  @media (pointer: coarse) { :is(input, select, textarea) { font-size: var(--text-base); } }
 }
 
 @layer components {
@@ -159,22 +130,12 @@
   .file-path { display: inline-flex; align-items: center; gap: --spacing(1.5); min-width: 0; color: var(--muted-foreground); }
   .file-path svg { width: --spacing(3.5); height: --spacing(3.5); }
 
-  /* Callouts: information (muted), warning, error. Text stays in the foreground; the tone colours the surface and title. */
-  .notice { margin: 0; padding: --spacing(2.5) --spacing(3.5); border-radius: var(--radius); background: var(--muted); color: var(--foreground); }
-  .callout-warning { background: var(--warning-surface); }
-  .error { padding: --spacing(3) --spacing(4); border-radius: var(--radius); background: var(--destructive-surface); color: var(--foreground); }
-  .error > strong:first-child { display: block; color: var(--destructive); }
-  .error p { margin: --spacing(1) 0 0; overflow-wrap: anywhere; }
-  .error .actions { margin-top: --spacing(3); }
+  /* Callouts (shadcn Alerts) and job panels in a row keep apart. */
   :is([data-slot=alert], .job) + :is([data-slot=alert], .job) { margin-top: --spacing(3); }
-  .field-error { margin: 0; color: var(--destructive); font-size: var(--text-small); }
-  /* A value Pi may not accept: the icon carries the tone, the text stays readable. */
   .muted { color: var(--muted-foreground); font-size: var(--text-small); }
   .loading { padding: --spacing(8) 0; color: var(--muted-foreground); }
   @media (prefers-reduced-motion: no-preference) { .loading { animation: appear 160ms var(--ease-out) 300ms backwards; } }
-  .empty { margin: 0; padding: --spacing(6) --spacing(2); color: var(--muted-foreground); }
   .actions { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2); }
-  .chip { display: inline-block; margin: 0 --spacing(1.5) --spacing(1) 0; padding: 0 --spacing(1.5); border: 1px solid var(--border); border-radius: var(--radius-sm); }
   .page-notice { margin-bottom: --spacing(4); }
 
   /* Workbench: a list and the chosen item's details, side by side; each pane scrolls on its own. */
@@ -196,8 +157,6 @@
   .item-state[data-state=refused] { color: var(--destructive); }
   .item-state[data-state=shadowed] { display: inline-flex; align-items: center; gap: --spacing(1); }
   .item-state[data-state=shadowed] svg { width: --spacing(3.5); height: --spacing(3.5); color: var(--warning); }
-  .notice.callout-warning:has(> p) { display: grid; gap: --spacing(1.5); }
-  .notice > p { margin: 0; }
   .pinned { padding-bottom: --spacing(2); border-bottom: 1px solid var(--border); }
 
   /* Detail pane. */
@@ -214,7 +173,6 @@
   .detail-list > div:last-child { border-bottom: 1px solid var(--border); }
   .detail-list dt { color: var(--muted-foreground); font-size: var(--text-small); }
   .detail-list dd { min-width: 0; overflow-wrap: anywhere; }
-  .detail-list dd select { min-width: 12rem; }
   .detail-list dd p { margin: --spacing(1.5) 0 0; }
   .detail-list dd > p:first-child { margin-top: 0; }
   .detail > .job, .detail > .prompt-preview, .detail > .in-project { margin-top: --spacing(4); }
@@ -326,7 +284,7 @@
   .prompt { display: grid; gap: --spacing(2); }
   .prompt-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); padding-bottom: --spacing(1); color: var(--muted-foreground); font-size: var(--text-small); font-variant-numeric: tabular-nums; }
   .prompt [data-slot=accordion-trigger] .muted { margin-inline-start: --spacing(1); font-weight: var(--font-weight-normal); font-variant-numeric: tabular-nums; }
-  .prompt pre { margin: --spacing(2.5) 0 0; max-height: 30rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .prompt pre { margin: 0; max-height: 30rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .tool-list { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(2); }
   .tool-list li { display: grid; gap: --spacing(0.5); }
 

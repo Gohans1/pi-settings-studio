@@ -81,23 +81,20 @@ describe("colour system", () => {
 
   // [foreground, background, minimum WCAG 2 ratio]: 4.5 for text, 3 for focus rings and control boundaries.
   const pairs: [string, string, number][] = [
-    ["--foreground", "--background", 4.5], ["--foreground", "--sidebar", 4.5], ["--foreground", "--muted", 4.5], ["--foreground", "--control", 4.5],
+    ["--foreground", "--background", 4.5], ["--foreground", "--sidebar", 4.5], ["--foreground", "--muted", 4.5],
     ["--muted-foreground", "--background", 4.5], ["--muted-foreground", "--sidebar", 4.5], ["--muted-foreground", "--muted", 4.5],
-    ["--muted-foreground", "--secondary", 4.5], ["--muted-foreground", "--control", 4.5],
+    ["--muted-foreground", "--secondary", 4.5],
     ["--primary-foreground", "--primary", 4.5], ["--secondary-foreground", "--secondary", 4.5],
     // shadcn's surfaces: callouts on --card, menu and select highlights on --accent, floating layers on --popover.
     ["--card-foreground", "--card", 4.5], ["--muted-foreground", "--card", 4.5], ["--destructive", "--card", 4.5],
     ["--accent-foreground", "--accent", 4.5], ["--popover-foreground", "--popover", 4.5],
     ["--destructive", "--background", 4.5], ["--destructive", "--secondary", 4.5],
     ["--ring", "--background", 3], ["--ring", "--sidebar", 3],
-    ["--input", "--control", 3], ["--warning", "--background", 3],
+    ["--input", "--background", 3], ["--input", "--sidebar", 3], ["--warning", "--background", 3],
     // The selected list row and floating layers (menus) keep body and muted text readable.
     ["--foreground", "--selected", 4.5], ["--muted-foreground", "--selected", 4.5],
     ["--foreground", "--popover", 4.5], ["--muted-foreground", "--popover", 4.5],
-    // Callouts: body text in the foreground, tone colours on their own surface.
-    ["--foreground", "--secondary", 4.5], ["--foreground", "--destructive-surface", 4.5], ["--destructive", "--destructive-surface", 4.5],
-    ["--foreground", "--warning-surface", 4.5], ["--warning", "--warning-surface", 3],
-    ["--foreground", "--success-surface", 4.5], ["--success", "--success-surface", 3], ["--success", "--background", 3],
+    ["--foreground", "--secondary", 4.5],
   ];
   for (const scheme of ["light", "dark"] as const) {
     test.each(pairs)(`${scheme}: %s on %s meets %d:1`, (fg, bg, minimum) => {
