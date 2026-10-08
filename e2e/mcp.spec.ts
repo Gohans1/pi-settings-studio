@@ -37,6 +37,21 @@ test("icon-only buttons and file paths say more in a tooltip", async ({ page }) 
   await expect(tooltip(file)).toBeVisible();
 });
 
+test("a server the browser would refuse says why under each field and is not added", async ({ page }) => {
+  const before = await readFile(file, "utf8");
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "Add server", exact: true }).click();
+  const form = page.getByRole("form", { name: "Add MCP server" });
+  const name = form.getByLabel("Name", { exact: true });
+  await name.fill("has space");
+  await form.getByRole("button", { name: "Save server" }).click();
+  await expect(name).toBeFocused();
+  await expect(form).toContainText("Use letters, digits, _ and -.");
+  await expect(form).toContainText("Command is required.");
+  await expect(form.getByLabel("Command", { exact: true })).toHaveAttribute("aria-invalid", "true");
+  expect(await readFile(file, "utf8")).toBe(before);
+});
+
 test("MCP tab lists servers and shows details without secret values", async ({ page }) => {
   await page.goto(server.url + "#mcp");
   await expect(page.getByRole("tab", { name: "MCP" })).toHaveAttribute("aria-selected", "true");

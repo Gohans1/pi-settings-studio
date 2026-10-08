@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Empty, EmptyDescription } from "./components/ui/empty";
-import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Spinner } from "./components/ui/spinner";
@@ -14,6 +14,7 @@ import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, IconButton, ListItem, Workbench } from "./Workbench";
+import { useFieldErrors } from "./useFieldErrors";
 
 function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
   agent?: AgentView; busy: boolean; error: string; title?: string; onSave: (input: AgentInput) => void; onCancel: () => void;
@@ -25,19 +26,23 @@ function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
   const [prompt, setPrompt] = useState(agent?.prompt ?? "");
   const title = heading ?? (agent ? `Edit ${agent.name ?? agent.file}` : "Add profile");
   const id = useId();
-  function submit(event: FormEvent) {
+  const { errors, check, clear, describe } = useFieldErrors({ [id + "name"]: "Use letters, digits, ., _ and -, starting with a letter or digit." });
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!check(event.currentTarget)) return;
     onSave({ name: name.trim(), description: description.trim(), tools: tools.split(",").map(tool => tool.trim()).filter(Boolean),
       ...(model.trim() ? { model: model.trim() } : {}), prompt });
   }
-  return <form className="detail server-form" aria-label={title} onSubmit={submit}>
+  return <form className="detail server-form" aria-label={title} onSubmit={submit} onInput={clear} noValidate>
     <h2>{title}</h2>
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    <Field><FieldLabel htmlFor={id + "name"}>Name</FieldLabel>
-      <Input id={id + "name"} value={name} required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*" title="Letters, digits, ., _ and -" autoComplete="off" spellCheck={false} onChange={e => setName(e.target.value)} />
+    <Field data-invalid={!!errors[id + "name"] || undefined}><FieldLabel htmlFor={id + "name"}>Name</FieldLabel>
+      <Input id={id + "name"} value={name} required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*" autoComplete="off" spellCheck={false} {...describe(id + "name")} onChange={e => setName(e.target.value)} />
+      <FieldError id={id + "name-error"}>{errors[id + "name"]}</FieldError>
       {!agent && <FieldDescription>Saved as {name.trim() || "name"}.md</FieldDescription>}</Field>
-    <Field><FieldLabel htmlFor={id + "description"}>Description</FieldLabel>
-      <Input id={id + "description"} value={description} required placeholder="When to use this agent, in a sentence" onChange={e => setDescription(e.target.value)} /></Field>
+    <Field data-invalid={!!errors[id + "description"] || undefined}><FieldLabel htmlFor={id + "description"}>Description</FieldLabel>
+      <Input id={id + "description"} value={description} required placeholder="When to use this agent, in a sentence" {...describe(id + "description")} onChange={e => setDescription(e.target.value)} />
+      <FieldError id={id + "description-error"}>{errors[id + "description"]}</FieldError></Field>
     <Field><FieldLabel htmlFor={id + "tools"}>Tools</FieldLabel>
       <Input id={id + "tools"} value={tools} placeholder="read, grep, find, ls" autoComplete="off" spellCheck={false} aria-describedby={id + "tools-hint"} onChange={e => setTools(e.target.value)} />
       <FieldDescription id={id + "tools-hint"}>Comma-separated. Empty means the extension's default tools.</FieldDescription></Field>

@@ -66,6 +66,17 @@ test("closing a file with unsaved changes asks first, and only Discard throws th
   expect(await readFile(join(agent, "skills/alpha/SKILL.md"), "utf8")).toBe(skill("alpha", "Alpha does things."));
 });
 
+test("a new skill without a name or description says so under each field and creates nothing", async ({ page }) => {
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: "New skill" }).click();
+  const create = page.getByRole("form", { name: "New skill" });
+  await create.getByRole("button", { name: "Create skill" }).click();
+  await expect(create.getByLabel("Name")).toBeFocused();
+  await expect(create).toContainText("Name is required.");
+  await expect(create).toContainText("Description is required.");
+  await expect(page.getByText("3 of 3 skills on")).toBeVisible();
+});
+
 test("while a file has unsaved changes, the skill's other files wait and say why", async ({ page }) => {
   await mkdir(join(agent, "skills/alpha/references"), { recursive: true });
   await writeFile(join(agent, "skills/alpha/references/notes.md"), "Old notes.\n");
