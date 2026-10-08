@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
-import { Boxes, FileJson, Plus, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import { Boxes, FileJson, Plus, RefreshCw, SlidersHorizontal } from "lucide-react";
 import type { CustomProvidersView, ProvidersView, ProviderView } from "../shared/models";
 import { loadModelsRaw, saveModelsRaw, addCustomProvider, editCustomProvider, loadCustomProviders, loadProviders, removeCustomProvider, removeProviderKey, restoreAuth, restoreCustomProviders, saveProviderKey } from "./api";
 import { CustomProviderForm } from "./CustomProviderForm";
@@ -12,6 +12,7 @@ import { ModelDefaults } from "./ModelDefaults";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, MoreMenu, Workbench } from "./Workbench";
+import { SearchField } from "./SearchField";
 
 const DEFAULTS = "#defaults";
 const CUSTOM = "#custom:";
@@ -154,7 +155,7 @@ export function ModelsTab({ project }: { project?: string }) {
       note={`${SECRET_NOTE} modelOverrides, compat, cost, thinkingLevelMap and samplingParams are edited here. Pi checks the file before it is saved.`}
       onClose={saved => { setRaw(false); if (saved) { setMessage("Saved models.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
     : !view ? !error && <div className="loading" aria-busy="true">Reading providers…</div> : <Workbench open={open} onBack={() => setSelected(undefined)} backLabel="All providers" list={<section aria-label="Providers">
-      <div className="list-search"><div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search providers" placeholder="Search providers…" value={query} onChange={event => setQuery(event.target.value)} /></div></div>
+      <div className="list-search"><SearchField label="Search providers" placeholder="Search providers…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned"><li><button type="button" aria-pressed={selected === DEFAULTS} onClick={() => setSelected(DEFAULTS)}>
         <SlidersHorizontal aria-hidden="true" /><span className="item-name">Defaults</span><span className="item-state">provider, model, thinking</span></button></li></ul>
       <section className="item-group" aria-label="Custom providers">

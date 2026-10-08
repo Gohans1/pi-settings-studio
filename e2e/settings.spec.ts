@@ -215,3 +215,19 @@ test("emptying a number field returns it to Pi's default", async ({ page }) => {
   await expect(page.getByRole("status").first()).toContainText("Saved to file");
   expect(JSON.parse(await readFile(file, "utf8")).thinkingBudgets?.minimal).toBeUndefined();
 });
+
+test("the section index counts the settings each group sets and marks unsaved edits", async ({ page }) => {
+  const index = page.getByRole("navigation", { name: "Setting groups" });
+  await expect(index.getByRole("link", { name: "Shell & packages (1 set)" })).toBeVisible();
+  await page.getByLabel("Thinking budget: low", { exact: true }).fill("2048");
+  await expect(index.getByRole("link", { name: "Models & thinking (unsaved changes)" })).toBeVisible();
+});
+
+test("slash moves to the search field unless the reader is typing", async ({ page }) => {
+  await expect(page.getByRole("heading", { name: "Models & thinking" })).toBeVisible();
+  await page.keyboard.press("/");
+  await expect(page.getByRole("searchbox", { name: "Search settings" })).toBeFocused();
+  await page.getByLabel("Shell command prefix", { exact: true }).fill("a");
+  await page.getByLabel("Shell command prefix", { exact: true }).press("/");
+  await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("a/");
+});

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Package, Plus, Puzzle, Search } from "lucide-react";
+import { ChevronDown, Package, Plus, Puzzle } from "lucide-react";
 import type { PluginsView, ResourceType, ResourceView } from "../shared/resources";
 import { loadPlugins, savePackageFilters, savePlugins } from "./api";
 import { PackageFilterForm, type FilterPatch } from "./PackageFilterForm";
@@ -11,6 +11,7 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from "./components/ui/menu";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, Workbench } from "./Workbench";
+import { SearchField } from "./SearchField";
 
 const typeLabels: Record<string, string> = { extensions: "extension", prompts: "prompt", themes: "theme" };
 const newLabels = { prompts: "Prompt template", themes: "Theme", extensions: "Extension" } as const;
@@ -124,7 +125,7 @@ export function PluginsTab({ project }: { project?: string }) {
     <Feedback message={message} onDismiss={() => setMessage("")} />
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading plugins…</div> : <Workbench open={open} onBack={back} backLabel="All plugins" list={<section aria-label="Plugin list">
-      <div className="list-search"><div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search plugins" placeholder="Search plugins…" value={query} onChange={event => setQuery(event.target.value)} /></div></div>
+      <div className="list-search"><SearchField label="Search plugins" placeholder="Search plugins…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned"><li><button type="button" aria-pressed={packagesOpen} onClick={() => { setPackagesOpen(true); setSelected(undefined); setMode(undefined); }}>
         <Package aria-hidden="true" /><span className="item-name">Packages</span><span className="item-state">{view.packages.length}</span></button></li></ul>
       {!visible.length && <p className="empty">{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</p>}

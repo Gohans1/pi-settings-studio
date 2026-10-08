@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Folder } from "lucide-react";
+import { CircleCheck, Folder, TriangleAlert } from "lucide-react";
 import type { ProjectView, TrustView } from "../shared/projects";
 import { loadProjects, saveTrust } from "./api";
 import { Button } from "./components/ui/button";
@@ -45,8 +45,9 @@ export function TrustPanel({ project, trust, onChange }: { project: string; trus
     ? `${trust.decision ? "Trusted" : "Not trusted"} in Pi's trust.json${trust.savedFor && trust.savedFor !== project ? ` through ${home(trust.savedFor)}` : ""}`
     : `No saved decision; defaultProjectTrust is "${trust.defaultTrust}"`;
   return <section className={trust.loadsInT3Code ? "trust notice" : "trust notice callout-warning"} aria-label="Project trust">
-    <p><strong>{trust.loadsInT3Code ? "This project's .pi folder loads in T3Code." : "T3Code ignores this project's .pi folder."}</strong> {why}.
-      {!trust.loadsInT3Code && " T3Code cannot ask for trust, so project settings, MCP servers and resources stay unused until the project is trusted."}</p>
+    <p>{trust.loadsInT3Code ? <CircleCheck aria-hidden="true" /> : <TriangleAlert aria-hidden="true" />}
+      <span><strong>{trust.loadsInT3Code ? "This project's .pi folder loads in T3Code." : "T3Code ignores this project's .pi folder."}</strong> {why}.
+      {!trust.loadsInT3Code && " T3Code cannot ask for trust, so project settings, MCP servers and resources stay unused until the project is trusted."}</span></p>
     <div className="actions">
       {!trust.loadsInT3Code && <Button size="sm" disabled={busy} onClick={() => void decide(true)}>Trust this project</Button>}
       {trust.decision !== false && <Button size="sm" variant="outline" disabled={busy} onClick={() => void decide(false)}>Do not trust</Button>}

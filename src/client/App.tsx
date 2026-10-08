@@ -51,6 +51,20 @@ export function App() {
     // On a narrow screen the chosen tab may sit past the edge of the scrolling tab bar.
     document.querySelector("[role=tab][aria-selected=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [active]);
+  useEffect(() => {
+    // "/" moves to the page's search field, unless the reader is typing or in a menu.
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey || event.defaultPrevented) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.closest("input, textarea, select, [contenteditable], [role=menu]")) return;
+      const search = document.querySelector<HTMLInputElement>("main input[data-shortcut]");
+      if (!search) return;
+      event.preventDefault();
+      search.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   function select(id: string) {
     history.replaceState(null, "", "#" + id);
     setActive(id);

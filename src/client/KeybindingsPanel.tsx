@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
 import type { KeybindingAction, KeybindingsView } from "../shared/keybindings";
 import { isValidKey } from "../shared/keys";
 import { loadKeybindings, saveKeybindings } from "./api";
 import { Button } from "./components/ui/button";
 import { FilePath } from "./PageHeader";
+import { SearchField } from "./SearchField";
 
 type Draft = Record<string, string[] | null>;
 const parse = (text: string) => text.split(",").map(key => key.trim()).filter(Boolean);
@@ -43,7 +43,7 @@ export function KeybindingsPanel({ onMessage }: { onMessage: (text: string) => v
     <p className="notice">Only affects Pi in a terminal. No effect in T3Code. A set value replaces the defaults; separate several keys with commas.</p>
     {view && <FilePath path={view.path} />}
     {(error || view?.error) && <div role="alert" className="error"><strong>keybindings.json</strong><p>{error || view?.error}</p></div>}
-    <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search shortcuts" placeholder="Search shortcuts…" value={query} onChange={e => setQuery(e.target.value)} /></div>
+    <SearchField label="Search shortcuts" placeholder="Search shortcuts…" value={query} onChange={setQuery} shortcut={false} />
     {view && <div className="keybinding-list">{visible.map(action => {
       const keys = current(action);
       const text = texts[action.id] ?? (keys ?? []).join(", ");

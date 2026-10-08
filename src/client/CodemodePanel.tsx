@@ -37,7 +37,7 @@ export function CodemodePanel({ view, autoEnable, busy, project, scope, onScope,
     </fieldset>}
     {view.disabledByExtensions && <p className="notice">-builtin:codemode in the extensions setting turns Code mode off.</p>}
     {effective && <p className="notice">This project's sessions get: {preferenceLabel[effective.preference]}, built-in tools {modeLabel[effective.mode].toLowerCase()}, budget {effective.inlineBudget}, automatic start {effective.autoEnableCodemode ? "on" : "off"}.</p>}
-    <fieldset><legend>Code mode</legend>
+    <fieldset><legend>When Code mode is on</legend>
       {inProject && radio("preference", "inherit", preference, "Same as global", "No codemode entry in this project's defaultTools.", { preference: "inherit" }, "Code mode follows the global choice in this project.")}
       {radio("preference", "automatic", preference, "Automatic", inProject ? "Turns on when a code-mode server connects (adds -codemode to the project's defaultTools)." : "Turns on when an MCP server that uses code mode connects.", { preference: "automatic" }, `Code mode is automatic${where}.`)}
       {radio("preference", "always", preference, "Always on", "Sessions start with Code mode on (adds +codemode to defaultTools).", { preference: "always" }, `Code mode is always on${where}.`)}

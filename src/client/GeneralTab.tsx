@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, FileJson, History, RotateCcw, Search } from "lucide-react";
+import { ChevronDown, FileJson, History, RotateCcw } from "lucide-react";
 import { fields, sections, type SettingsChange, type SettingsView } from "../shared/settings";
 import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
@@ -11,12 +11,13 @@ import { PiPanel } from "./PiPanel";
 import { NotHere } from "./NotHere";
 import { RawJsonEditor } from "./RawJsonEditor";
 import { KeybindingsPanel } from "./KeybindingsPanel";
+import { SearchField } from "./SearchField";
 
 const KEYBINDINGS = { id: "keybindings", title: "Keyboard shortcuts" };
 
 /** The group the reader is in: the last one whose top has passed the upper third of the scroller. */
 function useCurrentGroup(ids: string[]) {
-  const [current, setCurrent] = useState(ids[0]);
+  const [current, setCurrent] = useState<string>();
   const key = ids.join(" ");
   useEffect(() => {
     const visible = new Set<string>();
@@ -31,7 +32,8 @@ function useCurrentGroup(ids: string[]) {
     for (const id of ids) { const element = document.getElementById("group-" + id); if (element) observer.observe(element); }
     return () => observer.disconnect();
   }, [key]);
-  return [current, setCurrent] as const;
+  // Before the reader scrolls (or when the list changes), the first group is current.
+  return [current && ids.includes(current) ? current : ids[0], setCurrent] as const;
 }
 
 export function GeneralTab({ project }: { project?: string }) {
@@ -150,7 +152,7 @@ export function GeneralTab({ project }: { project?: string }) {
   </>;
   return <>
     <PageHeader title="General" titleRef={title} description={description} files={[view?.path]} actions={<>
-      <div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search settings" placeholder="Search settings or keys…" value={query} onChange={e => setQuery(e.target.value)} /></div>
+      <SearchField label="Search settings" placeholder="Search settings or keys…" value={query} onChange={setQuery} />
       <Menu>
         <MenuTrigger render={<Button variant="outline" />}><FileJson aria-hidden="true" />File<ChevronDown aria-hidden="true" /></MenuTrigger>
         <MenuContent>
@@ -174,8 +176,18 @@ export function GeneralTab({ project }: { project?: string }) {
         <p>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</p>
         <div className="actions"><Button variant="outline" disabled={busy} onClick={() => setRestore(false)}>Cancel</Button><Button disabled={busy} onClick={() => void recover()}>Restore previous file</Button></div></section>
       : <div className="settings-layout">
-        <nav className="section-nav" aria-label="Setting groups">{shownSections.map(section => <a key={section.id} href={"#group-" + section.id} aria-current={section.id === currentGroup ? "true" : undefined}
-          onClick={event => { event.preventDefault(); setCurrentGroup(section.id); document.getElementById("group-" + section.id)?.scrollIntoView({ block: "start" }); }}>{section.title}</a>)}</nav>
+        <nav className="section-nav" aria-label="Setting groups">{shownSections.map(section => {
+          // What the reader has made of each group: a dot for unsaved edits, else how many keys the file sets.
+          const keys = fields.filter(field => field.section === section.id).map(field => field.key);
+          const unsaved = changes.some(change => keys.includes(change.key));
+          const set = keys.filter(key => Object.hasOwn(view.values, key)).length;
+          return <a key={section.id} href={"#group-" + section.id} aria-current={section.id === currentGroup ? "true" : undefined}
+            onClick={event => { event.preventDefault(); setCurrentGroup(section.id); document.getElementById("group-" + section.id)?.scrollIntoView({ block: "start" }); }}>
+            {section.title}
+            {unsaved ? <span className="nav-dot"><span className="sr-only">(unsaved changes)</span></span>
+              : set > 0 && <span className="nav-count"><span aria-hidden="true">{set}</span><span className="sr-only">({set} set)</span></span>}
+          </a>;
+        })}</nav>
         <div className="settings-content">
           <div className="settings-groups">
             {sections.map(group => {

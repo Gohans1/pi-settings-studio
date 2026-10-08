@@ -99,7 +99,13 @@
   button, summary, select, label:has(> input:is([type=checkbox], [type=radio])) { cursor: pointer; }
   button, a, summary, select, input, textarea, label { touch-action: manipulation; }
   :disabled { cursor: not-allowed; }
-  summary { width: fit-content; }
+  summary { width: fit-content; display: flex; align-items: center; gap: --spacing(1.5); list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  /* Lucide's chevron-right as a mask, so it takes the text colour. */
+  summary::before { content: ""; flex: none; width: --spacing(3.5); height: --spacing(3.5); background: currentColor; opacity: .6;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") center / contain no-repeat; }
+  details[open] > summary::before { rotate: 90deg; }
+  @media (prefers-reduced-motion: no-preference) { summary::before { transition: rotate 150ms var(--ease-out); } }
   /* Form controls: one height, one border, one radius. */
   :where(input:not([type=checkbox], [type=radio]), select, textarea) {
     min-height: var(--control-height); padding: --spacing(1.5) --spacing(3);
@@ -154,6 +160,9 @@
   .search { position: relative; display: flex; align-items: center; width: 18rem; max-width: 100%; }
   .search svg { position: absolute; inset-inline-start: --spacing(2.5); width: --spacing(4); height: --spacing(4); color: var(--muted-foreground); pointer-events: none; }
   .search input { width: 100%; padding-inline-start: --spacing(8.5); }
+  .search:has(kbd) input { padding-inline-end: --spacing(8); }
+  .search kbd { position: absolute; inset-inline-end: --spacing(2.5); min-width: --spacing(5); padding: 0 --spacing(1); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--muted-foreground); font: var(--text-caption)/var(--leading-normal) var(--font-mono); text-align: center; pointer-events: none; }
+  .search input:is(:focus, :not(:placeholder-shown)) + kbd { display: none; }
 
   /* Callouts: information (muted), warning, error. Text stays in the foreground; the tone colours the surface and title. */
   .notice { margin: 0; padding: --spacing(2.5) --spacing(3.5); border-radius: var(--radius); background: var(--muted); color: var(--foreground); }
@@ -172,7 +181,9 @@
   .chip { display: inline-block; margin: 0 --spacing(1.5) --spacing(1) 0; padding: 0 --spacing(1.5); border: 1px solid var(--border); border-radius: var(--radius-sm); }
   .page-notice { margin-bottom: --spacing(4); }
   .trust { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(2) --spacing(4); margin-bottom: --spacing(5); }
-  .trust p { margin: 0; flex: 1 1 32rem; }
+  .trust p { margin: 0; flex: 1 1 32rem; display: flex; gap: --spacing(2.5); align-items: baseline; }
+  .trust p > svg { align-self: center; width: --spacing(4); height: --spacing(4); color: var(--success); }
+  .trust.callout-warning p > svg { color: var(--warning); }
   .trust .field-error { flex-basis: 100%; }
 
   /* Workbench: a list and the chosen item's details, side by side; each pane scrolls on its own. */
@@ -242,6 +253,7 @@
   .choice > span { display: grid; }
   .choice input { margin-top: --spacing(0.5); }
   .scope-choice { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1.5) --spacing(5); margin: 0 0 --spacing(5); padding: 0; border: 0; }
+  .codemode .scope-choice { margin: 0; }
   .scope-choice legend { float: inline-start; margin-inline-end: --spacing(2); font-weight: var(--font-weight-semibold); }
   .scope-choice label { display: flex; gap: --spacing(2); align-items: center; }
   .switch-row { display: flex; gap: --spacing(3); align-items: center; font-weight: var(--font-weight-normal); }
@@ -260,7 +272,7 @@
 
   /* Code mode. */
   .codemode { display: grid; gap: --spacing(5); max-width: 44rem; }
-  .codemode fieldset { margin: 0; padding: --spacing(2) --spacing(4) --spacing(3); display: grid; gap: --spacing(0.5); border: 1px solid var(--border); border-radius: var(--radius); }
+  .codemode fieldset:not(.scope-choice) { margin: 0; padding: --spacing(2) --spacing(4) --spacing(3); display: grid; gap: --spacing(0.5); border: 1px solid var(--border); border-radius: var(--radius); }
   .codemode legend { padding: 0 --spacing(1); font-weight: var(--font-weight-semibold); }
   .codemode > header h2 { margin: 0; }
   .codemode > header p { margin: --spacing(1) 0 0; }
@@ -344,9 +356,11 @@
   /* General: a section index beside the settings; the save bar follows the edits. */
   .settings-layout { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: --spacing(10); align-items: start; }
   .section-nav { position: sticky; top: 0; display: grid; gap: --spacing(0.25); padding-top: --spacing(1); }
-  .section-nav a { display: block; padding: --spacing(1.5) --spacing(2.5); border-radius: var(--radius-md); color: var(--muted-foreground); font-size: var(--text-small); text-decoration: none; }
+  .section-nav a { position: relative; display: flex; align-items: center; justify-content: space-between; gap: --spacing(2); padding: --spacing(1.5) --spacing(2.5); border-radius: var(--radius-md); color: var(--muted-foreground); font-size: var(--text-small); text-decoration: none; }
   @media (hover: hover) { .section-nav a:hover { background: var(--secondary); color: var(--foreground); } }
   .section-nav a[aria-current=true] { background: var(--selected); color: var(--foreground); }
+  .nav-count { color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
+  .nav-dot { flex: none; width: --spacing(1.5); height: --spacing(1.5); border-radius: calc(infinity * 1px); background: var(--primary); }
   .settings-content { min-width: 0; container-type: inline-size; }
   .settings-group { scroll-margin-top: --spacing(4); }
   .settings-group + .settings-group { margin-top: --spacing(10); }

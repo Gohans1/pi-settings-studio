@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Layers, Plus, Search } from "lucide-react";
+import { Layers, Plus } from "lucide-react";
 import type { ResourceView, SkillsView } from "../shared/resources";
 import { loadSkills, saveSkills } from "./api";
 import { Button } from "./components/ui/button";
@@ -8,6 +8,7 @@ import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, Workbench } from "./Workbench";
+import { SearchField } from "./SearchField";
 
 function SkillDetail({ skill, onEdit }: { skill: ResourceView; onEdit: () => void }) {
   const editable = skill.origin === "top-level";
@@ -70,7 +71,7 @@ export function SkillsTab({ project }: { project?: string }) {
     <Feedback message={message} onDismiss={() => setMessage("")} />
     {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p><div className="actions"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></div>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading skills…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode(undefined); }} backLabel="All skills" list={<section aria-label="Skills list">
-      <div className="list-search"><div className="search"><Search aria-hidden="true" /><input type="search" aria-label="Search skills" placeholder="Search skills…" value={query} onChange={event => setQuery(event.target.value)} /></div></div>
+      <div className="list-search"><SearchField label="Search skills" placeholder="Search skills…" value={query} onChange={setQuery} /></div>
       <p className="list-count">{skills.filter(skill => skill.enabled).length} of {skills.length} skills on</p>
       {!visible.length && <p className="empty">{skills.length ? `No skills match “${query.trim()}”.` : "No skills found. Create one, or add skill folders to ~/.pi/agent/skills."}</p>}
       {groups.map(group => {
