@@ -28,12 +28,12 @@ test("project skills and prompts switch in the project's .pi/settings.json", asy
   await expect(page.getByRole("button", { name: /^delta/ })).toHaveCount(0);
   await page.getByLabel("Project", { exact: true }).selectOption(project);
   await page.getByRole("switch", { name: "Enable delta" }).click();
-  await expect(page.getByRole("status")).toContainText("delta turned off");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("delta turned off");
   expect(await projectSettings()).toEqual({ skills: ["-skills/delta/SKILL.md"] });
   expect(JSON.parse(await readFile(join(root, "agent", "settings.json"), "utf8"))).toEqual({});
 
   await page.getByRole("tab", { name: "Plugins" }).click();
   await page.getByRole("switch", { name: "Enable ship" }).click();
-  await expect(page.getByRole("status")).toContainText("ship turned off");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("ship turned off");
   expect(await projectSettings()).toEqual({ skills: ["-skills/delta/SKILL.md"], prompts: ["-prompts/ship.md"] });
 });

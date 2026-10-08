@@ -49,7 +49,7 @@ test("shows the recorded system prompt of a chosen project and session", async (
   await expect(page.getByRole("list", { name: "Tools" })).toContainText("read");
   await expect(page.getByRole("list", { name: "Tools" })).not.toContainText("write");
   await page.getByRole("button", { name: "Copy full prompt" }).click();
-  await expect(page.getByRole("status")).toContainText("Copied");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Copied");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("You are Pi.\n\nRule two.");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

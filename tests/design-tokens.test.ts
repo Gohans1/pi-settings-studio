@@ -98,8 +98,6 @@ describe("colour system", () => {
     ["--foreground", "--secondary", 4.5], ["--foreground", "--destructive-surface", 4.5], ["--destructive", "--destructive-surface", 4.5],
     ["--foreground", "--warning-surface", 4.5], ["--warning", "--warning-surface", 3],
     ["--foreground", "--success-surface", 4.5], ["--success", "--success-surface", 3], ["--success", "--background", 3],
-    // The toast: ink on paper, inverted from the page.
-    ["--inverse-foreground", "--inverse", 4.5], ["--inverse-muted-foreground", "--inverse", 4.5], ["--inverse-foreground", "--inverse-hover", 4.5],
   ];
   for (const scheme of ["light", "dark"] as const) {
     test.each(pairs)(`${scheme}: %s on %s meets %d:1`, (fg, bg, minimum) => {

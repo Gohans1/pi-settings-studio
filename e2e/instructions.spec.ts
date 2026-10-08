@@ -24,7 +24,7 @@ test("instruction files are edited, created and removed with undo", async ({ pag
   await expect(editor).toHaveValue("# Global rules\n");
   await editor.fill("# Global rules\n- Be brief.\n");
   await page.getByRole("button", { name: "Save file" }).click();
-  await expect(page.getByRole("status")).toContainText("Saved AGENTS.md");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved AGENTS.md");
   expect(await readFile(join(agent, "AGENTS.md"), "utf8")).toBe("# Global rules\n- Be brief.\n");
 
   await page.getByLabel("Project", { exact: true }).selectOption(project);
@@ -32,14 +32,14 @@ test("instruction files are edited, created and removed with undo", async ({ pag
   await expect(page.getByText("Not created yet")).toBeVisible();
   await page.getByLabel("Contents of SYSTEM.md").fill("You review code.\n");
   await page.getByRole("button", { name: "Create file" }).click();
-  await expect(page.getByRole("status")).toContainText("Saved SYSTEM.md");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved SYSTEM.md");
   expect(await readFile(join(project, ".pi", "SYSTEM.md"), "utf8")).toBe("You review code.\n");
 
   await page.getByRole("button", { name: "Delete file" }).click();
-  await expect(page.getByRole("status")).toContainText("Deleted SYSTEM.md");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Deleted SYSTEM.md");
   await expect(stat(join(project, ".pi", "SYSTEM.md"))).rejects.toThrow();
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByRole("status")).toContainText("Restored SYSTEM.md");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored SYSTEM.md");
   expect(await readFile(join(project, ".pi", "SYSTEM.md"), "utf8")).toBe("You review code.\n");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

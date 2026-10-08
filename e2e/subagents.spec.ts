@@ -34,24 +34,24 @@ test("sub-agent profiles can be read, added, edited, removed and restored", asyn
   await form.getByLabel("Tools").fill("read, bash");
   await form.getByLabel("System prompt").fill("Review carefully.");
   await form.getByRole("button", { name: "Save profile" }).click();
-  await expect(page.getByRole("status")).toContainText("reviewer saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("reviewer saved");
   expect(await readFile(join(dir, "reviewer.md"), "utf8")).toContain("tools: read, bash");
 
   await page.getByRole("button", { name: /^scout/ }).click();
   await page.getByRole("button", { name: "Edit scout" }).click();
   await page.getByRole("form", { name: "Edit scout" }).getByLabel("Description").fill("Recon, fast");
   await page.getByRole("form", { name: "Edit scout" }).getByRole("button", { name: "Save profile" }).click();
-  await expect(page.getByRole("status")).toContainText("scout saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("scout saved");
   const scoutFile = await readFile(join(dir, "scout.md"), "utf8");
   expect(scoutFile).toContain("description: Recon, fast");
   expect(scoutFile).toContain("thinking: high");
 
   await page.getByRole("button", { name: /^reviewer/ }).click();
   await page.getByRole("button", { name: "Remove reviewer" }).click();
-  await expect(page.getByRole("status")).toContainText("Removed reviewer.md");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Removed reviewer.md");
   await expect(stat(join(dir, "reviewer.md"))).rejects.toThrow();
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByRole("status")).toContainText("Restored reviewer.md");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored reviewer.md");
   expect(await readFile(join(dir, "reviewer.md"), "utf8")).toContain("Reviews diffs");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
@@ -68,7 +68,7 @@ test("a project profile is added in the project's .pi/agents and replaces a glob
   await form.getByLabel("Name").fill("scout");
   await form.getByLabel("Description").fill("Project recon");
   await form.getByRole("button", { name: "Save profile" }).click();
-  await expect(page.getByRole("status")).toContainText("scout saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("scout saved");
   expect(await readFile(join(project, ".pi", "agents", "scout.md"), "utf8")).toContain("description: Project recon");
   await expect(page.getByRole("region", { name: "Global profiles" }).getByRole("button", { name: /^scout/ })).toContainText("replaced here");
 });

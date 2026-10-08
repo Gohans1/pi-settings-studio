@@ -29,10 +29,12 @@ test("the window title names the open tab", async ({ page }) => {
 test("a saved change is confirmed until dismissed, and dismissing changes no file", async ({ page }) => {
   await page.goto(server.url + "#mcp");
   await page.getByRole("switch", { name: "Enable search" }).click();
-  await expect(page.getByRole("status")).toContainText("search turned on");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("search turned on");
   const saved = await readFile(file, "utf8");
-  await page.getByRole("button", { name: "Dismiss" }).click();
-  await expect(page.getByRole("status")).toHaveText("");
+  // Base UI reveals the close button once the reader is in the notifications (hover, focus or F6).
+  await page.getByRole("region", { name: "Notifications" }).getByRole("dialog").hover();
+  await page.getByRole("button", { name: "Close toast" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toHaveText("");
   expect(await readFile(file, "utf8")).toBe(saved);
 });
 

@@ -30,12 +30,12 @@ test("plugins list built-ins, user files and packages, and switch them in settin
   await page.getByRole("button", { name: /^mcp/ }).click();
   await expect(page.getByRole("region", { name: "mcp" })).toContainText("turns off Pi's MCP support");
   await page.getByRole("switch", { name: "Enable mcp" }).click();
-  await expect(page.getByRole("status")).toContainText("mcp turned off");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("mcp turned off");
   expect((await settings()).extensions).toEqual(["-builtin:mcp"]);
   await page.getByRole("button", { name: /^review/ }).click();
   await expect(page.getByRole("region", { name: "review" })).toContainText("Review the diff");
   await page.getByRole("switch", { name: "Enable tool.ts" }).click();
-  await expect(page.getByRole("status")).toContainText("tool.ts turned off");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("tool.ts turned off");
   expect((await settings()).packages[0]).toEqual({ source: "./pkgs/my-pack", extensions: ["-extensions/tool.ts"] });
   await page.getByRole("button", { name: /^Packages/ }).click();
   const packages = page.getByRole("region", { name: "Packages" });
@@ -55,13 +55,13 @@ test("a package's resource filters are edited in settings.json", async ({ page }
   await form.getByLabel("Extension patterns").fill("extensions/*.ts\n!extensions/legacy.ts");
   await form.getByLabel("Prompts", { exact: true }).selectOption("none");
   await form.getByRole("button", { name: "Save filters" }).click();
-  await expect(page.getByRole("status").first()).toContainText("Filters saved for ./pkgs/my-pack");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Filters saved for ./pkgs/my-pack");
   expect((await settings()).packages[0]).toEqual({ source: "./pkgs/my-pack", extensions: ["extensions/*.ts", "!extensions/legacy.ts"], prompts: [] });
   await page.getByRole("button", { name: "Filters for ./pkgs/my-pack" }).click();
   await form.getByLabel("Extensions", { exact: true }).selectOption("all");
   await form.getByLabel("Prompts", { exact: true }).selectOption("all");
   await form.getByRole("button", { name: "Save filters" }).click();
-  await expect(page.getByRole("status").first()).toContainText("Filters saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Filters saved");
   expect((await settings()).packages[0]).toBe("./pkgs/my-pack");
 });
 
@@ -72,7 +72,7 @@ test("prompts and extensions are edited or viewed, and a new theme is created", 
   const editor = page.getByRole("form", { name: "Edit review" });
   await editor.getByLabel("Content of review.md").fill("---\ndescription: Review the diff\n---\nReview it twice.\n");
   await editor.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved review.md");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved review.md");
   expect(await readFile(join(agent, "prompts/review.md"), "utf8")).toContain("Review it twice.");
   await editor.getByRole("button", { name: "Close" }).click();
 
@@ -102,7 +102,7 @@ test("extra folders of prompt templates are added from the Plugins tab", async (
   const prompts = page.getByRole("region", { name: "Prompt template folders" });
   await prompts.getByLabel("Folder or file").fill(shared);
   await prompts.getByRole("button", { name: "Add" }).click();
-  await expect(page.getByRole("status")).toContainText("Added");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Added");
   await expect(page.getByRole("button", { name: /^triage/ })).toBeVisible();
   expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).prompts).toEqual([shared]);
 });

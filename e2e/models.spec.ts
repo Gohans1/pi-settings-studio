@@ -23,7 +23,7 @@ test("API keys are stored, removed and restored without ever being shown", async
   const detail = page.getByRole("region", { name: "OpenAI" });
   await detail.getByLabel("API key").fill("fixture-new-key");
   await detail.getByRole("button", { name: "Save key" }).click();
-  await expect(page.getByRole("status")).toContainText("API key saved for OpenAI");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("API key saved for OpenAI");
   expect((await auth()).openai).toEqual({ type: "api_key", key: "fixture-new-key" });
   await expect(detail.getByLabel("API key")).toHaveValue("");
   expect(await page.content()).not.toContain("fixture-");
@@ -31,10 +31,10 @@ test("API keys are stored, removed and restored without ever being shown", async
   await page.getByRole("searchbox", { name: "Search providers" }).fill("anthropic");
   await page.getByRole("button", { name: /^Anthropic\b/ }).first().click();
   await page.getByRole("region", { name: "Anthropic" }).getByRole("button", { name: "Remove credential" }).click();
-  await expect(page.getByRole("status")).toContainText("Removed the stored credential for Anthropic");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Removed the stored credential for Anthropic");
   expect((await auth()).anthropic).toBeUndefined();
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByRole("status")).toContainText("Restored");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored");
   expect((await auth()).anthropic.key).toBe("fixture-secret-anthropic");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
@@ -56,7 +56,7 @@ test("defaults are chosen from Pi's catalog and saved to settings.json", async (
   await enabled.getByRole("button", { name: "Add" }).click();
   await expect(enabled.getByRole("listitem").filter({ hasText: "anthropic/*" })).toContainText(/\d+ models/);
   await panel.getByRole("button", { name: "Save defaults" }).click();
-  await expect(page.getByRole("status")).toContainText("Defaults saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
   const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
   expect(settings).toEqual({ defaultProvider: "anthropic", defaultModel: chosen, defaultThinkingLevel: "high", enabledModels: ["anthropic/*"] });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -75,23 +75,23 @@ test("a custom provider is added to models.json, edited without seeing its key, 
   await form.getByLabel("Model ID 1").fill("llama-3");
   await form.getByLabel("Context window 1").fill("8192");
   await form.getByRole("button", { name: "Save provider" }).click();
-  await expect(page.getByRole("status")).toContainText("lmstudio saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("lmstudio saved");
   expect((await models()).lmstudio).toEqual({ baseUrl: "http://localhost:1234/v1", api: "openai-completions", apiKey: "fixture-lm-key", models: [{ id: "llama-3", contextWindow: 8192 }] });
 
   const edit = page.getByRole("form", { name: "Edit lmstudio" });
   await expect(edit.getByLabel("API key", { exact: true })).toHaveValue("");
   await edit.getByLabel("Base URL").fill("http://localhost:4321/v1");
   await edit.getByRole("button", { name: "Save provider" }).click();
-  await expect(page.getByRole("status")).toContainText("lmstudio saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("lmstudio saved");
   expect((await models()).lmstudio.apiKey).toBe("fixture-lm-key");
   expect((await models()).lmstudio.baseUrl).toBe("http://localhost:4321/v1");
   expect(await page.content()).not.toContain("fixture-lm-key");
 
   await page.getByRole("button", { name: "Remove lmstudio" }).click();
-  await expect(page.getByRole("status")).toContainText("Removed lmstudio");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Removed lmstudio");
   expect((await models()).lmstudio).toBeUndefined();
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByRole("status")).toContainText("Restored");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored");
   expect((await models()).lmstudio.baseUrl).toBe("http://localhost:4321/v1");
 });
 
@@ -127,7 +127,7 @@ test("models.json is edited as raw JSON; keys stay hidden and a file Pi rejects 
   edited.providers.o.modelOverrides = { "x/y": { name: "Y" } };
   await editor.fill(JSON.stringify(edited));
   await page.getByRole("button", { name: "Save JSON" }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved models.json");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved models.json");
   const saved = JSON.parse(await readFile(file, "utf8")).providers.o;
   expect([saved.apiKey, saved.modelOverrides]).toEqual(["fixture-raw-key", { "x/y": { name: "Y" } }]);
   expect(await page.content()).not.toContain("fixture-raw-key");
@@ -150,7 +150,7 @@ test("models are listed from the endpoint and the chosen ones added to the form"
     await expect(form.getByLabel("Model ID 2")).toHaveValue("qwen3-coder");
     await expect(form.getByLabel("Context window 2")).toHaveValue("65536");
     await form.getByRole("button", { name: "Save provider" }).click();
-    await expect(page.getByRole("status")).toContainText("ollama saved");
+    await expect(page.getByRole("region", { name: "Notifications" })).toContainText("ollama saved");
     const saved = JSON.parse(await readFile(join(agent, "models.json"), "utf8")).providers.ollama;
     expect(saved.models).toEqual([{ id: "llama-3" }, { id: "qwen3-coder", contextWindow: 65536 }]);
   } finally { endpoint.stop(true); }
@@ -174,7 +174,7 @@ test("a provider Pi's catalog does not list, such as one from an extension, is t
   await panel.getByLabel("Default model").fill("opus");
   await expect(panel.getByLabel("Default provider")).toHaveAccessibleDescription(/not in the catalog this app reads/);
   await panel.getByRole("button", { name: "Save defaults" }).click();
-  await expect(page.getByRole("status")).toContainText("Defaults saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
   const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
   expect([settings.defaultProvider, settings.defaultModel]).toEqual(["claude-bridge", "opus"]);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -191,7 +191,7 @@ test("a default model outside the enabled models is added to them on save, as Pi
   await panel.getByLabel("Default model").fill(other!);
   await expect(panel).toContainText("Not in Enabled models");
   await panel.getByRole("button", { name: "Save defaults" }).click();
-  await expect(page.getByRole("status")).toContainText("added to Enabled models");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("added to Enabled models");
   const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
   expect(settings.enabledModels).toEqual(["anthropic/claude-sonnet-4-5", `anthropic/${other}`]);
 });

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bot, Boxes, FileText, Layers, Puzzle, ScrollText, Server, SlidersHorizontal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Toaster } from "./components/ui/toast";
 import { ProjectPicker, TrustPanel, useProject } from "./ProjectBar";
 import { GeneralTab } from "./GeneralTab";
 import { InstructionsTab } from "./InstructionsTab";
@@ -86,5 +87,6 @@ export function App() {
       {current && <TrustPanel project={current.path} trust={current.trust} onChange={trust => updateTrust(current.path, trust)} />}
       {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id} className="flex flex-col"><Panel project={project} loadsInProject={current?.trust.loadsInT3Code} /></TabsContent>)}
     </main>
+    <Toaster />
   </Tabs>;
 }

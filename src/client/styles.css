@@ -41,15 +41,6 @@
   --warning-surface: light-dark(var(--flexoki-orange-50), var(--flexoki-orange-950));
   --success: light-dark(var(--flexoki-green-600), var(--flexoki-green-400));
   --success-surface: light-dark(var(--flexoki-green-50), var(--flexoki-green-950));
-  /* The toast: ink on paper, inverted from the page. */
-  --inverse: light-dark(var(--flexoki-black), var(--flexoki-base-850));
-  --inverse-foreground: light-dark(var(--flexoki-paper), var(--flexoki-base-200));
-  --inverse-muted-foreground: light-dark(var(--flexoki-base-400), var(--flexoki-base-400));
-  --inverse-hover: light-dark(var(--flexoki-base-850), var(--flexoki-base-800));
-  /* Floating layers (menus, the toast) cast one soft shadow in light; in dark, their lighter surface and
-     hairline carry the lift, since a shadow on black is invisible. */
-  --shadow-ink: light-dark(color-mix(in oklab, var(--flexoki-black) 14%, transparent), transparent);
-  --shadow-popover: 0 1px 2px var(--shadow-ink), 0 12px 32px -8px var(--shadow-ink);
   --radius: .375rem;
   /* A frame's corner is its inset row's corner plus the inset, so nested corners stay concentric. */
   --radius-frame: calc(var(--radius-md) + --spacing(2));
@@ -76,7 +67,6 @@
   --color-destructive: var(--destructive); --color-destructive-surface: var(--destructive-surface);
   --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
   --color-selected: var(--selected); --color-warning: var(--warning); --color-success: var(--success);
-  --color-inverse: var(--inverse); --color-inverse-foreground: var(--inverse-foreground); --color-inverse-muted-foreground: var(--inverse-muted-foreground); --color-inverse-hover: var(--inverse-hover);
   /* shadcn's radius scale, derived from --radius. */
   --radius-sm: calc(var(--radius) * 0.6); --radius-md: calc(var(--radius) * 0.8); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8); --radius-3xl: calc(var(--radius) * 2.2); --radius-4xl: calc(var(--radius) * 2.6);
@@ -465,13 +455,6 @@
   .tool-option[data-changed] code::after { content: ""; display: inline-block; width: --spacing(1.5); height: --spacing(1.5); margin-inline-start: --spacing(1.5); vertical-align: middle; border-radius: calc(infinity * 1px); background: var(--primary); }
   .theme-field { display: grid; gap: --spacing(2); margin: 0; padding: 0; border: 0; }
   .theme-field label { display: grid; gap: --spacing(1); color: var(--muted-foreground); font-size: var(--text-small); }
-
-  /* The toast: one quiet line with its undo, at the corner nothing else uses. */
-  .toaster { position: fixed; inset-inline-end: --spacing(5); bottom: --spacing(5); z-index: 40; width: max-content; max-width: min(30rem, calc(100vw - --spacing(10))); }
-  .toast { display: flex; align-items: center; gap: --spacing(2); padding: --spacing(2) --spacing(2) --spacing(2) --spacing(4); border-radius: var(--radius-frame); background: var(--inverse); color: var(--inverse-foreground); box-shadow: var(--shadow-popover); }
-  .toast p { margin: 0; flex: 1; }
-  .toast :focus-visible { outline-color: var(--inverse-foreground); }
-  @media (prefers-reduced-motion: no-preference) { .toast { transition: translate 220ms var(--ease-out), opacity 220ms var(--ease-out); @starting-style { translate: 0 --spacing(2); opacity: 0; } } }
 }
 
 @keyframes appear { from { opacity: 0; } }

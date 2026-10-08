@@ -22,7 +22,7 @@ test("save writes native files directly, preserves unknown values, and survives 
   await page.getByLabel("Shell command prefix", { exact: true }).fill("new-model");
   expect(JSON.parse(await readFile(file, "utf8")).shellCommandPrefix).toBe("fixture-prefix");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved to file");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   const saved = JSON.parse(await readFile(file, "utf8"));
   expect(saved.shellCommandPrefix).toBe("new-model");
   expect(saved.extensionSecret).toBe("fixture-not-real");
@@ -48,7 +48,7 @@ test("search narrows the settings by label or key", async ({ page }) => {
 test("backup restore is explicit and restores the original native document", async ({ page }) => {
   await page.getByLabel("Shell command prefix", { exact: true }).fill("changed");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved to file");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   await page.getByRole("button", { name: "File", exact: true }).click();
   await page.getByRole("menuitem", { name: "Restore previous file" }).click();
   await expect(page.getByRole("heading", { name: "Restore previous file?" })).toBeVisible();
@@ -65,7 +65,7 @@ test("list fields take one entry per line without losing Enter", async ({ page }
   await expect(list).toHaveValue("bun\n");
   await list.pressSequentially("x");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved to file");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   expect(JSON.parse(await readFile(file, "utf8")).npmCommand).toEqual(["bun", "x"]);
 });
 
@@ -94,7 +94,7 @@ test("a switch and a typed choice save with their JSON types", async ({ page }) 
   await page.getByRole("switch", { name: "Automatic compaction" }).click();
   await page.getByLabel("Image protocol").selectOption("false");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   const saved = JSON.parse(await readFile(file, "utf8"));
   expect([saved.compaction, saved.terminal]).toEqual([{ enabled: false }, { images: false }]);
 });
@@ -109,7 +109,7 @@ test("the raw JSON editor saves exactly what was typed and repairs a broken file
   await expect(editor).toHaveValue('{ "shellCommandPrefix": "broken", }');
   await editor.fill('{ "shellCommandPrefix": "repaired" }');
   await page.getByRole("button", { name: "Save JSON" }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   expect(await readFile(file, "utf8")).toBe('{ "shellCommandPrefix": "repaired" }');
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("repaired");
   await page.getByRole("button", { name: "File", exact: true }).click();
@@ -132,7 +132,7 @@ test("keyboard shortcuts are edited, disabled and reset in keybindings.json", as
   await panel.getByRole("searchbox", { name: "Search shortcuts" }).fill("altScreen.pageUp");
   await panel.getByRole("button", { name: "Disable tui.altScreen.pageUp" }).click();
   await panel.getByRole("button", { name: "Save shortcuts" }).click();
-  await expect(page.getByRole("status")).toContainText("Saved keybindings.json");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved keybindings.json");
   expect(JSON.parse(await readFile(keys, "utf8"))).toEqual({ "app.session.new": "ctrl+shift+n", "tui.altScreen.pageUp": [] });
   await panel.getByRole("searchbox", { name: "Search shortcuts" }).fill("session.tree");
   await panel.getByLabel("Keys for app.session.tree").fill("ctrl+banana");
@@ -152,7 +152,7 @@ test("per-model thinking levels and compaction overrides are edited as rows", as
   await compaction.getByLabel("Model 1", { exact: true }).fill("openai/gpt");
   await compaction.getByLabel("Reserved tokens for model 1").fill("8000");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   const saved = JSON.parse(await readFile(file, "utf8"));
   expect([saved.modelThinkingLevels, saved.compaction]).toEqual([{ "anthropic/claude-sonnet": "high" }, { modelOverrides: { "openai/gpt": { reserveTokens: 8000 } } }]);
   await thinking.getByLabel("Model 1", { exact: true }).fill("no-slash");
@@ -169,13 +169,13 @@ test("the theme is chosen from Pi's themes: one theme, or a light and a dark one
   await theme.getByLabel("Theme mode").selectOption("single");
   await theme.getByLabel("Theme name").selectOption("ocean");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   expect(JSON.parse(await readFile(file, "utf8")).theme).toBe("ocean");
   await theme.getByLabel("Theme mode").selectOption("pair");
   await theme.getByLabel("Light terminal theme").selectOption("light");
   await theme.getByLabel("Dark terminal theme").selectOption("ocean");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   expect(JSON.parse(await readFile(file, "utf8")).theme).toBe("light/ocean");
 });
 
@@ -208,11 +208,11 @@ test("emptying a number field returns it to Pi's default", async ({ page }) => {
   const budget = page.getByLabel("Thinking budget: minimal", { exact: true });
   await budget.fill("500");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved to file");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   expect(JSON.parse(await readFile(file, "utf8")).thinkingBudgets).toEqual({ minimal: 500 });
   await budget.fill("");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved to file");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   expect(JSON.parse(await readFile(file, "utf8")).thinkingBudgets?.minimal).toBeUndefined();
 });
 
@@ -239,12 +239,12 @@ test("startup tools are a checklist that saves modifiers against Pi's defaults",
   await tools.getByRole("checkbox", { name: "grep", exact: true }).check();
   await tools.getByRole("checkbox", { name: "write", exact: true }).uncheck();
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved to file");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   expect(JSON.parse(await readFile(file, "utf8")).defaultTools).toEqual(["+grep", "-write"]);
   await tools.getByRole("checkbox", { name: "grep", exact: true }).uncheck();
   await tools.getByRole("checkbox", { name: "write", exact: true }).check();
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status").first()).toContainText("Saved to file");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   expect(JSON.parse(await readFile(file, "utf8")).defaultTools).toBeUndefined();
   expect((await new AxeBuilder({ page }).include("#row-defaultTools").analyze()).violations).toEqual([]);
 });

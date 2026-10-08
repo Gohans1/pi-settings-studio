@@ -37,7 +37,7 @@ test("a project is picked, trusted, and its own settings.json edited", async ({ 
   await expect(retries).toHaveValue("3");
   await retries.fill("5");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   expect(JSON.parse(await readFile(join(project, ".pi", "settings.json"), "utf8"))).toEqual({ retry: { maxRetries: 5 } });
   expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8"))).toEqual({ retry: { maxRetries: 3 } });
   await page.reload();
@@ -53,7 +53,7 @@ test("project model defaults and raw JSON write the project's settings.json", as
   await panel.getByRole("radio", { name: "This project" }).check();
   await panel.getByLabel("Thinking level").selectOption("high");
   await panel.getByRole("button", { name: "Save defaults" }).click();
-  await expect(page.getByRole("status")).toContainText("Defaults saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
   expect(JSON.parse(await readFile(join(project, ".pi", "settings.json"), "utf8"))).toEqual({ defaultThinkingLevel: "high" });
 
   await page.getByRole("tab", { name: "General" }).click();
@@ -62,7 +62,7 @@ test("project model defaults and raw JSON write the project's settings.json", as
   await page.getByRole("menuitem", { name: "Edit as JSON" }).click();
   await page.getByLabel("settings.json", { exact: true }).fill('{ "defaultThinkingLevel": "low" }');
   await page.getByRole("button", { name: "Save JSON" }).click();
-  await expect(page.getByRole("status")).toContainText("Saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   expect(await readFile(join(project, ".pi", "settings.json"), "utf8")).toBe('{ "defaultThinkingLevel": "low" }');
   expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8"))).toEqual({ retry: { maxRetries: 3 } });
 });

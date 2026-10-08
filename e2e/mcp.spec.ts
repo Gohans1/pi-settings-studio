@@ -48,12 +48,12 @@ test("switches and the exposure choice save to mcp.json immediately", async ({ p
   await page.goto(server.url + "#mcp");
   const readServers = async () => JSON.parse(await readFile(file, "utf8")).mcpServers;
   await page.getByRole("switch", { name: "Enable search" }).click();
-  await expect(page.getByRole("status")).toContainText("search turned on");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("search turned on");
   expect((await readServers()).search.enabled).toBeUndefined();
   expect((await readServers()).search.env.SEARCH_API_KEY).toBe("fixture-secret-value");
   await page.getByRole("button", { name: /^docs/ }).click();
   await page.getByLabel("Tool exposure for docs").selectOption("direct");
-  await expect(page.getByRole("status")).toContainText("docs now uses Direct");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("docs now uses Direct");
   expect((await readServers()).docs.exposure).toBe("direct");
   await expect(page.getByText("2 of 3 servers on")).toBeVisible();
 });
@@ -70,7 +70,7 @@ test("add a server, edit it without seeing its secret, remove it and undo", asyn
   await form.getByLabel("Variable name 1").fill("TOKEN");
   await form.getByLabel("Value of variable 1").fill("fixture-new-secret");
   await form.getByRole("button", { name: "Save server" }).click();
-  await expect(page.getByRole("status")).toContainText("files added");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("files added");
   expect((await readServers()).files).toEqual({ command: "npx", args: ["-y", "server-filesystem"], env: { TOKEN: "fixture-new-secret" } });
 
   await page.getByRole("button", { name: "Edit files" }).click();
@@ -78,15 +78,15 @@ test("add a server, edit it without seeing its secret, remove it and undo", asyn
   await expect(edit.getByLabel("Value of variable 1")).toHaveValue("");
   await edit.getByLabel("Command", { exact: true }).fill("bunx");
   await edit.getByRole("button", { name: "Save server" }).click();
-  await expect(page.getByRole("status")).toContainText("files saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("files saved");
   expect((await readServers()).files).toEqual({ command: "bunx", args: ["-y", "server-filesystem"], env: { TOKEN: "fixture-new-secret" } });
   expect(await page.content()).not.toContain("fixture-new-secret");
 
   await page.getByRole("button", { name: "Remove files" }).click();
-  await expect(page.getByRole("status")).toContainText("Removed files");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Removed files");
   expect((await readServers()).files).toBeUndefined();
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByRole("status")).toContainText("Restored");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored");
   expect((await readServers()).files.command).toBe("bunx");
 });
 
@@ -110,10 +110,10 @@ test("Code mode choices save at once; the tool list budget saves on Save", async
   await page.getByRole("button", { name: /^Code mode/ }).click();
   const panel = page.getByRole("region", { name: "Code mode" });
   await panel.getByRole("radio", { name: /Always on/ }).check();
-  await expect(page.getByRole("status")).toContainText("Code mode is always on");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Code mode is always on");
   expect((await settings()).defaultTools).toEqual(["+codemode"]);
   await panel.getByRole("radio", { name: /In scripts/ }).check();
-  await expect(page.getByRole("status")).toContainText("Built-in tools are called from scripts");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Built-in tools are called from scripts");
   expect((await settings()).codemode).toEqual({ mode: "only" });
   const budget = panel.getByLabel("Tool list budget");
   await budget.fill("-1");
@@ -123,10 +123,10 @@ test("Code mode choices save at once; the tool list budget saves on Save", async
   expect((await settings()).codemode).toEqual({ mode: "only" });
   await budget.fill("1200");
   await panel.getByRole("button", { name: "Save budget" }).click();
-  await expect(page.getByRole("status")).toContainText("Tool list budget saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Tool list budget saved");
   expect((await settings()).codemode).toEqual({ mode: "only", inlineBudget: 1200 });
   await panel.getByRole("switch", { name: "Turn Code mode on automatically" }).click();
-  await expect(page.getByRole("status")).toContainText("no longer turns on automatically");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("no longer turns on automatically");
   expect(JSON.parse(await readFile(file, "utf8")).autoEnableCodemode).toBe(false);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
@@ -147,7 +147,7 @@ test("tool exposure rules, OAuth settings and provider sign-in are edited in the
   await form.getByLabel("Callback port").fill("8765");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await form.getByRole("button", { name: "Save server" }).click();
-  await expect(page.getByRole("status")).toContainText("docs saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("docs saved");
   expect(await readDocs()).toMatchObject({ toolExposure: { "search_*": "direct" }, oauth: { clientId: "my-client", clientSecret: "fixture-client-secret", callbackPort: 8765 } });
   await expect(page.getByRole("region", { name: "docs" })).toContainText("search_* → Direct");
 
@@ -160,7 +160,7 @@ test("tool exposure rules, OAuth settings and provider sign-in are edited in the
   await form.getByLabel("Pi provider").fill("anthropic");
   await form.getByRole("button", { name: "Remove rule search_*" }).click();
   await form.getByRole("button", { name: "Save server" }).click();
-  await expect(page.getByRole("status")).toContainText("docs saved");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("docs saved");
   const docs = await readDocs();
   expect([docs.toolExposure, docs.oauth, docs.auth]).toEqual([undefined, { callbackPort: 8765, clientRegistration: "cimd" }, { provider: "anthropic" }]);
   expect(await page.content()).not.toContain("fixture-client-secret");
@@ -188,13 +188,13 @@ startup_timeout_sec = 20`);
   await expect(panel).toContainText("Replaces the server of the same name");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await panel.getByRole("button", { name: "Import 1 server" }).click();
-  await expect(page.getByRole("status")).toContainText("Imported context7");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Imported context7");
   const servers = await readServers();
   expect(servers.context7).toEqual({ command: "npx", args: ["-y", "@upstash/context7-mcp"], env: { CONTEXT7_KEY: "fixture-codex-secret" } });
   expect(servers.docs.url).toBe("https://example.com/mcp");
   expect(await page.content()).not.toContain("fixture-codex-secret");
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByRole("status")).toContainText("Restored");
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored");
   expect((await readServers()).context7).toBeUndefined();
 });
 
