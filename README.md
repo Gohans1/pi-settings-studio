@@ -20,8 +20,6 @@ Options: `--port`, `--agent-dir` (default `PI_CODING_AGENT_DIR` or `~/.pi/agent`
 
 ## Run in the background
 
-Not verified yet: systemd is not running in this WSL distro until WSL restarts once.
-
 ```sh
 bun run build
 mkdir -p ~/.config/systemd/user
@@ -35,7 +33,16 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 
 ## Tabs
 
-General (every documented `settings.json` key, raw JSON, keyboard shortcuts), Models (providers, keys, sign-in, defaults, `models.json`), Skills, Sub-agents, Plugins (switches, install/update/remove), MCP (servers, Code mode, test, sign-in), Instructions (`AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`) and System prompt. The project picker adds each project's `.pi` files and trust. Changes apply to new T3Code threads, or after `/reload`.
+- **General**: every documented `settings.json` key, raw JSON, keyboard shortcuts, the installed Pi version with Update Pi, and what cannot be edited here.
+- **Models**: providers, keys, sign-in, credential check, defaults, custom providers in `models.json` with model lists from their endpoint.
+- **Skills**: switches, a file editor for each skill folder, new skills.
+- **Sub-agents**: profiles in Pi's example format.
+- **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (install, update, remove, filters).
+- **MCP**: servers with exposure rules, OAuth and provider sign-in, Code mode, import from other clients, connection test, sign-in state, `mcp.log`.
+- **Instructions**: `AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`.
+- **System prompt**: what Pi recorded in a session.
+
+The project picker adds each project's `.pi` files and trust. Changes apply to new T3Code threads, or after `/reload`.
 
 Buttons that run something use the `pi` command on `PATH` (or `~/.local/bin/pi`) with `PI_CODING_AGENT_DIR` set to the app's agent directory.
 

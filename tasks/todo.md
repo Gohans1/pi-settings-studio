@@ -11,11 +11,16 @@
 - [x] MCP: add, edit, remove, undo.
 - [x] MCP: codemode controls.
 - [x] System prompt tab.
-- [x] Skills tab (user and package skills; project skills pending).
+- [x] Skills tab (user, package and project skills).
 - [x] General tab, drift test, raw JSON.
 - [x] Models tab: providers, API keys, defaults from the catalog.
 - [x] Models: custom providers form for models.json.
-- [x] Plugins tab (built-ins, user files, packages; install/update/remove later).
-- [x] Sub-agents tab (user profiles; project .pi/agents and T3Code integration later).
+- [x] Plugins tab (built-ins, user files, packages, install/update/remove).
+- [x] Sub-agents tab (user and project profiles).
 - [ ] Background service on port 4369 (unit file ready; install after WSL restarts with systemd).
 - [x] Execution features: MCP test and sign-in, provider sign-in, package install/update/remove, model catalog refresh.
+- [x] Project scope for every tab, project trust.
+- [x] Raw JSON for mcp.json and models.json with secrets masked.
+- [x] Model maps, theme picker, package filters, MCP exposure rules/OAuth/provider auth, MCP import.
+- [x] Model discovery, resource editors, custom sessionDir, MCP sign-in state and log, credential check, Update Pi.
+- [x] "Not editable here" notes in the app and in docs/parity.md.

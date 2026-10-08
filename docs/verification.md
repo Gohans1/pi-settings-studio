@@ -1,3 +1,21 @@
+# Verification — Pi 1.1.0 and the remaining editors, 2026-10-08
+
+Scope: everything added since the first full run: Pi 1.1.0 update, package filters, theme picker, MCP exposure rules/OAuth/provider auth, MCP import, model discovery, skill/prompt/theme/extension editors, custom `sessionDir`, MCP sign-in state and log, credential check, Update Pi, "Not editable here" notes. Also the fix for listing running `npmCommand` (introduced in `2acb564`, fixed in `30cd0cd`).
+
+| Check | Result |
+|---|---|
+| `bun test` | 133 passed (35 files) |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run test:e2e` (axe on every new form) | 45 passed |
+| Drift | SDK pin equals the installed Pi (1.1.0); settings keys, keybinding ids and ported MCP logic re-checked; `$NAME` interpolation compared with Pi's resolver |
+| Safety tests | Listing runs no command (marker file, untrusted project `npmCommand`); model discovery never runs a `!command` key, sends stored keys only to their saved URL, refuses redirects; resource files are opened only when Pi discovers them, never through `..` or a link out of a skill folder, never written through a link; MCP OAuth client secrets, tokens in `mcp-auth.json` and `Bearer` tokens never reach the browser |
+
+Manual browser checks on a temporary agent directory (`/tmp/pss-fx`): MCP form with rules and OAuth (global and project scope), import preview of a VS Code file with `${input:…}` and an SSE server, model list from a fake OpenRouter-style endpoint, skill editor with a supporting file, a symlinked prompt shown read-only, the `mcp.log` panel, the Pi panel, the notes. The real `~/.pi` was not written.
+
+Not exercised: `pi update` itself (its arguments are tested with a stand-in command), OAuth sign-ins with a real account, the background service.
+
+---
+
 # Verification — full Pi core coverage, 2026-10-07
 
 Scope: all tabs, global and project scope, jobs that run Pi.

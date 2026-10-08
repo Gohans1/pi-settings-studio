@@ -5,6 +5,7 @@ import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSe
 import { SettingField } from "./SettingField";
 import { Button } from "./components/ui/button";
 import { PiPanel } from "./PiPanel";
+import { NotHere } from "./NotHere";
 import { RawJsonEditor } from "./RawJsonEditor";
 import { KeybindingsPanel } from "./KeybindingsPanel";
 
@@ -157,6 +158,7 @@ export function GeneralTab({ project }: { project?: string }) {
     </>}
     <datalist id="model-ids">{modelIds.map(id => <option key={id} value={id} />)}</datalist>
     {scope === "global" && !needle && <KeybindingsPanel />}
+    {scope === "global" && !needle && <NotHere />}
     <footer className="scope-footnote"><p>Saved values apply to new T3Code threads, or after /reload. Unknown keys in the file are kept as they are.</p></footer>
   </>;
 }
