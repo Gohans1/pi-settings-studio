@@ -7,7 +7,7 @@ import { SettingField } from "./SettingField";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -176,11 +176,13 @@ export function GeneralTab({ project }: { project?: string }) {
     <PageHeader title="General" titleRef={title} description={description} files={[view?.path]} actions={<>
       <SearchField label="Search settings" placeholder="Search settings or keys…" value={query} onChange={setQuery} className="w-72 max-sm:w-auto max-sm:min-w-0 max-sm:flex-1" />
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="outline" />}><FileJson aria-hidden="true" />File<ChevronDown aria-hidden="true" /></DropdownMenuTrigger>
+        <DropdownMenuTrigger render={<Button variant="outline" />}><FileJson aria-hidden="true" data-icon="inline-start" />File<ChevronDown aria-hidden="true" data-icon="inline-end" /></DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto">
-          <DropdownMenuItem disabled={busy || !!changes.length} onClick={openRaw}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem>
-          <DropdownMenuItem disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</DropdownMenuItem>
-          {view?.hasBackup && <><DropdownMenuSeparator /><DropdownMenuItem disabled={busy || !!changes.length} onClick={() => setRestore(true)}><History aria-hidden="true" />Restore previous file</DropdownMenuItem></>}
+          <DropdownMenuGroup>
+            <DropdownMenuItem disabled={busy || !!changes.length} onClick={openRaw}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem>
+            <DropdownMenuItem disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</DropdownMenuItem>
+          </DropdownMenuGroup>
+          {view?.hasBackup && <><DropdownMenuSeparator /><DropdownMenuGroup><DropdownMenuItem disabled={busy || !!changes.length} onClick={() => setRestore(true)}><History aria-hidden="true" />Restore previous file</DropdownMenuItem></DropdownMenuGroup></>}
         </DropdownMenuContent>
       </DropdownMenu>
     </>} />

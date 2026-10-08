@@ -35,7 +35,7 @@ export function PluginTools({ path, project }: { path: string; project?: string 
   return <section className="mt-6 grid gap-3" aria-label="Extension tools" aria-busy={loading}>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h3>Tools</h3>
-      <Button variant="outline" size="sm" disabled={loading} onClick={() => setAttempt(value => value + 1)}><RefreshCw aria-hidden="true" />Refresh tools</Button>
+      <Button variant="outline" size="sm" disabled={loading} onClick={() => setAttempt(value => value + 1)}><RefreshCw aria-hidden="true" data-icon="inline-start" />Refresh tools</Button>
     </div>
     <p className="muted">{project ? "Global + selected project settings, trusted for inspection." : "Global settings only."} Startup preview, not a running thread.</p>
     {loading && <p className="loading" role="status"><Spinner aria-hidden="true" />Loading tools with Pi…</p>}

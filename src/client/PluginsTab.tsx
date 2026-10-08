@@ -13,7 +13,7 @@ import { Input } from "./components/ui/input";
 import { OptionSelect } from "./OptionSelect";
 import { Switch } from "./components/ui/switch";
 import { JobPanel, useJob } from "./JobPanel";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Spinner } from "./components/ui/spinner";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -158,7 +158,7 @@ export function PluginsTab({ project }: { project?: string }) {
         {/* The region's status line announces the check; the spinner only shows it. */}
         {checking && <Spinner data-icon="inline-start" aria-hidden="true" />}Check for updates</Button>
       <Button variant="ghost" size="sm" disabled={job.running || checking || !view.packages.length} onClick={() => void job.start({ action: "packages-update", ...(project ? { project } : {}) })}>Update all</Button></div>
-    <div className="my-4 space-y-2">
+    <div className="my-4 flex flex-col gap-2">
       <p role="status" aria-live="polite" className="m-0">{checking ? "Checking for package updates…"
         : !lastCheck ? "Not checked yet. Check for updates to find newer packages."
         : lastCheck.offline ? "Check skipped: Pi is in offline mode."
@@ -184,9 +184,9 @@ export function PluginsTab({ project }: { project?: string }) {
   return <>
     <PageHeader title="Plugins" description="Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab."
       actions={<DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="outline" />}><Plus aria-hidden="true" />New<ChevronDown aria-hidden="true" /></DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-auto">{(["prompts", "themes", "extensions"] as const).map(type =>
-          <DropdownMenuItem key={type} onClick={() => { setMode(type); setSelected(undefined); setPinned(undefined); }}>{newLabels[type]}</DropdownMenuItem>)}</DropdownMenuContent>
+        <DropdownMenuTrigger render={<Button variant="outline" />}><Plus aria-hidden="true" data-icon="inline-start" />New<ChevronDown aria-hidden="true" data-icon="inline-end" /></DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-auto"><DropdownMenuGroup>{(["prompts", "themes", "extensions"] as const).map(type =>
+          <DropdownMenuItem key={type} onClick={() => { setMode(type); setSelected(undefined); setPinned(undefined); }}>{newLabels[type]}</DropdownMenuItem>)}</DropdownMenuGroup></DropdownMenuContent>
       </DropdownMenu>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => void restore(undo) }} />

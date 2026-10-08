@@ -109,7 +109,7 @@ export function SubagentsTab({ project }: { project?: string }) {
   const open = mode !== "view" || !!current;
   return <>
     <PageHeader title="Sub-agents" description="Profiles in the format of Pi's example subagent extension." files={[view?.dir]}
-      actions={<Button variant="outline" disabled={busy} onClick={() => add("user")}><Plus aria-hidden="true" />Add profile</Button>} />
+      actions={<Button variant="outline" disabled={busy} onClick={() => add("user")}><Plus aria-hidden="true" data-icon="inline-start" />Add profile</Button>} />
     {view && !view.readerInstalled && <Alert role="note" className="mb-4"><TriangleAlert aria-hidden="true" /><AlertDescription>No installed extension reads these profiles yet. Pi has no built-in sub-agents: install Pi's example subagent extension (or another that reads this folder) for them to take effect. T3Code's own sub-agents are separate.</AlertDescription></Alert>}
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => { const target = undo; void run(() => restoreAgent(target.scope, target.file, project), `Restored ${target.file}.`, () => setSelected(target)); } }} />

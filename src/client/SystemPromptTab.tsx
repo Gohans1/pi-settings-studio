@@ -61,7 +61,7 @@ export function SystemPromptTab({ project }: { project?: string }) {
             {/* The outline for the sections' h3 headings (Base UI's Accordion.Header). */}
             <h2 id="recorded-prompt" className="sr-only">Recorded prompt</h2>
             <div className="prompt-summary"><span>{prompt.sections.length} sections · {prompt.tools.length} tools · {count(prompt.text)}</span>
-              <Button variant="outline" size="sm" onClick={() => void copy()}><Copy aria-hidden="true" />Copy full prompt</Button></div>
+              <Button variant="outline" size="sm" onClick={() => void copy()}><Copy aria-hidden="true" data-icon="inline-start" />Copy full prompt</Button></div>
             {/* Closed sections stay in the page (hidden until found), so the browser's find still reaches them. */}
             <Accordion multiple hiddenUntilFound defaultValue={["#base"]}>
               {prompt.content && <AccordionItem value="#base"><AccordionTrigger><span>Base prompt <span className="muted">{count(prompt.content)}</span></span></AccordionTrigger>

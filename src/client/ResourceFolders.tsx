@@ -77,7 +77,7 @@ export function ResourceFolders({ type, project, level = 3, onChanged }: {
         </li>)}</ul> : <p className="muted">None. Pi only uses the folders above{type === "skills" ? " and packages" : ""}.</p>}
       </div>
       <form className="add-path" onSubmit={submit} noValidate>
-        <Field className="flex-1 basis-72"><FieldLabel htmlFor={`${id}-path`}>Folder or file</FieldLabel>
+        <Field className="flex-1 basis-72" data-invalid={!!error || undefined}><FieldLabel htmlFor={`${id}-path`}>Folder or file</FieldLabel>
           <Input id={`${id}-path`} value={path} required autoComplete="off" spellCheck={false} placeholder={EXAMPLES[type]}
             aria-invalid={!!error || undefined} aria-describedby={`${id}-hint${error ? ` ${id}-error` : ""}`} onChange={event => { setPath(event.target.value); setError(""); }} /></Field>
         {project && <Field className="w-auto"><FieldLabel htmlFor={`${id}-scope`}>Save in</FieldLabel>

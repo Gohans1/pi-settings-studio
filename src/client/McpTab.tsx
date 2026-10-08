@@ -292,8 +292,8 @@ export function McpTab({ project }: { project?: string }) {
   return <>
     <PageHeader title="MCP" description="Servers Pi connects to. Changes apply to new T3Code threads, or after /reload." files={[global?.path, local?.path]}
       actions={<>
-        <Button variant="outline" disabled={check.running} onClick={test}><PlugZap aria-hidden="true" />Test connections</Button>
-        <Button variant="ghost" onClick={showLog}><ScrollText aria-hidden="true" />View mcp.log</Button>
+        <Button variant="outline" disabled={check.running} onClick={test}><PlugZap aria-hidden="true" data-icon="inline-start" />Test connections</Button>
+        <Button variant="ghost" onClick={showLog}><ScrollText aria-hidden="true" data-icon="inline-start" />View mcp.log</Button>
       </>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => { const scope = undo.scope; void run(scope, revision => restoreMcp(target(scope), revision), "Restored the previous file."); } }} />

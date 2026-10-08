@@ -161,7 +161,7 @@ export function ModelsTab({ project }: { project?: string }) {
   const open = !!selected;
   return <>
     <PageHeader title="Models" description="Providers and their credentials, from auth.json and models.json. Keys are never shown."
-      actions={<Button variant="outline" disabled={catalog.running} onClick={() => void catalog.start({ action: "models-refresh" })}><RefreshCw aria-hidden="true" />Refresh model catalogs</Button>} />
+      actions={<Button variant="outline" disabled={catalog.running} onClick={() => void catalog.start({ action: "models-refresh" })}><RefreshCw aria-hidden="true" data-icon="inline-start" />Refresh model catalogs</Button>} />
     <JobPanel job={catalog.job} error={catalog.error} onAnswer={value => void catalog.answer(value)} onCancel={() => void catalog.cancel()} onDismiss={catalog.dismiss} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && view && { label: "Undo", disabled: busy, onClick: () => undo === "auth" ? void run(restoreAuth, "Restored the previous auth.json.") : void runCustom(restoreCustomProviders, "Restored the previous models.json.") }} />

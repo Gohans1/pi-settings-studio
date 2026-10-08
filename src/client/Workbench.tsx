@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, type ComponentProps, type ReactNode } from "re
 import { ChevronLeft, Ellipsis, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "./components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./components/ui/empty";
 import { Item, ItemContent, ItemMedia, ItemTitle } from "./components/ui/item";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
@@ -68,7 +68,7 @@ export function MoreMenu({ label, children }: { label: string; children: ReactNo
       <TooltipTrigger render={<DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label={label} />} />}><Ellipsis aria-hidden="true" /></TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
-    <DropdownMenuContent align="end" className="w-auto">{children}</DropdownMenuContent>
+    <DropdownMenuContent align="end" className="w-auto"><DropdownMenuGroup>{children}</DropdownMenuGroup></DropdownMenuContent>
   </DropdownMenu>;
 }
 
