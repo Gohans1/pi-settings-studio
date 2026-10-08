@@ -10,7 +10,7 @@ Tabs below. A project picker (folders Pi has sessions in) adds each tab's projec
 |---|---|
 | MCP | Global and project `mcp.json` servers: list, enable/disable, exposure, add, edit, remove (undo). Codemode controls: `defaultTools` `+codemode`, `codemode.mode`, `codemode.inlineBudget`, `autoEnableCodemode`. `toolExposure`, `oauth`, `auth.provider`. Import from other clients. Connection test, OAuth sign-in, sign-in state, `mcp.log`. |
 | System prompt | Read-only. Pick project, then session (newest first); show the persisted system prompt sections and tool declarations exactly as Pi recorded them in the session file. Copy button. |
-| Skills | Discovered skills with source; enable/disable per skill and per group; edit user and project skill files; create skills. |
+| Skills | Discovered skills with source; enable/disable per skill and per group; whether the model may load a skill, per skill and per group; edit user and project skill files; create skills; remove user and project skills (undo). |
 | General | A form field for every documented `settings.json` key that no other tab owns; terminal-only keys grouped and labelled "no effect in T3Code"; internal keys (`lastChangelogVersion`, `deviceId`, `trackingId`) never touched. Raw JSON editor. Global or project file. Keyboard shortcuts (`keybindings.json`). |
 | Instructions | Context files (`AGENTS.md`…), `SYSTEM.md`, `APPEND_SYSTEM.md`, global and project. |
 | Models | Providers and API-key status, custom providers/models (`models.json`), default provider/model, enabled models, thinking levels. OAuth sign-in, credential check, model lists from a custom endpoint. |
