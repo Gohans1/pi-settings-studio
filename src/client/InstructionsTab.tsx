@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { CircleAlert } from "lucide-react";
 import type { InstructionFile, InstructionsView } from "../shared/instructions";
 import { deleteInstruction, loadInstructions, restoreInstruction, saveInstruction } from "./api";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Textarea } from "./components/ui/textarea";
 import { Feedback } from "./Feedback";
 import { FilePath, home, PageHeader } from "./PageHeader";
 import { ListItem, Workbench } from "./Workbench";
@@ -35,10 +38,10 @@ function Editor({ file, files, project, loadsInProject, busy, onSave, onDelete }
     <header><h2 id="instruction-title">{title(file)}</h2>
       <p className="muted">{role(file, files, loadsInProject)}{project && file.scope === "global" && " Applies to every project, not only the one chosen at the top."}</p>
       <FilePath path={file.path} /></header>
-    {file.error ? <div className="error"><strong>Cannot edit this file here</strong><p>{file.error}</p></div> : <>
-      {!file.exists && <p className="notice">Not created yet. Saving creates it{file.kind === "context" ? " as AGENTS.md" : ""}.</p>}
-      {file.others?.length ? <p className="notice">Pi ignores {file.others.join(", ")} in this folder, because {baseName(file.path)} comes first.</p> : null}
-      <textarea aria-label={`Contents of ${baseName(file.path)}`} value={text} rows={22} spellCheck={false} onChange={event => setText(event.target.value)} />
+    {file.error ? <Alert role="note" variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Cannot edit this file here</AlertTitle><AlertDescription>{file.error}</AlertDescription></Alert> : <>
+      {!file.exists && <Alert role="note"><AlertDescription>Not created yet. Saving creates it{file.kind === "context" ? " as AGENTS.md" : ""}.</AlertDescription></Alert>}
+      {file.others?.length ? <Alert role="note"><AlertDescription>Pi ignores {file.others.join(", ")} in this folder, because {baseName(file.path)} comes first.</AlertDescription></Alert> : null}
+      <Textarea aria-label={`Contents of ${baseName(file.path)}`} className="field-sizing-fixed font-mono" value={text} rows={22} spellCheck={false} onChange={event => setText(event.target.value)} />
       <div className="form-actions">
         <Button disabled={busy || (file.exists && !changed)} onClick={() => onSave(text)}>{busy ? "Saving…" : file.exists ? "Save file" : "Create file"}</Button>
         {changed && <Button variant="outline" disabled={busy} onClick={() => setText(file.text ?? "")}>Discard changes</Button>}
@@ -83,7 +86,7 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
     <PageHeader title="Instructions" description="Text Pi puts in every system prompt: context files (AGENTS.md), SYSTEM.md and APPEND_SYSTEM.md." />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={!!undo && { label: "Undo", disabled: busy, onClick: () => { const id = undo; const name = baseName(files.find(file => file.id === id)?.path ?? id); void run(() => restoreInstruction(id, project), `Restored ${name}.`); } }} />
-    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p></div>}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading instruction files…</div> : <Workbench open={picked} onBack={() => setPicked(false)} backLabel="All files" list={<>
       <section className="item-group" aria-label="Global instruction files"><div className="list-header"><h2>Global</h2></div>{list("global")}</section>
       {project && <section className="item-group" aria-label="This project's instruction files"><div className="list-header"><h2>This project</h2></div>{list("project")}</section>}

@@ -1,8 +1,15 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import type { AgentInput, AgentView, AgentsView } from "../shared/agents";
 import { addAgent, editAgent, loadAgents, removeAgent, restoreAgent, type AgentScope } from "./api";
-import { Bot, Plus } from "lucide-react";
+import { Bot, CircleAlert, Plus, TriangleAlert } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
+import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
+import { Input } from "./components/ui/input";
+import { Textarea } from "./components/ui/textarea";
+import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, ListItem, Workbench } from "./Workbench";
@@ -16,6 +23,7 @@ function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
   const [model, setModel] = useState(agent?.model ?? "");
   const [prompt, setPrompt] = useState(agent?.prompt ?? "");
   const title = heading ?? (agent ? `Edit ${agent.name ?? agent.file}` : "Add profile");
+  const id = useId();
   function submit(event: FormEvent) {
     event.preventDefault();
     onSave({ name: name.trim(), description: description.trim(), tools: tools.split(",").map(tool => tool.trim()).filter(Boolean),
@@ -23,15 +31,20 @@ function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
   }
   return <form className="detail server-form" aria-label={title} onSubmit={submit}>
     <h2>{title}</h2>
-    {error && <div role="alert" className="error"><strong>Not saved</strong><p>{error}</p></div>}
-    <label>Name<input value={name} required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*" title="Letters, digits, ., _ and -" autoComplete="off" spellCheck={false} onChange={e => setName(e.target.value)} />
-      {!agent && <span className="muted">Saved as {name.trim() || "name"}.md</span>}</label>
-    <label>Description<input value={description} required placeholder="When to use this agent, in a sentence" onChange={e => setDescription(e.target.value)} /></label>
-    <label>Tools<input value={tools} placeholder="read, grep, find, ls" autoComplete="off" spellCheck={false} onChange={e => setTools(e.target.value)} />
-      <span className="muted">Comma-separated. Empty means the extension's default tools.</span></label>
-    <label>Model<input value={model} placeholder="Default model" autoComplete="off" spellCheck={false} onChange={e => setModel(e.target.value)} /></label>
-    <label>System prompt<textarea rows={12} value={prompt} onChange={e => setPrompt(e.target.value)} /></label>
-    {agent && agent.extraKeys.length > 0 && <p className="muted">Kept as they are: {agent.extraKeys.join(", ")}.</p>}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    <Field><FieldLabel htmlFor={id + "name"}>Name</FieldLabel>
+      <Input id={id + "name"} value={name} required pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*" title="Letters, digits, ., _ and -" autoComplete="off" spellCheck={false} onChange={e => setName(e.target.value)} />
+      {!agent && <FieldDescription>Saved as {name.trim() || "name"}.md</FieldDescription>}</Field>
+    <Field><FieldLabel htmlFor={id + "description"}>Description</FieldLabel>
+      <Input id={id + "description"} value={description} required placeholder="When to use this agent, in a sentence" onChange={e => setDescription(e.target.value)} /></Field>
+    <Field><FieldLabel htmlFor={id + "tools"}>Tools</FieldLabel>
+      <Input id={id + "tools"} value={tools} placeholder="read, grep, find, ls" autoComplete="off" spellCheck={false} aria-describedby={id + "tools-hint"} onChange={e => setTools(e.target.value)} />
+      <FieldDescription id={id + "tools-hint"}>Comma-separated. Empty means the extension's default tools.</FieldDescription></Field>
+    <Field><FieldLabel htmlFor={id + "model"}>Model</FieldLabel>
+      <Input id={id + "model"} value={model} placeholder="Default model" autoComplete="off" spellCheck={false} onChange={e => setModel(e.target.value)} /></Field>
+    <Field><FieldLabel htmlFor={id + "prompt"}>System prompt</FieldLabel>
+      <Textarea id={id + "prompt"} className="field-sizing-fixed" rows={12} value={prompt} onChange={e => setPrompt(e.target.value)} /></Field>
+    {agent && agent.extraKeys.length > 0 && <FieldDescription>Kept as they are: {agent.extraKeys.join(", ")}.</FieldDescription>}
     <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save profile"}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;
@@ -45,16 +58,16 @@ function AgentDetail({ agent, busy, onEdit, onRemove }: { agent: AgentView; busy
         <Button variant="outline" disabled={busy} onClick={onEdit} aria-label={`Edit ${title}`}>Edit</Button>
         <Button variant="destructive" disabled={busy} onClick={onRemove} aria-label={`Remove ${title}`}>Remove</Button>
       </div></header>
-    {agent.error && <div className="error"><strong>Not loaded</strong><p>{agent.error}</p></div>}
-    {agent.shadowed && <p className="notice">This project has its own "{agent.name}" profile, which replaces this one there.</p>}
+    {agent.error && <Alert role="note" variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not loaded</AlertTitle><AlertDescription>{agent.error}</AlertDescription></Alert>}
+    {agent.shadowed && <Alert role="note"><AlertDescription>This project has its own "{agent.name}" profile, which replaces this one there.</AlertDescription></Alert>}
     <dl className="detail-list">
       {agent.description && <div><dt>Description</dt><dd>{agent.description}</dd></div>}
       <div><dt>Tools</dt><dd>{agent.tools?.join(", ") ?? <span className="muted">Extension default</span>}</dd></div>
       <div><dt>Model</dt><dd>{agent.model ?? <span className="muted">Default model</span>}</dd></div>
-      {agent.extraKeys.length > 0 && <div><dt>Other keys</dt><dd>{agent.extraKeys.map(key => <code key={key} className="chip">{key}</code>)}<span className="muted"> kept as they are</span></dd></div>}
+      {agent.extraKeys.length > 0 && <div><dt>Other keys</dt><dd className="flex flex-wrap items-center gap-1.5">{agent.extraKeys.map(key => <Badge key={key} variant="outline" render={<code />}>{key}</Badge>)}<span className="muted">kept as they are</span></dd></div>}
       <div><dt>File</dt><dd><code>{agent.file}</code><span className="muted"> · {agent.scope === "project" ? "this project's .pi/agents" : "global"}</span></dd></div>
     </dl>
-    <details className="prompt-preview"><summary>System prompt</summary><pre>{agent.prompt || "(empty)"}</pre></details>
+    <Disclosure label="System prompt" className="prompt-preview"><pre>{agent.prompt || "(empty)"}</pre></Disclosure>
   </section>;
 }
 
@@ -96,19 +109,19 @@ export function SubagentsTab({ project }: { project?: string }) {
   return <>
     <PageHeader title="Sub-agents" description="Profiles in the format of Pi's example subagent extension." files={[view?.dir]}
       actions={<Button variant="outline" disabled={busy} onClick={() => add("user")}><Plus aria-hidden="true" />Add profile</Button>} />
-    {view && !view.readerInstalled && <p className="notice callout-warning page-notice">No installed extension reads these profiles yet. Pi has no built-in sub-agents: install Pi's example subagent extension (or another that reads this folder) for them to take effect. T3Code's own sub-agents are separate.</p>}
+    {view && !view.readerInstalled && <Alert role="note" className="page-notice"><TriangleAlert aria-hidden="true" /><AlertDescription>No installed extension reads these profiles yet. Pi has no built-in sub-agents: install Pi's example subagent extension (or another that reads this folder) for them to take effect. T3Code's own sub-agents are separate.</AlertDescription></Alert>}
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => { const target = undo; void run(() => restoreAgent(target.scope, target.file, project), `Restored ${target.file}.`, () => setSelected(target)); } }} />
-    {error && <div role="alert" className="error"><strong>Could not complete the change</strong><p>{error}</p></div>}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true">Reading profiles…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode("view"); }} backLabel="All profiles" list={<>
       <section className="item-group" aria-label="Global profiles">
         <div className="list-header"><h2>Global</h2><span>{agents.filter(agent => agent.scope === "user").length}</span></div>
-        {agents.some(agent => agent.scope === "user") ? list("user") : <p className="empty">No profiles yet.</p>}
+        {agents.some(agent => agent.scope === "user") ? list("user") : <Empty><EmptyDescription>No profiles yet.</EmptyDescription></Empty>}
       </section>
       {project && <section className="item-group" aria-label="This project's profiles">
         <div className="list-header"><h2>This project</h2><span>{agents.filter(agent => agent.scope === "project").length} in .pi/agents</span>
           <Button variant="ghost" size="icon-xs" aria-label="Add profile to project" title="Add profile to project" disabled={busy} onClick={() => add("project")}><Plus aria-hidden="true" /></Button></div>
-        {agents.some(agent => agent.scope === "project") ? list("project") : <p className="empty">No profiles in this project yet.</p>}
+        {agents.some(agent => agent.scope === "project") ? list("project") : <Empty><EmptyDescription>No profiles in this project yet.</EmptyDescription></Empty>}
       </section>}
     </>} detail={mode !== "view" ? <AgentForm key={mode + addScope + (selected?.file ?? "")} agent={mode === "edit" ? current : undefined} busy={busy} error={formError}
         title={mode === "add" && addScope === "project" ? "Add profile to this project" : undefined}

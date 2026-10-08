@@ -44,8 +44,8 @@ test("shows the recorded system prompt of a chosen project and session", async (
   await page.getByRole("combobox", { name: "Project", exact: true }).click();
   await page.getByRole("option", { name: projA, exact: true }).click();
   await expect(page.getByLabel("Session")).toContainText("Fix the login bug");
-  const rules = page.getByRole("group", { name: /rules/ });
-  await expect(rules).toContainText("Rule two.");
+  await page.getByRole("button", { name: /^rules/ }).click();
+  await expect(page.getByRole("region", { name: /^rules/ })).toContainText("Rule two.");
   await expect(page.getByText("Rule one.")).toHaveCount(0);
   await page.getByText(/^Tools \(1\)/).click();
   await expect(page.getByRole("list", { name: "Tools" })).toContainText("read");

@@ -232,11 +232,10 @@
   .switch-row { display: flex; gap: --spacing(3); align-items: center; font-weight: var(--font-weight-normal); }
 
   /* File contents, prompts and logs. */
-  :is(.log-tail, .instruction textarea, .prompt pre, .prompt-preview pre, .job pre) { font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
+  :is(.log-tail, .prompt pre, .prompt-preview pre, .job pre) { font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
   .log-tail { margin: 0; padding: --spacing(3); max-height: 32rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--muted); border-radius: var(--radius); }
   .resource-editor, .instruction, .raw-editor { display: grid; gap: --spacing(3); }
   :is(.resource-editor, .instruction, .raw-editor) h2 { margin: 0; }
-  .instruction textarea { width: 100%; }
   .resource-editor .file-list { display: flex; flex-wrap: wrap; gap: --spacing(1); }
   .raw-editor { max-width: 60rem; }
 
@@ -318,23 +317,17 @@
   .folder-missing svg { width: --spacing(3.5); height: --spacing(3.5); }
   .add-path { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2); }
   /* Sub-agents and resources. */
-  .prompt-preview { border: 1px solid var(--border); border-radius: var(--radius); padding: --spacing(2.5) --spacing(3.5); }
-  .prompt-preview > summary { font-weight: var(--font-weight-semibold); }
-  .prompt-preview pre { margin: --spacing(2.5) 0 0; max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .prompt-preview pre { margin: --spacing(1) 0 0; max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .plain-list { list-style: none; margin: 0; padding: --spacing(1) --spacing(2); display: grid; gap: --spacing(1); }
   .list-note { margin: 0; padding: --spacing(1) --spacing(2); }
 
   /* System prompt. */
-  .prompt-pickers { display: grid; gap: --spacing(1.5); max-width: 45rem; margin-bottom: --spacing(5); }
-  .prompt-pickers label { display: grid; gap: --spacing(1.5); min-width: 0; font-weight: var(--font-weight-semibold); }
-  .prompt-pickers select { min-width: 0; font-weight: var(--font-weight-normal); }
+  .prompt-pickers { max-width: 45rem; margin-bottom: --spacing(5); }
   .prompt { display: grid; gap: --spacing(2); }
   .prompt-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); padding-bottom: --spacing(1); color: var(--muted-foreground); font-size: var(--text-small); font-variant-numeric: tabular-nums; }
-  .prompt details { border: 1px solid var(--border); border-radius: var(--radius); padding: --spacing(2.5) --spacing(3.5); }
-  .prompt summary { font-weight: var(--font-weight-semibold); }
-  .prompt summary .muted { margin-inline-start: --spacing(1); font-weight: var(--font-weight-normal); font-variant-numeric: tabular-nums; }
+  .prompt [data-slot=accordion-trigger] .muted { margin-inline-start: --spacing(1); font-weight: var(--font-weight-normal); font-variant-numeric: tabular-nums; }
   .prompt pre { margin: --spacing(2.5) 0 0; max-height: 30rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .tool-list { list-style: none; margin: --spacing(2.5) 0 0; padding: 0; display: grid; gap: --spacing(2); }
+  .tool-list { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(2); }
   .tool-list li { display: grid; gap: --spacing(0.5); }
 
   /* General: a section index beside the settings; the save bar follows the edits. */
