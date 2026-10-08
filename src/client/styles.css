@@ -104,10 +104,6 @@
 }
 
 @layer components {
-  /* Pointer press feedback; leave popup anchors stationary and keyboard/touch scrolling undisturbed. */
-  @media (prefers-reduced-motion: no-preference) {
-    html[data-motion-input=pointer] .press-feedback:active:not(:disabled):not([aria-disabled=true]):not([aria-haspopup]) { transform: scale(0.97); }
-  }
 
   /* App shell: the top bar scrolls nothing; main is the one scroller, so the chrome never moves. */
   .app { display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); height: 100svh; }

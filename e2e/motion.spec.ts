@@ -84,25 +84,6 @@ test("pointer menu zooms in from its trigger as shadcn ships it and can close be
   await expect(trigger).toBeFocused();
 });
 
-test("buttons compress only during a pointer press, without moving surrounding layout", async ({ page }) => {
-  await page.goto(server.url + "#mcp");
-  const button = page.getByRole("button", { name: "Add server", exact: true });
-  await button.hover();
-  const box = (await button.boundingBox())!;
-  await page.mouse.down();
-  await expect(button).toHaveCSS("transform", "matrix(0.97, 0, 0, 0.97, 0, 0)", { timeout: 3000 });
-  expect(await button.evaluate(element => getComputedStyle(element).translate)).toBe("none");
-  await page.mouse.move(box.x - 20, box.y);
-  await page.mouse.up();
-  await expect(button).toHaveCSS("transform", "none");
-  expect(await button.boundingBox()).toEqual(box);
-  await button.focus();
-  await page.keyboard.down("Space");
-  await expect(button).toHaveCSS("transform", "none");
-  await page.keyboard.up("Space");
-  await expect(page.getByRole("heading", { name: "Add MCP server", exact: true })).toBeVisible();
-});
-
 test("reduced motion settles a menu at once", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(server.url);
