@@ -10,7 +10,7 @@
 
 ## shadcn/ui (Base Nova)
 
-`src/client/components/ui/button.tsx`, `tabs.tsx` and `switch.tsx` come from the shadcn registry (base-nova style, retrieved 2026-10-07; `cn` import pointed at `@/lib/utils`), adapted to the app's tokens: hover colours, the type scale and the transitions. The `data-horizontal`/`data-vertical` custom variants in `src/client/styles.css` come from `shadcn@4.21.4` `dist/tailwind.css`.
+Every file in `src/client/components/ui` (accordion, alert, badge, button, checkbox, collapsible, dropdown-menu, empty, field, input, input-group, item, kbd, label, radio-group, select, separator, switch, tabs, textarea, toast) comes from the shadcn registry, base-nova style, installed with `shadcn@4.21.4` on 2026-10-08 and not edited since. `shadcn add --dry-run --diff` finds no difference beyond a `"use client"` line, which the CLI adds or drops from run to run and which a Vite app ignores. `src/client/styles.css` imports `shadcn/tailwind.css` from the `shadcn` package; `tw-animate-css` and `cn` are dependencies under their own MIT licenses.
 
 MIT License
 

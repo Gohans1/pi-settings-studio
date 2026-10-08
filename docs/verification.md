@@ -1,3 +1,24 @@
+# Verification — shadcn components throughout, 2026-10-08
+
+Scope: every control, callout, list row, disclosure and confirmation on shadcn (Base UI, base-nova) components installed with the shadcn CLI; Flexoki reaches them only through tokens. Set up as shadcn's install guide asks: `tw-animate-css`, `shadcn/tailwind.css` and the `cn` package (docs-mcp `shadcn-ui`: Theming, CLI, Manual installation, Changelog).
+
+| Check | Result |
+|---|---|
+| `bun test` | 245 passed (40 files). New: a hovered primary button keeps 4.5:1 on the page, a card and the list pane in both schemes, plus pairs for `--card`, `--accent` and `--popover-foreground`. Removed: checks that read the source of `components/ui` and the `cn` configuration, now that both are shadcn's own |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run test:e2e` (axe in light and dark mode, 1440/768/320) | 63 passed; none added or removed. 78 confirmations are read from Base UI's "Notifications" region, 30 selects are opened and an option clicked, the toast is hovered before it is closed, checkboxes are found by the label beside them, and a prompt section is opened before it is read |
+| Client bundle | JS 662.6 → 758.5 kB (gzip 200.4 → 233.3 kB), CSS 60.5 → 101.5 kB (gzip 11.3 → 16.8 kB), served locally |
+
+Found and fixed with a test first: shadcn's Button hovers at 80% of the primary colour, which left its text at 4.11:1 on Flexoki blue 600; the primary moved to 700 in light and 300 in dark. Found by axe: Base UI's Accordion headers are h3, so the recorded prompt gained a visually hidden h2.
+
+Found while building: the shadcn Alert is `role="alert"`, so notes that are part of a page pass `role="note"`; Base UI names a checkbox by its label element, which wins over `aria-label`; Base UI's Select icon carries a "▼" text node that tests must not compare whole; shadcn has no autocomplete and its Combobox refuses free text, so suggested free text stays an Input with a `datalist`.
+
+Manual browser checks against a temporary agent folder (T3 preview, then `agent-browser` in its own session when the preview host disconnected): General rows, startup tools and the File menu; the project Select and the trust Alert; Models defaults and lists; an MCP server's detail, its form with OAuth open, a toast with Undo in dark mode; Skills folders; Plugins packages in dark mode. Nothing was written to the real `~/.pi`.
+
+Not verified: a real screen reader, forced-colors mode, Windows, phones (Selects now open Base UI's popup rather than the native picker).
+
+---
+
 # Verification — every core Pi setting in the GUI, 2026-10-08
 
 Scope: startup tools checklist; extra resource folders and duplicate skill names; free-form default provider and model with warnings; Enabled models as a list; the model-invocation switch of a skill; each MCP tool's exposure; Pi's own key setup for providers that need more than a key.
