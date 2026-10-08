@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { McpFileView, McpServerInput, McpServerView, NamedValue } from "../shared/mcp.ts";
+import type { McpFileView, McpOAuthInput, McpOAuthView, McpServerInput, McpServerView, NamedValue } from "../shared/mcp.ts";
 import { isRecord, MCP_EXPOSURES, readMcpServers, updateMcpServer, type McpEntry } from "./mcp-config.ts";
 import { maskArgs, maskUrl, unmaskArgs, unmaskUrl } from "./mcp-secrets.ts";
 import { maskJson, mcpSecrets, unmaskJson } from "./json-secrets.ts";
 import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
 import type { ProjectRegistry } from "./projects.ts";
-import type { McpServerConfig } from "@earendil-works/pi-coding-agent";
+import type { McpExposure, McpServerConfig } from "@earendil-works/pi-coding-agent";
 
 function strings(value: unknown): string[] | undefined {
   return Array.isArray(value) && value.every(entry => typeof entry === "string") ? value : undefined;
@@ -19,6 +19,30 @@ function text(value: unknown): string | undefined {
 /** Env and header values: an arg that repeats one is hidden too. */
 function secretValues(entry: Record<string, unknown>): string[] {
   return [entry.env, entry.headers].flatMap(group => isRecord(group) ? Object.values(group).filter((value): value is string => typeof value === "string") : []);
+}
+
+const OAUTH_TEXT = ["clientId", "callbackUrl", "scope", "clientName", "authServerMetadataUrl"] as const;
+function oauthView(oauth: Record<string, unknown>): McpOAuthView {
+  const view: McpOAuthView = {};
+  for (const key of OAUTH_TEXT) if (typeof oauth[key] === "string") view[key] = oauth[key] as string;
+  if (typeof oauth.clientSecret === "string") view.hasClientSecret = true;
+  if (typeof oauth.callbackPort === "number") view.callbackPort = oauth.callbackPort;
+  if (oauth.clientRegistration === "dcr" || oauth.clientRegistration === "cimd") view.clientRegistration = oauth.clientRegistration;
+  return Object.fromEntries(Object.entries({ clientId: view.clientId, hasClientSecret: view.hasClientSecret, callbackPort: view.callbackPort, callbackUrl: view.callbackUrl,
+    scope: view.scope, clientName: view.clientName, clientRegistration: view.clientRegistration, authServerMetadataUrl: view.authServerMetadataUrl }).filter(([, value]) => value !== undefined)) as McpOAuthView;
+}
+
+/** The form's OAuth fields over the stored object; unknown keys and the hidden secret are kept. */
+function buildOAuth(input: McpOAuthInput, previous: unknown): Record<string, unknown> | undefined {
+  const old = isRecord(previous) ? previous : {};
+  const next: Record<string, unknown> = {};
+  for (const key of OAUTH_TEXT) if (input[key]) next[key] = input[key];
+  if (input.clientSecret) next.clientSecret = input.clientSecret;
+  else if (!input.clearClientSecret && typeof old.clientSecret === "string") next.clientSecret = old.clientSecret;
+  if (input.callbackPort) next.callbackPort = input.callbackPort;
+  if (input.clientRegistration) next.clientRegistration = input.clientRegistration;
+  for (const [key, value] of Object.entries(old)) if (!(key in next) && ![...OAUTH_TEXT, "clientSecret", "callbackPort", "clientRegistration"].includes(key)) next[key] = value;
+  return Object.keys(next).length ? next : undefined;
 }
 
 function toView({ name, raw, config, error, override }: McpEntry): McpServerView {
@@ -42,7 +66,8 @@ function toView({ name, raw, config, error, override }: McpEntry): McpServerView
     timeout: typeof entry.timeout === "number" ? entry.timeout : undefined,
     env: isRecord(entry.env) ? Object.keys(entry.env) : [],
     headers: isRecord(entry.headers) ? Object.keys(entry.headers) : [],
-    toolExposureRules: isRecord(entry.toolExposure) ? Object.keys(entry.toolExposure).length : 0,
+    toolExposure: isRecord(entry.toolExposure) ? Object.fromEntries(Object.entries(entry.toolExposure).filter(([, value]) => typeof value === "string")) as Record<string, string> : {},
+    ...(isRecord(entry.oauth) ? { oauth: oauthView(entry.oauth) } : {}),
     authProvider: isRecord(entry.auth) ? text(entry.auth.provider) : undefined,
   };
 }
@@ -78,6 +103,13 @@ const serverInput = z.object({
   url: z.string().max(2_000).optional(),
   headers: named.optional(),
   timeout: z.number().positive().max(86_400).optional(),
+  toolExposure: z.array(z.object({ tool: z.string().min(1).max(300), exposure: z.enum(MCP_EXPOSURES as [McpExposure, ...McpExposure[]]) }).strict()).max(200).optional(),
+  oauth: z.object({
+    clientId: z.string().max(500).optional(), clientSecret: z.string().max(10_000).optional(), clearClientSecret: z.boolean().optional(),
+    callbackPort: z.number().int().optional(), callbackUrl: z.string().max(2000).optional(), scope: z.string().max(2000).optional(),
+    clientName: z.string().max(200).optional(), clientRegistration: z.enum(["dcr", "cimd"]).optional(), authServerMetadataUrl: z.string().max(2000).optional(),
+  }).strict().nullable().optional(),
+  authProvider: z.string().max(100).nullable().optional(),
 }).strict();
 const MANAGED_KEYS = ["type", "command", "args", "cwd", "env", "url", "headers", "description", "timeout"];
 
@@ -116,9 +148,19 @@ function buildEntry(input: McpServerInput, previous: Record<string, unknown> = {
   }
   if (input.description) entry.description = input.description;
   if (input.timeout) entry.timeout = input.timeout;
+  // Fields the form sends replace the stored ones; fields it leaves out are kept.
+  if (input.toolExposure !== undefined) {
+    if (input.toolExposure.length) entry.toolExposure = Object.fromEntries(input.toolExposure.map(rule => [rule.tool, rule.exposure]));
+  } else if (previous.toolExposure !== undefined) entry.toolExposure = previous.toolExposure;
+  if (input.transport === "http") {
+    const oauth = input.oauth === undefined ? previous.oauth : input.oauth === null ? undefined : buildOAuth(input.oauth as McpOAuthInput, previous.oauth);
+    if (oauth !== undefined) entry.oauth = oauth;
+    const auth = input.authProvider === undefined ? previous.auth : input.authProvider ? { ...(isRecord(previous.auth) ? previous.auth : {}), provider: input.authProvider } : undefined;
+    if (auth !== undefined) entry.auth = auth;
+  }
   for (const [key, value] of Object.entries(previous)) {
     // OAuth and provider auth only apply to HTTP servers.
-    if (MANAGED_KEYS.includes(key) || (input.transport === "stdio" && (key === "oauth" || key === "auth"))) continue;
+    if (MANAGED_KEYS.includes(key) || ["toolExposure", "oauth", "auth"].includes(key)) continue;
     entry[key] = value;
   }
   return entry;

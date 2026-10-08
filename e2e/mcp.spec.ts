@@ -127,3 +127,38 @@ test("Code mode choices save at once; the tool list budget saves on Save", async
   expect(JSON.parse(await readFile(file, "utf8")).autoEnableCodemode).toBe(false);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("tool exposure rules, OAuth settings and provider sign-in are edited in the form", async ({ page }) => {
+  const readDocs = async () => JSON.parse(await readFile(file, "utf8")).mcpServers.docs;
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: /^docs/ }).click();
+  await page.getByRole("button", { name: "Edit docs" }).click();
+  const form = page.getByRole("form", { name: "Edit docs" });
+  await form.getByRole("button", { name: "Add rule" }).click();
+  await form.getByLabel("Tool or pattern 1").fill("search_*");
+  await form.getByLabel("Exposure of rule 1").selectOption("direct");
+  await form.getByText("OAuth settings").click();
+  await expect(form.getByText("OAuth is not used while an Authorization header is set.")).toBeVisible();
+  await form.getByLabel("Client ID").fill("my-client");
+  await form.getByLabel("Client secret", { exact: true }).fill("fixture-client-secret");
+  await form.getByLabel("Callback port").fill("8765");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await form.getByRole("button", { name: "Save server" }).click();
+  await expect(page.getByRole("status")).toContainText("docs saved");
+  expect(await readDocs()).toMatchObject({ toolExposure: { "search_*": "direct" }, oauth: { clientId: "my-client", clientSecret: "fixture-client-secret", callbackPort: 8765 } });
+  await expect(page.getByRole("region", { name: "docs" })).toContainText("search_* → Direct");
+
+  await page.getByRole("button", { name: "Edit docs" }).click();
+  await expect(form.getByLabel("Client secret", { exact: true })).toHaveValue("");
+  await expect(form.getByLabel("Client ID")).toHaveValue("my-client");
+  await form.getByLabel("Client registration").selectOption("cimd");
+  await form.getByLabel("Client ID").fill("");
+  await form.getByLabel("Remove the stored client secret").check();
+  await form.getByLabel("Pi provider").fill("anthropic");
+  await form.getByRole("button", { name: "Remove rule search_*" }).click();
+  await form.getByRole("button", { name: "Save server" }).click();
+  await expect(page.getByRole("status")).toContainText("docs saved");
+  const docs = await readDocs();
+  expect([docs.toolExposure, docs.oauth, docs.auth]).toEqual([undefined, { callbackPort: 8765, clientRegistration: "cimd" }, { provider: "anthropic" }]);
+  expect(await page.content()).not.toContain("fixture-client-secret");
+});

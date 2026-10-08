@@ -21,9 +21,20 @@ export type McpServerView = {
   /** Names only; values stay on the server. */
   env: string[];
   headers: string[];
-  toolExposureRules: number;
+  /** toolExposure: tool name or pattern → exposure. */
+  toolExposure: Record<string, string>;
+  /** OAuth settings without the client secret, which is only reported as set. */
+  oauth?: McpOAuthView;
   authProvider?: string;
 };
+
+export type McpOAuthView = {
+  clientId?: string; hasClientSecret?: boolean; callbackPort?: number; callbackUrl?: string; scope?: string;
+  clientName?: string; clientRegistration?: "dcr" | "cimd"; authServerMetadataUrl?: string;
+};
+
+/** OAuth fields of the form. An empty clientSecret keeps the stored one unless clearClientSecret is set. */
+export type McpOAuthInput = Omit<McpOAuthView, "hasClientSecret"> & { clientSecret?: string; clearClientSecret?: boolean };
 
 export type McpFileView = {
   path: string;
@@ -50,4 +61,8 @@ export type McpServerInput = {
   url?: string;
   headers?: NamedValue[];
   timeout?: number;
+  /** Undefined keeps the stored value; an empty list or null removes it. */
+  toolExposure?: { tool: string; exposure: McpExposure }[];
+  oauth?: McpOAuthInput | null;
+  authProvider?: string | null;
 };

@@ -117,6 +117,10 @@ textarea { resize: vertical; }
 .server-form fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin: 0; }
 .server-form legend { padding: 0 4px; font-weight: 560; }
 .named-rows { display: grid; gap: 8px; justify-items: start; }
+.oauth-fields { display: grid; gap: 10px; }
+.oauth-fields[open] > summary { margin-bottom: 4px; }
+.oauth-fields summary { cursor: pointer; font-weight: 560; }
+.server-form label.check { display: flex; align-items: center; gap: 8px; font-weight: 400; }
 .named-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 8px; width: 100%; }
 .feedback [data-slot=button] { margin-left: 8px; }
 .codemode-item { margin: 0 0 20px; }

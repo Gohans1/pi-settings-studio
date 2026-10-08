@@ -4,19 +4,12 @@ import type { CodemodeView } from "../shared/codemode";
 import { addMcpServer, editMcpServer, loadCodemode, loadMcp, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget, loadMcpRaw, saveMcpRaw } from "./api";
 import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
 import { CodemodePanel } from "./CodemodePanel";
-import { McpServerForm } from "./McpServerForm";
+import { exposureLabels, McpServerForm } from "./McpServerForm";
 import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
 import { Button } from "./components/ui/button";
 import { Switch } from "./components/ui/switch";
 
-
-const exposureLabels: Record<string, [string, string]> = {
-  codemode: ["Code mode", "Callable from codemode scripts; not declared to the model."],
-  deferred: ["Tool search", "Declared once tool_search loads them."],
-  direct: ["Direct", "Declared to the model like built-in tools: the most tokens."],
-  hidden: ["Hidden", "Registered but unreachable."],
-};
 
 function shortState(server: McpServerView): string {
   if (server.error) return "refused";
@@ -28,6 +21,8 @@ function signIn(server: McpServerView): string | undefined {
   if (server.transport !== "http") return undefined;
   if (server.authProvider) return `Sends the token of the Pi provider ${server.authProvider}.`;
   if (server.headers.some(name => name.toLowerCase() === "authorization")) return "Authorization header.";
+  if (server.oauth?.clientId) return `OAuth with the registered client ${server.oauth.clientId}${server.oauth.hasClientSecret ? " (secret set)" : ""}.`;
+  if (server.oauth?.clientRegistration === "cimd") return "OAuth with Pi's client ID metadata document.";
   return "OAuth, when the server asks for it.";
 }
 
@@ -53,7 +48,7 @@ function ServerDetail({ server, busy, onExposure, actions, children }: {
       {Object.entries(exposureLabels).map(([value, [label]]) => <option key={value} value={value}>{label}{value === "codemode" ? " (default)" : ""}</option>)}
     </select>
     <p className="muted">{exposureLabels[server.exposure]?.[1]}</p>
-    {server.toolExposureRules > 0 && <p className="muted">{server.toolExposureRules} toolExposure rule(s) keep their own exposure.</p>}
+    {Object.keys(server.toolExposure).length > 0 && <p className="muted">Own exposure: {Object.entries(server.toolExposure).map(([tool, exposure]) => `${tool} → ${exposureLabels[exposure]?.[0] ?? exposure}`).join(", ")}</p>}
   </>]);
   if (server.timeout) rows.push(["Timeout", `${server.timeout} s`]);
   return <section className="detail" aria-labelledby="server-title">
@@ -197,7 +192,7 @@ export function McpTab({ project }: { project?: string }) {
 
   let detail: ReactNode = <section className="detail"><p className="empty">Select a server to see its details.</p></section>;
   if (form) {
-    detail = <McpServerForm key={form.mode + form.scope + (current?.name ?? "")} server={form.mode === "edit" ? current : undefined} busy={busy} error={formError}
+    detail = <McpServerForm key={form.mode + form.scope + (current?.name ?? "")} server={form.mode === "edit" ? current : undefined} busy={busy} error={formError} scope={form.scope}
       title={form.mode === "add" ? (form.scope === "project" ? "Add MCP server to this project" : "Add MCP server") : undefined}
       onSave={(name, input) => void submit(name, input)} onCancel={() => setForm(undefined)} />;
   } else if (selected === "codemode" && codemode && global) {
