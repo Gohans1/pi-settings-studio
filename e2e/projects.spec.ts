@@ -28,8 +28,9 @@ test("a project is picked, trusted, and its own settings.json edited", async ({ 
   await page.getByRole("option", { name: project, exact: true }).click();
   const trust = page.getByRole("region", { name: "Project trust" });
   await expect(trust).toContainText("T3Code ignores this project's .pi folder");
+  await expect(trust.getByRole("button", { name: "Do not trust" })).toHaveCount(0);
   await trust.getByRole("button", { name: "Trust this project" }).click();
-  await expect(trust).toContainText("loads in T3Code");
+  await expect(trust).toHaveCount(0);
   expect(JSON.parse(await readFile(join(agent, "trust.json"), "utf8"))[project]).toBe(true);
 
   await page.getByRole("radio", { name: "This project" }).check();
@@ -43,7 +44,37 @@ test("a project is picked, trusted, and its own settings.json edited", async ({ 
   expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8"))).toEqual({ retry: { maxRetries: 3 } });
   await page.reload();
   await expect(page.getByRole("combobox", { name: "Project", exact: true })).toContainText(project);
+  await expect(trust).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+for (const source of ["default", "project", "parent"] as const) {
+  test(`trusted projects have no trust banner or opt-out action (${source})`, async ({ page }) => {
+    await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProjectTrust: source === "default" ? "always" : "ask" }));
+    if (source !== "default") await writeFile(join(agent, "trust.json"), JSON.stringify({ [source === "project" ? project : root]: true }));
+    await page.goto(server.url + "#general");
+    await page.getByRole("combobox", { name: "Project", exact: true }).click();
+    await page.getByRole("option", { name: project, exact: true }).click();
+    await expect(page.getByRole("radio", { name: "This project" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Project trust" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Do not trust" })).toHaveCount(0);
+    await page.getByRole("tab", { name: "MCP", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Project trust" })).toHaveCount(0);
+  });
+}
+
+test("an explicit block still warns even when projects are trusted by default", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProjectTrust: "always" }));
+  await writeFile(join(agent, "trust.json"), JSON.stringify({ [project]: false }));
+  await page.goto(server.url + "#general");
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: project, exact: true }).click();
+  const trust = page.getByRole("region", { name: "Project trust" });
+  await expect(trust).toContainText("T3Code ignores this project's .pi folder");
+  await expect(trust).toContainText("Not trusted in Pi's trust.json");
+  await trust.getByRole("button", { name: "Trust this project" }).click();
+  await expect(trust).toHaveCount(0);
+  expect(JSON.parse(await readFile(join(agent, "trust.json"), "utf8"))[project]).toBe(true);
 });
 
 test("project model defaults and raw JSON write the project's settings.json", async ({ page }) => {

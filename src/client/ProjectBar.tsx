@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CircleCheck, Folder, TriangleAlert } from "lucide-react";
+import { Folder, TriangleAlert } from "lucide-react";
 import type { ProjectView, TrustView } from "../shared/projects";
 import { loadProjects, saveTrust } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
@@ -43,17 +43,17 @@ export function TrustPanel({ project, trust, onChange }: { project: string; trus
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save the trust decision."); }
     finally { setBusy(false); }
   }
+  // Trust needs attention only when it prevents the project's configuration from loading.
+  if (trust.loadsInT3Code) return null;
   const why = trust.decision !== undefined
-    ? `${trust.decision ? "Trusted" : "Not trusted"} in Pi's trust.json${trust.savedFor && trust.savedFor !== project ? ` through ${home(trust.savedFor)}` : ""}`
+    ? `Not trusted in Pi's trust.json${trust.savedFor && trust.savedFor !== project ? ` through ${home(trust.savedFor)}` : ""}`
     : `No saved decision; defaultProjectTrust is "${trust.defaultTrust}"`;
-  // A landmark rather than an alert: it states the chosen project's trust, it does not interrupt.
   return <Alert role="region" aria-label="Project trust" className="mb-5">
-    {trust.loadsInT3Code ? <CircleCheck aria-hidden="true" /> : <TriangleAlert aria-hidden="true" />}
-    <AlertTitle>{trust.loadsInT3Code ? "This project's .pi folder loads in T3Code." : "T3Code ignores this project's .pi folder."}</AlertTitle>
-    <AlertDescription>{why}.{!trust.loadsInT3Code && " T3Code cannot ask for trust, so project settings, MCP servers and resources stay unused until the project is trusted."}</AlertDescription>
+    <TriangleAlert aria-hidden="true" />
+    <AlertTitle>T3Code ignores this project's .pi folder.</AlertTitle>
+    <AlertDescription>{why}. T3Code cannot ask for trust, so project settings, MCP servers and resources stay unused until the project is trusted.</AlertDescription>
     <div className="actions col-start-2 mt-2">
-      {!trust.loadsInT3Code && <Button size="sm" disabled={busy} onClick={() => void decide(true)}>Trust this project</Button>}
-      {trust.decision !== false && <Button size="sm" variant="outline" disabled={busy} onClick={() => void decide(false)}>Do not trust</Button>}
+      <Button size="sm" disabled={busy} onClick={() => void decide(true)}>Trust this project</Button>
       {trust.decision !== undefined && trust.savedFor === project && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void decide(null)}>Forget the decision</Button>}
     </div>
     {error && <FieldError className="col-start-2 mt-2">{error}</FieldError>}
