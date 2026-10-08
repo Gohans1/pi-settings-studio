@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Empty, EmptyDescription } from "./components/ui/empty";
 import { Field, FieldLabel } from "./components/ui/field";
+import { Spinner } from "./components/ui/spinner";
 import { OptionSelect } from "./OptionSelect";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -47,20 +48,20 @@ export function SystemPromptTab({ project }: { project?: string }) {
     <PageHeader title="System prompt" description="Exactly what Pi recorded for a session: the prompt sections and tool declarations the model received. Read-only." />
     <Feedback message={message} onDismiss={() => setMessage("")} />
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not show the prompt</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    {!sessions ? !error && <div className="loading" aria-busy="true">Reading sessions…</div>
+    {!sessions ? !error && <div className="loading" aria-busy="true"><Spinner />Reading sessions…</div>
       : !project ? <Alert role="note"><AlertDescription>Choose a project at the top to see its sessions.</AlertDescription></Alert>
       : !projectSessions.length ? <Empty><EmptyDescription>This project has no Pi sessions yet. Start a thread in T3Code, then come back.</EmptyDescription></Empty>
       : <>
-        <Field className="prompt-pickers"><FieldLabel htmlFor="prompt-session">Session</FieldLabel>
+        <Field className="mb-5 max-w-180"><FieldLabel htmlFor="prompt-session">Session</FieldLabel>
           <OptionSelect id="prompt-session" className="w-full" value={sessionId} onChange={setSessionId}
             options={projectSessions.map(session => ({ value: session.id, label: `${new Date(session.modified).toLocaleString()} — ${session.title}` }))} /></Field>
-        {!prompt ? !error && sessionId && <div className="loading" aria-busy="true">Reading the session…</div>
+        {!prompt ? !error && sessionId && <div className="loading" aria-busy="true"><Spinner />Reading the session…</div>
           : !prompt.text && !prompt.tools.length ? <Alert role="note"><AlertDescription>This session has no recorded system prompt. Sessions record it on their first request.</AlertDescription></Alert>
           : <section className="prompt" aria-labelledby="recorded-prompt">
             {/* The outline for the sections' h3 headings (Base UI's Accordion.Header). */}
             <h2 id="recorded-prompt" className="sr-only">Recorded prompt</h2>
             <div className="prompt-summary"><span>{prompt.sections.length} sections · {prompt.tools.length} tools · {count(prompt.text)}</span>
-              <Button variant="outline" size="sm" onClick={() => void copy()}><Copy aria-hidden="true" />Copy full prompt</Button></div>
+              <Button variant="outline" size="sm" onClick={() => void copy()}><Copy aria-hidden="true" data-icon="inline-start" />Copy full prompt</Button></div>
             {/* Closed sections stay in the page (hidden until found), so the browser's find still reaches them. */}
             <Accordion multiple hiddenUntilFound defaultValue={["#base"]}>
               {prompt.content && <AccordionItem value="#base"><AccordionTrigger><span>Base prompt <span className="muted">{count(prompt.content)}</span></span></AccordionTrigger>

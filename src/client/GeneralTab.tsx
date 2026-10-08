@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { ChevronDown, CircleAlert, FileJson, History, RotateCcw } from "lucide-react";
 import { fields, sections, type Field, type SettingsChange, type SettingsView } from "../shared/settings";
 import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { FieldGroup, FieldSeparator } from "./components/ui/field";
 import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -17,6 +19,7 @@ import { KeybindingsPanel } from "./KeybindingsPanel";
 import { SearchField } from "./SearchField";
 import { ScopeChoice } from "./ScopeChoice";
 import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Spinner } from "./components/ui/spinner";
 
 const KEYBINDINGS = { id: "keybindings", title: "Keyboard shortcuts" };
 
@@ -143,7 +146,7 @@ export function GeneralTab({ project }: { project?: string }) {
   const needle = query.trim().toLowerCase();
   const results = fields.filter(field => field.section !== "modelDefaults" && (!needle || (field.label + " " + field.key + " " + field.help).toLowerCase().includes(needle)));
   const shownSections = [...sections.filter(section => results.some(field => field.section === section.id)), ...(scope === "global" && !needle ? [KEYBINDINGS] : [])];
-  const [currentGroup, setCurrentGroup] = useCurrentGroup(view && !restore ? shownSections.map(section => section.id) : []);
+  const [currentGroup, setCurrentGroup] = useCurrentGroup(view ? shownSections.map(section => section.id) : []);
   async function closeRaw(saved: boolean) {
     setRaw(false);
     if (!saved) return;
@@ -165,6 +168,7 @@ export function GeneralTab({ project }: { project?: string }) {
       invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
       onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;
   };
+  const rows = (list: Field[]) => <FieldGroup>{list.map((field, index) => <Fragment key={field.key}>{index > 0 && <FieldSeparator />}{row(field)}</Fragment>)}</FieldGroup>;
   const description = scope === "project" ? "Settings for this project only. They override the global ones while the project is trusted." : "Pi core settings shared by every project.";
   if (raw) return <>
     <PageHeader title="General" description={description} />
@@ -174,25 +178,23 @@ export function GeneralTab({ project }: { project?: string }) {
     <PageHeader title="General" titleRef={title} description={description} files={[view?.path]} actions={<>
       <SearchField label="Search settings" placeholder="Search settings or keys…" value={query} onChange={setQuery} className="w-72 max-sm:w-auto max-sm:min-w-0 max-sm:flex-1" />
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="outline" />}><FileJson aria-hidden="true" />File<ChevronDown aria-hidden="true" /></DropdownMenuTrigger>
+        <DropdownMenuTrigger render={<Button variant="outline" />}><FileJson aria-hidden="true" data-icon="inline-start" />File<ChevronDown aria-hidden="true" data-icon="inline-end" /></DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto">
-          <DropdownMenuItem disabled={busy || !!changes.length} onClick={openRaw}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem>
-          <DropdownMenuItem disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</DropdownMenuItem>
-          {view?.hasBackup && <><DropdownMenuSeparator /><DropdownMenuItem disabled={busy || !!changes.length} onClick={() => setRestore(true)}><History aria-hidden="true" />Restore previous file</DropdownMenuItem></>}
+          <DropdownMenuGroup>
+            <DropdownMenuItem disabled={busy || !!changes.length} onClick={openRaw}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem>
+            <DropdownMenuItem disabled={busy} onClick={() => void refresh()}><RotateCcw aria-hidden="true" />Reload from disk</DropdownMenuItem>
+          </DropdownMenuGroup>
+          {view?.hasBackup && <><DropdownMenuSeparator /><DropdownMenuGroup><DropdownMenuItem disabled={busy || !!changes.length} onClick={() => setRestore(true)}><History aria-hidden="true" />Restore previous file</DropdownMenuItem></DropdownMenuGroup></>}
         </DropdownMenuContent>
       </DropdownMenu>
     </>} />
-    {project && <ScopeChoice value={scope} globalLabel="Global settings" disabled={busy || !!changes.length} onChange={setScopeChoice} />}
+    {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global settings" disabled={busy || !!changes.length} onChange={setScopeChoice} />}
     {scope === "global" && !needle && <PiPanel />}
     <Feedback message={message} onDismiss={() => setMessage("")} />
-    {error && <Alert variant="destructive" className="page-notice"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription>
+    {error && <Alert variant="destructive" className="mb-4"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription>
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>
         <Button variant="outline" size="sm" disabled={busy || !!changes.length} onClick={openRaw}>Edit as JSON</Button></div></Alert>}
-    {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && (restore
-      ? <section className="review" aria-labelledby="restore-title"><h2 id="restore-title">Restore previous file?</h2>
-        <p>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</p>
-        <div className="actions"><Button variant="outline" disabled={busy} onClick={() => setRestore(false)}>Cancel</Button><Button disabled={busy} onClick={() => void recover()}>Restore previous file</Button></div></section>
-      : <div className="settings-layout">
+    {loading ? <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : view && <div className="settings-layout">
         <nav className="section-nav" aria-label="Setting groups">{shownSections.map(section => {
           // What the reader has made of each group: a dot for unsaved edits, else how many keys the file sets.
           const keys = fields.filter(field => field.section === section.id).map(field => field.key);
@@ -206,7 +208,7 @@ export function GeneralTab({ project }: { project?: string }) {
           </a>;
         })}</nav>
         <div className="settings-content">
-          <div className="settings-groups">
+          <div>
             {sections.map(group => {
               const items = results.filter(field => field.section === group.id);
               // A search shows every match; otherwise the advanced rows wait behind the group's toggle,
@@ -215,12 +217,12 @@ export function GeneralTab({ project }: { project?: string }) {
               return items.length > 0 && <section key={group.id} id={"group-" + group.id} className="settings-group" aria-labelledby={"group-" + group.id + "-title"}>
                 <h2 id={"group-" + group.id + "-title"}>{group.title}</h2>
                 {"note" in group && <Alert role="note"><AlertDescription>{group.note}</AlertDescription></Alert>}
-                {items.filter(field => !advanced.includes(field)).map(row)}
-                {advanced.length > 0 && <Disclosure label={`${advanced.length} advanced ${advanced.length === 1 ? "setting" : "settings"}`} className="settings-advanced" hiddenUntilFound
+                {rows(items.filter(field => !advanced.includes(field)))}
+                {advanced.length > 0 && <div className="settings-advanced"><Disclosure label={`${advanced.length} advanced ${advanced.length === 1 ? "setting" : "settings"}`} hiddenUntilFound
                   open={advancedOpen[group.id] ?? advanced.some(field => Object.hasOwn(view.values, field.key))}
                   onOpenChange={open => setAdvancedOpen(current => ({ ...current, [group.id]: open }))}>
-                  {advanced.map(row)}
-                </Disclosure>}
+                  {rows(advanced)}
+                </Disclosure></div>}
               </section>;
             })}
             {!results.length && <Empty><EmptyDescription>No settings match “{query.trim()}”. Try a label such as “model” or “budget”, or a key.</EmptyDescription></Empty>}
@@ -236,7 +238,20 @@ export function GeneralTab({ project }: { project?: string }) {
           {scope === "global" && !needle && <NotHere />}
           <p className="scope-footnote">Saved values apply to new T3Code threads, or after /reload. Unknown keys in the file are kept as they are.</p>
         </div>
-      </div>)}
+      </div>}
+    <AlertDialog open={restore} onOpenChange={setRestore}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Restore previous file?</AlertDialogTitle>
+          <AlertDialogDescription>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          {/* Closes first, so a failure shows on the page rather than behind the dialog. */}
+          <AlertDialogAction disabled={busy} onClick={() => { setRestore(false); void recover(); }}>Restore previous file</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <datalist id="model-ids">{modelIds.map(id => <option key={id} value={id} />)}</datalist>
   </>;
 }

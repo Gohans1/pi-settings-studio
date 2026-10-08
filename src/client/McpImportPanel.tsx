@@ -4,8 +4,9 @@ import type { McpFileView, McpImportPreview, McpServerView } from "../shared/mcp
 import { importMcp, previewMcpImport, type McpTarget } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader } from "./components/ui/card";
 import { Checkbox } from "./components/ui/checkbox";
-import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "./components/ui/field";
 import { Textarea } from "./components/ui/textarea";
 
 const summary = (server: McpServerView) => server.url ?? [server.command, ...(server.args ?? [])].filter(Boolean).join(" ");
@@ -40,6 +41,7 @@ export function McpImportPanel({ target, revision, onImported, onCancel }: {
   const toggle = (name: string, on: boolean) => setChosen(current => { const next = new Set(current); if (on) next.add(name); else next.delete(name); return next; });
   return <form className="detail server-form" aria-label="Import MCP servers" onSubmit={submit}>
     <h2>Import MCP servers{target.scope === "project" ? " to this project" : ""}</h2>
+    <FieldGroup>
     <Field><FieldLabel htmlFor={id}>Pasted configuration</FieldLabel>
       <Textarea id={id} className="field-sizing-fixed font-mono" rows={10} spellCheck={false} value={text} autoComplete="off" aria-describedby={id + "-hint"}
         placeholder={'{ "mcpServers": { … } }  or  [mcp_servers.name] …'} onChange={event => { setText(event.target.value); setPreview(undefined); }} />
@@ -48,16 +50,20 @@ export function McpImportPanel({ target, revision, onImported, onCancel }: {
     {preview && <section aria-label="Preview" className="import-preview">
       <p>Read as {preview.format}. {preview.servers.length} server{preview.servers.length === 1 ? "" : "s"} found.</p>
       {preview.notes.length > 0 && <ul className="notes">{preview.notes.map(note => <li key={note}>{note}</li>)}</ul>}
-      <ul className="import-list">{preview.servers.map(({ server, exists }) => <li key={server.name}>
-        <Field orientation="horizontal"><Checkbox id={`${id}-${server.name}`} checked={chosen.has(server.name)} disabled={!!server.error}
-          onCheckedChange={checked => toggle(server.name, checked)} /><FieldLabel htmlFor={`${id}-${server.name}`}>{server.name}</FieldLabel></Field>
-        <code>{summary(server)}</code>
-        {server.env.length > 0 && <span className="muted">Environment: {server.env.join(", ")}</span>}
-        {server.headers.length > 0 && <span className="muted">Headers: {server.headers.join(", ")}</span>}
-        {exists && !server.error && <Alert role="note"><AlertDescription>Replaces the server of the same name in this file.</AlertDescription></Alert>}
-        {server.error && <span className="text-destructive">Pi refuses it: {server.error}</span>}
-      </li>)}</ul>
+      <ul className="import-list">{preview.servers.map(({ server, exists }) => <li key={server.name}><Card size="sm">
+        <CardHeader>
+          <Field orientation="horizontal"><Checkbox id={`${id}-${server.name}`} checked={chosen.has(server.name)} disabled={!!server.error}
+            onCheckedChange={checked => toggle(server.name, checked)} /><FieldLabel htmlFor={`${id}-${server.name}`}>{server.name}</FieldLabel></Field>
+          <CardDescription><code>{summary(server)}</code>
+            {server.env.length > 0 && <><br />Environment: {server.env.join(", ")}</>}
+            {server.headers.length > 0 && <><br />Headers: {server.headers.join(", ")}</>}</CardDescription>
+        </CardHeader>
+        {(exists || server.error) && <CardContent>{server.error
+          ? <Alert role="note" variant="destructive"><AlertDescription>Pi refuses it: {server.error}</AlertDescription></Alert>
+          : <Alert role="note"><AlertDescription>Replaces the server of the same name in this file.</AlertDescription></Alert>}</CardContent>}
+      </Card></li>)}</ul>
     </section>}
+    </FieldGroup>
     <div className="form-actions">
       {preview ? <Button type="submit" disabled={busy || !chosen.size}>Import {chosen.size} server{chosen.size === 1 ? "" : "s"}</Button>
         : <Button type="button" disabled={busy || !text.trim()} onClick={() => void check()}>Preview</Button>}

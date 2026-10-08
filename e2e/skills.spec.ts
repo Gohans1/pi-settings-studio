@@ -45,6 +45,51 @@ test("skills can be inspected, searched and switched one by one or by group", as
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("closing a file with unsaved changes asks first, and only Discard throws the draft away", async ({ page }) => {
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^alpha/ }).click();
+  await page.getByRole("button", { name: "Edit files of alpha" }).click();
+  const editor = page.getByRole("form", { name: "Edit alpha" });
+  await editor.getByLabel("Content of SKILL.md").fill("Draft.\n");
+  const close = editor.getByRole("button", { name: "Close" });
+  await close.click();
+  const ask = page.getByRole("alertdialog", { name: "Discard the unsaved changes?" });
+  await expect(ask).toContainText("SKILL.md");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await ask.getByRole("button", { name: "Keep editing" }).click();
+  await expect(ask).toBeHidden();
+  await expect(close).toBeFocused();
+  await expect(editor.getByLabel("Content of SKILL.md")).toHaveValue("Draft.\n");
+  await close.click();
+  await ask.getByRole("button", { name: "Discard" }).click();
+  await expect(editor).toBeHidden();
+  expect(await readFile(join(agent, "skills/alpha/SKILL.md"), "utf8")).toBe(skill("alpha", "Alpha does things."));
+});
+
+test("a new skill without a name or description says so under each field and creates nothing", async ({ page }) => {
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: "New skill" }).click();
+  const create = page.getByRole("form", { name: "New skill" });
+  await create.getByRole("button", { name: "Create skill" }).click();
+  await expect(create.getByLabel("Name")).toBeFocused();
+  await expect(create).toContainText("Name is required.");
+  await expect(create).toContainText("Description is required.");
+  await expect(page.getByText("3 of 3 skills on")).toBeVisible();
+});
+
+test("while a file has unsaved changes, the skill's other files wait and say why", async ({ page }) => {
+  await mkdir(join(agent, "skills/alpha/references"), { recursive: true });
+  await writeFile(join(agent, "skills/alpha/references/notes.md"), "Old notes.\n");
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^alpha/ }).click();
+  await page.getByRole("button", { name: "Edit files of alpha" }).click();
+  const editor = page.getByRole("form", { name: "Edit alpha" });
+  await expect(editor).not.toContainText("Save or discard the changes to open another file.");
+  await editor.getByLabel("Content of SKILL.md").fill("Draft.\n");
+  await expect(editor.getByRole("button", { name: "references/notes.md" })).toBeDisabled();
+  await expect(editor).toContainText("Save or discard the changes to open another file.");
+});
+
 test("a skill and its files are edited, package skills are read-only, and a new skill is created", async ({ page }) => {
   await mkdir(join(agent, "skills/alpha/references"), { recursive: true });
   await writeFile(join(agent, "skills/alpha/references/notes.md"), "Old notes.\n");

@@ -25,3 +25,4 @@
 - [x] Model discovery, resource editors, custom sessionDir, MCP sign-in state and log, credential check, Update Pi.
 - [x] "Not editable here" notes in the app and in docs/parity.md.
 - [x] Skills: remove with Undo; model invocation for a whole group.
+- [x] Every component from the shadcn registry, kept as shipped and checked by @shadcn/lint.

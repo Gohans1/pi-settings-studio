@@ -1,6 +1,6 @@
 import type { Field } from "../shared/settings";
 import { Button } from "./components/ui/button";
-import { FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
+import { Field as FieldRow, FieldContent, FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Switch } from "./components/ui/switch";
 import { Textarea } from "./components/ui/textarea";
@@ -69,18 +69,20 @@ export function SettingField({ field, value, inherited, overridden, invalid, sco
   const source = disabled ? "Global only: Pi ignores it in a project"
     : overridden ? (scope === "project" ? "Set in this project" : `Set in settings.json${field.defaultValue === undefined ? "" : ` · Pi's default is ${shown(field.defaultValue)}`}`)
     : scope === "project" ? "Inherited" : "";
-  return <div className="setting-row" id={"row-" + field.key}>
-    <div className="setting-label">
+  // A shadcn settings row: label and help beside the control, stacked when the group is narrow; the startup
+  // tools checklist takes the whole row.
+  return <FieldRow orientation={field.kind === "tools" ? "vertical" : "responsive"} id={"row-" + field.key} data-invalid={invalid || undefined}>
+    <FieldContent>
       <FieldLabel id={id + "-label"} htmlFor={["boolean", "thinkingMap", "compactionMap", "theme", "tools"].includes(field.kind) ? undefined : id}>{field.label}</FieldLabel>
       <code className="setting-key" translate="no">{field.key}</code>
       <FieldDescription id={id + "-help"} className="max-w-[62ch]">{field.help}</FieldDescription>
-    </div>
-    <div className="setting-control">
+    </FieldContent>
+    <div className="setting-control @md/field-group:shrink-0 @md/field-group:basis-[min(22rem,45%)]">
       {control}
       {source && <div className="field-meta"><span data-set={overridden && !disabled}>{source}</span>
         {overridden && !disabled && <Button type="button" variant="ghost" size="xs" onClick={onReset} aria-label={`${scope === "project" ? "Use inherited" : "Use default"} for ${field.label}`}>{scope === "project" ? "Use inherited" : "Use default"}</Button>}
       </div>}
       {invalid && <FieldError id={id + "-error"}>{fixes[field.kind]}</FieldError>}
     </div>
-  </div>;
+  </FieldRow>;
 }

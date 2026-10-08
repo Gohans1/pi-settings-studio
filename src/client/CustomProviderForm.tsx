@@ -3,10 +3,12 @@ import { CircleAlert, X } from "lucide-react";
 import type { CustomModel, CustomProviderInput, CustomProviderView } from "../shared/models";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
+import { Card, CardContent } from "./components/ui/card";
 import { Checkbox } from "./components/ui/checkbox";
-import { Field, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { OptionSelect } from "./OptionSelect";
+import { useFieldErrors } from "./useFieldErrors";
 import { NamedRows } from "./McpServerForm";
 import { discoverCustomModels } from "./api";
 
@@ -38,6 +40,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
   const [listError, setListError] = useState("");
   const title = provider ? `Edit ${provider.id}` : "Add custom provider";
   const id = useId();
+  const { errors, check, clear, describe } = useFieldErrors({ [id + "id"]: "Use letters, digits, ., _ and -, starting with a letter or digit." });
   const headerInput = () => headers.filter(row => row.name.trim()).map(row => ({ name: row.name.trim(), ...(row.value ? { value: row.value } : {}) }));
   async function listModels() {
     setListing(true); setListError("");
@@ -49,8 +52,9 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
   }
   const known = new Set(models.map(row => row.id.trim()));
   const update = (index: number, patch: Partial<ModelRow>) => setModels(rows => rows.map((row, i) => i === index ? { ...row, ...patch } : row));
-  function submit(event: FormEvent) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!check(event.currentTarget)) return;
     const number = (value: string) => value ? Number(value) : undefined;
     onSave(providerId.trim(), {
       ...(name.trim() ? { name: name.trim() } : {}), ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}), ...(api ? { api } : {}),
@@ -62,12 +66,14 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
         ...(number(row.contextWindow) ? { contextWindow: number(row.contextWindow) } : {}), ...(number(row.maxTokens) ? { maxTokens: number(row.maxTokens) } : {}) })),
     });
   }
-  return <form className="detail server-form" aria-label={title} onSubmit={submit}>
+  return <form className="detail server-form" aria-label={title} onSubmit={submit} onInput={clear} noValidate>
     <h2>{title}</h2>
     <p className="muted">An endpoint that speaks an API Pi supports (Ollama, LM Studio, vLLM, a proxy). Pi checks the entry before it is saved.</p>
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    {!provider && <Field><FieldLabel htmlFor={id + "id"}>Provider ID</FieldLabel>
-      <Input id={id + "id"} value={providerId} required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" autoComplete="off" spellCheck={false} aria-describedby={id + "id-help"} onChange={e => setProviderId(e.target.value)} />
+    <FieldGroup>
+    {!provider && <Field data-invalid={!!errors[id + "id"] || undefined}><FieldLabel htmlFor={id + "id"}>Provider ID</FieldLabel>
+      <Input id={id + "id"} value={providerId} required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" autoComplete="off" spellCheck={false} {...describe(id + "id", id + "id-help")} onChange={e => setProviderId(e.target.value)} />
+      <FieldError id={id + "id-error"}>{errors[id + "id"]}</FieldError>
       <FieldDescription id={id + "id-help"}>Used in model names such as {providerId || "ollama"}/model-id. An existing ID changes that built-in provider.</FieldDescription></Field>}
     <Field><FieldLabel htmlFor={id + "name"}>Display name</FieldLabel><Input id={id + "name"} value={name} placeholder={providerId || "Optional"} onChange={e => setName(e.target.value)} /></Field>
     <Field><FieldLabel htmlFor={id + "url"}>Base URL</FieldLabel><Input id={id + "url"} value={baseUrl} placeholder="http://localhost:11434/v1" autoComplete="off" spellCheck={false} onChange={e => setBaseUrl(e.target.value)} /></Field>
@@ -83,22 +89,24 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
       <div className="model-rows">{models.map((row, index) => <div className="model-row" key={index}>
         <Input aria-label={`Model ID ${index + 1}`} value={row.id} placeholder="model-id" spellCheck={false} onChange={e => update(index, { id: e.target.value })} />
         <Input aria-label={`Model name ${index + 1}`} value={row.name} placeholder="Display name" onChange={e => update(index, { name: e.target.value })} />
-        <Input aria-label={`Context window ${index + 1}`} type="number" min={1} value={row.contextWindow} placeholder="Context" onChange={e => update(index, { contextWindow: e.target.value })} />
-        <Input aria-label={`Max output tokens ${index + 1}`} type="number" min={1} value={row.maxTokens} placeholder="Max out" onChange={e => update(index, { maxTokens: e.target.value })} />
+        <Input aria-label={`Context window ${index + 1}`} type="number" min={1} value={row.contextWindow} placeholder="Context" aria-invalid={!!errors[`Context window ${index + 1}`] || undefined} onChange={e => update(index, { contextWindow: e.target.value })} />
+        <Input aria-label={`Max output tokens ${index + 1}`} type="number" min={1} value={row.maxTokens} placeholder="Max out" aria-invalid={!!errors[`Max output tokens ${index + 1}`] || undefined} onChange={e => update(index, { maxTokens: e.target.value })} />
         <Field orientation="horizontal" className="w-auto"><Checkbox id={`${id}reasoning-${index}`} checked={row.reasoning} onCheckedChange={reasoning => update(index, { reasoning })} /><FieldLabel htmlFor={`${id}reasoning-${index}`}>Reasoning</FieldLabel></Field>
         <Field orientation="horizontal" className="w-auto"><Checkbox id={`${id}image-${index}`} checked={row.image} onCheckedChange={image => update(index, { image })} /><FieldLabel htmlFor={`${id}image-${index}`}>Images</FieldLabel></Field>
         <Button type="button" variant="ghost" size="icon" aria-label={`Remove model ${row.id || index + 1}`} onClick={() => setModels(rows => rows.filter((_, i) => i !== index))}><X aria-hidden="true" /></Button>
       </div>)}</div>
+      <FieldError errors={models.flatMap((_, index) => [errors[`Context window ${index + 1}`], errors[`Max output tokens ${index + 1}`]]).filter(Boolean).map(message => ({ message }))} />
       <div className="actions">
         <Button type="button" variant="outline" size="sm" onClick={() => setModels(rows => [...rows, toRow()])}>Add model</Button>
         <Button type="button" variant="outline" size="sm" disabled={listing || !baseUrl.trim() || !api} onClick={() => void listModels()}>{listing ? "Listing…" : "List models from the endpoint"}</Button>
       </div>
       {listError && <FieldError>{listError}</FieldError>}
-      {found && <div role="group" aria-label="Models the endpoint offers" className="found-models">
-        {found.length ? <ul>{found.map(model => <li key={model.id}><Field orientation="horizontal" className="flex-wrap">
+      {found && <Card size="sm"><CardContent><FieldSet>
+        <FieldLegend variant="label">Models the endpoint offers</FieldLegend>
+        {found.length ? <ul className="found-models">{found.map(model => <li key={model.id}><Field orientation="horizontal" className="flex-wrap">
           <Checkbox id={`${id}found-${model.id}`} checked={known.has(model.id) || picked.has(model.id)} disabled={known.has(model.id)}
             onCheckedChange={checked => setPicked(current => { const next = new Set(current); if (checked) next.add(model.id); else next.delete(model.id); return next; })} />
-          <FieldLabel htmlFor={`${id}found-${model.id}`} className="flex-wrap font-normal"><code>{model.id}</code>{model.name && <span className="muted">{model.name}</span>}
+          <FieldLabel htmlFor={`${id}found-${model.id}`} className="flex-wrap"><code>{model.id}</code>{model.name && <span className="muted">{model.name}</span>}
             {model.contextWindow && <span className="muted">{model.contextWindow.toLocaleString("en")} context</span>}
             {known.has(model.id) && <span className="muted">in the list</span>}</FieldLabel>
         </Field></li>)}</ul> : <FieldDescription>The endpoint lists no models.</FieldDescription>}
@@ -110,10 +118,11 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
           <Button type="button" variant="outline" size="sm" onClick={() => setFound(undefined)}>Close</Button>
         </div>
         <FieldDescription>Uses the stored key and headers only while the base URL is unchanged. A key that is a command is not run.</FieldDescription>
-      </div>}
+      </FieldSet></CardContent></Card>}
       <FieldDescription>Other model fields (cost, compat, thinking maps) stay as they are in the file.</FieldDescription>
     </FieldSet>
     {provider && provider.otherKeys.length > 0 && <FieldDescription>Kept as they are: {provider.otherKeys.join(", ")}.</FieldDescription>}
+    </FieldGroup>
     <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save provider"}</Button>
       {onRemove && <Button type="button" variant="destructive" disabled={busy} onClick={onRemove} aria-label={`Remove ${provider?.id}`}>Remove</Button>}
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>

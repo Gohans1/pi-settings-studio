@@ -2,7 +2,7 @@ import { Disclosure } from "./Disclosure";
 
 /** What this app cannot change, and where it is changed instead. */
 export function NotHere() {
-  return <Disclosure label="Not editable here" className="not-here">
+  return <div className="not-here"><Disclosure label="Not editable here">
     <ul>
       <li><strong>Environment variables</strong> such as <code>PI_CODING_AGENT_DIR</code>, <code>PI_CODING_AGENT_SESSION_DIR</code>, <code>PI_PROGRAM_STATUS</code> and provider keys like <code>OPENAI_API_KEY</code>: they belong to the environment T3Code starts Pi in. Check credential only sees this app's environment.</li>
       <li><strong>Command-line options</strong> such as <code>--model</code>, <code>--tools</code>, <code>--session-dir</code> and <code>--no-mcp</code>: whatever launches Pi chooses them for each run.</li>
@@ -12,5 +12,5 @@ export function NotHere() {
       <li><strong>Settings of third-party extensions</strong> kept in their own files, and <strong>T3Code's own settings</strong>.</li>
       <li><strong>Stored keys and tokens</strong>: write-only on purpose; they are never shown.</li>
     </ul>
-  </Disclosure>;
+  </Disclosure></div>;
 }

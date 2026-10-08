@@ -1,14 +1,18 @@
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { CircleAlert, TriangleAlert, X } from "lucide-react";
 import type { ModelScopeView, ModelSummary, ProviderView } from "../shared/models";
 import type { SettingsChange, SettingsView } from "../shared/settings";
 import { checkModelScope, loadModelIds, loadModels, loadSettings, saveSettings } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
-import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
+import { Spinner } from "./components/ui/spinner";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator, ItemTitle } from "./components/ui/item";
 import { OptionSelect } from "./OptionSelect";
 import { ScopeChoice } from "./ScopeChoice";
+import { IconButton } from "./Workbench";
 
 const LEVELS = [{ value: "", label: "Pi's default (medium)" }, ...["off", "minimal", "low", "medium", "high", "xhigh", "max"].map(level => ({ value: level, label: level }))];
 const hasGlob = (text: string) => /[*?[]/.test(text);
@@ -19,9 +23,9 @@ const misses = {
   "no-match": "No model matches",
 };
 
-/** A value Pi may not accept: the icon carries the tone, the text stays readable. */
+/** A value Pi may not accept: the icon carries the tone. */
 function Warning({ id, children }: { id: string; children: React.ReactNode }) {
-  return <FieldDescription id={id} className="flex gap-2 text-foreground"><TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" /><span>{children}</span></FieldDescription>;
+  return <FieldDescription id={id}><TriangleAlert aria-hidden="true" className="me-1.5 inline size-4 align-text-bottom text-warning" />{children}</FieldDescription>;
 }
 
 /** enabledModels as rows: what each pattern selects among the providers that are set up, and an adder. */
@@ -37,16 +41,21 @@ function EnabledModels({ patterns, scope, ids, inherited, onChange }: {
   // Enter adds the pattern here instead of submitting the whole form.
   const onKey = (event: KeyboardEvent) => { if (event.key === "Enter") { event.preventDefault(); add(); } };
   const matched = (pattern: string) => scope?.patterns.find(entry => entry.pattern === pattern);
-  return <FieldSet className="gap-3">
+  return <FieldSet>
     <FieldLegend variant="label">Enabled models</FieldLegend>
-    {patterns.length ? <ul className="pattern-list">{patterns.map(pattern => {
+    {patterns.length ? <ItemGroup>{patterns.map((pattern, index) => {
       const match = matched(pattern);
-      return <li key={pattern}>
-        <code translate="no">{pattern}</code>
-        <span className="muted" title={match?.examples.join(", ") || undefined}>{match && (match.matches ? plural(match.matches, "model", "models") : misses[match.reason ?? "no-match"])}</span>
-        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove ${pattern}`} title="Remove" onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></Button>
-      </li>;
-    })}</ul> : <FieldDescription>{inherited?.length ? `None here, so the global list applies: ${inherited.join(", ")}.` : "None: every model that has a credential."}</FieldDescription>}
+      const count = match && (match.matches ? plural(match.matches, "model", "models") : misses[match.reason ?? "no-match"]);
+      return <Fragment key={pattern}>{index > 0 && <ItemSeparator aria-hidden="true" />}<Item size="xs" role="listitem">
+        <ItemContent>
+          <ItemTitle><code translate="no">{pattern}</code></ItemTitle>
+          <ItemDescription>{match?.examples.length
+            ? <Tooltip><TooltipTrigger render={<span />}>{count}</TooltipTrigger><TooltipContent>{match.examples.join(", ")}</TooltipContent></Tooltip>
+            : count}</ItemDescription>
+        </ItemContent>
+        <ItemActions><IconButton type="button" label={`Remove ${pattern}`} onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></IconButton></ItemActions>
+      </Item></Fragment>;
+    })}</ItemGroup> : <FieldDescription>{inherited?.length ? `None here, so the global list applies: ${inherited.join(", ")}.` : "None: every model that has a credential."}</FieldDescription>}
     <div className="pattern-add">
       <Input aria-label="Model or pattern" list="enabled-model-options" value={text} placeholder="anthropic/* or provider/model" autoComplete="off" spellCheck={false}
         onChange={event => setText(event.target.value)} onKeyDown={onKey} />
@@ -139,9 +148,10 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
   return <section className="detail server-form" aria-labelledby="defaults-title">
     <header><h2 id="defaults-title">Defaults</h2>
       <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p></header>
-    {project && <ScopeChoice value={scope} globalLabel="Global defaults" disabled={busy} onChange={setScopeChoice} />}
+    {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global defaults" disabled={busy} onChange={setScopeChoice} />}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
+    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
+      <FieldGroup>
       <Field><FieldLabel htmlFor="default-provider">Default provider</FieldLabel>
         <Input id="default-provider" value={provider} list="default-provider-options" placeholder={String(inherited("defaultProvider") ?? "Automatic")} autoComplete="off" spellCheck={false}
           aria-describedby={providerWarning ? "provider-warning" : undefined} onChange={event => setProvider(event.target.value)} />
@@ -163,6 +173,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
         <OptionSelect id="default-thinking" className="w-full" options={LEVELS} value={thinking} onChange={setThinking} aria-describedby="default-thinking-help" />
         <FieldDescription id="default-thinking-help">Pi limits the level to what the model supports.</FieldDescription></Field>
       <EnabledModels patterns={enabled} scope={modelScope} ids={ids} inherited={inheritedEnabled} onChange={setEnabled} />
+      </FieldGroup>
       <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save defaults"}</Button></div>
     </form>}
   </section>;

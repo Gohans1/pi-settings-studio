@@ -7,6 +7,7 @@ import { Button } from "./components/ui/button";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Empty, EmptyDescription } from "./components/ui/empty";
 import { Switch } from "./components/ui/switch";
+import { Spinner } from "./components/ui/spinner";
 import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -135,12 +136,12 @@ export function SkillsTab({ project }: { project?: string }) {
   }
   return <>
     <PageHeader title="Skills" description="Skills Pi advertises to the model. Changes apply to new T3Code threads, or after /reload."
-      actions={<Button variant="outline" onClick={() => { setMode("new"); setSelected(undefined); }}><Plus aria-hidden="true" />New skill</Button>} />
+      actions={<Button variant="outline" onClick={() => { setMode("new"); setSelected(undefined); }}><Plus aria-hidden="true" data-icon="inline-start" />New skill</Button>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => void revert(undo) }} />
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription>
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></Alert>}
-    {!view ? !error && <div className="loading" aria-busy="true">Reading skills…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode(undefined); }} backLabel="All skills" list={<section aria-label="Skills list">
+    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading skills…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode(undefined); }} backLabel="All skills" list={<section aria-label="Skills list">
       <div className="list-search"><SearchField label="Search skills" placeholder="Search skills…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned"><li><ListItem selected={mode === "folders"} onSelect={() => { setMode("folders"); setSelected(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds skills" /></li></ul>
       <p className="list-count">{skills.filter(skill => skill.enabled).length} of {skills.length} skills on{shadowed > 0 && `, ${shadowed} not loaded (same name)`}</p>

@@ -5,11 +5,12 @@ import { loadProviders } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Checkbox } from "./components/ui/checkbox";
-import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Disclosure } from "./Disclosure";
 import { OptionSelect } from "./OptionSelect";
+import { useFieldErrors } from "./useFieldErrors";
 
 export const exposureLabels: Record<string, [string, string]> = {
   codemode: ["Code mode", "Callable from codemode scripts; not declared to the model."],
@@ -144,27 +145,31 @@ export function McpServerForm({ server, busy, error, title: heading, scope = "gl
   const set = (patch: Partial<Draft>) => setDraft(current => ({ ...current, ...patch }));
   const title = heading ?? (server ? `Edit ${server.name}` : "Add MCP server");
   const id = useId();
-  function submit(event: FormEvent) {
+  const { errors, check, clear, describe } = useFieldErrors({ [id + "name"]: "Use letters, digits, _ and -." });
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSave(draft.name.trim(), toInput(draft, scope));
+    if (check(event.currentTarget)) onSave(draft.name.trim(), toInput(draft, scope));
   }
-  return <form className="detail server-form" aria-label={title} onSubmit={submit}>
+  return <form className="detail server-form" aria-label={title} onSubmit={submit} onInput={clear} noValidate>
     <h2>{title}</h2>
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    {!server && <Field><FieldLabel htmlFor={id + "name"}>Name</FieldLabel><Input id={id + "name"} value={draft.name} required pattern="[A-Za-z0-9_-]+" title="Letters, digits, _ and -" autoComplete="off" spellCheck={false}
-      onChange={event => set({ name: event.target.value })} /></Field>}
+    <FieldGroup>
+    {!server && <Field data-invalid={!!errors[id + "name"] || undefined}><FieldLabel htmlFor={id + "name"}>Name</FieldLabel><Input id={id + "name"} value={draft.name} required pattern="[A-Za-z0-9_\-]+" autoComplete="off" spellCheck={false}
+      {...describe(id + "name")} onChange={event => set({ name: event.target.value })} /><FieldError id={id + "name-error"}>{errors[id + "name"]}</FieldError></Field>}
     <Field><FieldLabel htmlFor={id + "transport"}>Transport</FieldLabel>
       <OptionSelect id={id + "transport"} className="w-full" value={draft.transport} onChange={transport => set({ transport })}
         options={[{ value: "stdio", label: "Command (stdio)" }, { value: "http", label: "URL (streamable HTTP)" }] as const} /></Field>
     {draft.transport === "stdio" ? <>
-      <Field><FieldLabel htmlFor={id + "command"}>Command</FieldLabel><Input id={id + "command"} value={draft.command} required placeholder="npx" autoComplete="off" spellCheck={false} onChange={event => set({ command: event.target.value })} /></Field>
+      <Field data-invalid={!!errors[id + "command"] || undefined}><FieldLabel htmlFor={id + "command"}>Command</FieldLabel><Input id={id + "command"} value={draft.command} required placeholder="npx" autoComplete="off" spellCheck={false}
+        {...describe(id + "command")} onChange={event => set({ command: event.target.value })} /><FieldError id={id + "command-error"}>{errors[id + "command"]}</FieldError></Field>
       <Field><FieldLabel htmlFor={id + "args"}>Arguments</FieldLabel>
         <Textarea id={id + "args"} rows={3} value={draft.args} placeholder={"-y\n@modelcontextprotocol/server-filesystem"} spellCheck={false} aria-describedby={id + "args-hint"} onChange={event => set({ args: event.target.value })} />
         <FieldDescription id={id + "args-hint"}>One argument per line. Not a shell command. ‹hidden N› stands for a stored secret: keep it to keep the value.</FieldDescription></Field>
       <Field><FieldLabel htmlFor={id + "cwd"}>Working directory</FieldLabel><Input id={id + "cwd"} value={draft.cwd} placeholder="Session directory" autoComplete="off" spellCheck={false} onChange={event => set({ cwd: event.target.value })} /></Field>
       <FieldSet><FieldLegend variant="label">Environment</FieldLegend><NamedRows kind="variable" rows={draft.env} onChange={env => set({ env })} /></FieldSet>
     </> : <>
-      <Field><FieldLabel htmlFor={id + "url"}>URL</FieldLabel><Input id={id + "url"} value={draft.url} required type="text" placeholder="https://example.com/mcp" autoComplete="off" spellCheck={false} onChange={event => set({ url: event.target.value })} /></Field>
+      <Field data-invalid={!!errors[id + "url"] || undefined}><FieldLabel htmlFor={id + "url"}>URL</FieldLabel><Input id={id + "url"} value={draft.url} required type="text" placeholder="https://example.com/mcp" autoComplete="off" spellCheck={false}
+        {...describe(id + "url")} onChange={event => set({ url: event.target.value })} /><FieldError id={id + "url-error"}>{errors[id + "url"]}</FieldError></Field>
       <FieldSet><FieldLegend variant="label">Headers</FieldLegend><NamedRows kind="header" rows={draft.headers} onChange={headers => set({ headers })} /></FieldSet>
       <FieldSet><FieldLegend variant="label">Sign-in</FieldLegend>
         {scope === "global" ? <Field><FieldLabel htmlFor={id + "provider"}>Pi provider</FieldLabel>
@@ -178,7 +183,8 @@ export function McpServerForm({ server, busy, error, title: heading, scope = "gl
     </>}
     <FieldSet><FieldLegend variant="label">Tool exposure rules</FieldLegend><RuleRows rules={draft.rules} onChange={rules => set({ rules })} /></FieldSet>
     <Field><FieldLabel htmlFor={id + "description"}>Description</FieldLabel><Input id={id + "description"} value={draft.description} placeholder="What the server offers, in a sentence" onChange={event => set({ description: event.target.value })} /></Field>
-    <Field><FieldLabel htmlFor={id + "timeout"}>Timeout (seconds)</FieldLabel><Input id={id + "timeout"} type="number" min={1} step="any" value={draft.timeout} placeholder="60" onChange={event => set({ timeout: event.target.value })} /></Field>
+    <Field data-invalid={!!errors[id + "timeout"] || undefined}><FieldLabel htmlFor={id + "timeout"}>Timeout (seconds)</FieldLabel><Input id={id + "timeout"} type="number" min={1} step="any" value={draft.timeout} placeholder="60" {...describe(id + "timeout")} onChange={event => set({ timeout: event.target.value })} /><FieldError id={id + "timeout-error"}>{errors[id + "timeout"]}</FieldError></Field>
+    </FieldGroup>
     <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save server"}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;

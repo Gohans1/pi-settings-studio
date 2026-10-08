@@ -24,23 +24,22 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
-test("pointer disclosure expands and collapses continuously, including a quick reversal", async ({ page }) => {
+test("a disclosure opens at once, as shadcn's Collapsible ships, and settles after quick clicks", async ({ page }) => {
   await page.goto(server.url);
   const trigger = page.getByRole("button", { name: "Not editable here" });
   const panel = page.locator(".not-here [data-slot=collapsible-content]");
   await trigger.click();
-  await expect.poll(() => page.evaluate(() => window.motionEvents.filter(event => event.slot === "collapsible-content").map(event => event.property)), { timeout: 3000 }).toContain("height");
   await expect(panel).toBeVisible();
-  await expect.poll(() => panel.evaluate(element => Math.abs(element.clientHeight - element.scrollHeight))).toBeLessThanOrEqual(1);
+  await expect(panel).toHaveCSS("transition-duration", "0s");
   await trigger.click();
   await expect(panel).toBeHidden();
-  // Raw pointer clicks do not wait for animation stability between toggles.
+  // Raw pointer clicks do not wait for anything between toggles.
   const box = (await trigger.boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await expect.poll(() => panel.evaluate(element => Math.abs(element.clientHeight - element.scrollHeight))).toBeLessThanOrEqual(1);
+  await expect(panel).toBeVisible();
 });
 
 test("keyboard disclosure and escape stay instant even after using the pointer", async ({ page }) => {
@@ -63,14 +62,14 @@ test("keyboard disclosure and escape stay instant even after using the pointer",
   await expect(page.getByRole("button", { name: "File", exact: true })).toBeFocused();
 });
 
-test("pointer menu transitions from its trigger and can close before its entrance finishes", async ({ page }) => {
+test("pointer menu zooms in from its trigger as shadcn ships it and can close before its entrance finishes", async ({ page }) => {
   await page.goto(server.url);
   const trigger = page.getByRole("button", { name: "File", exact: true });
   await trigger.click();
   const menu = page.getByRole("menu");
-  await expect.poll(() => page.evaluate(() => window.motionEvents.filter(event => event.slot === "dropdown-menu-content").map(event => event.property)), { timeout: 3000 }).toEqual(expect.arrayContaining(["transform", "opacity"]));
-  await expect(menu).toHaveCSS("animation-name", "none");
-  await expect(menu).toHaveCSS("transition-duration", "0.18s, 0.18s");
+  // tw-animate-css's enter keyframes, 100ms in base-nova.
+  await expect(menu).toHaveCSS("animation-name", "enter");
+  await expect(menu).toHaveCSS("animation-duration", "0.1s");
   expect(await menu.evaluate(element => getComputedStyle(element).getPropertyValue("--transform-origin"))).not.toBe("");
   await trigger.click();
   await expect(menu).toBeHidden();
@@ -84,53 +83,14 @@ test("pointer menu transitions from its trigger and can close before its entranc
   await expect(trigger).toBeFocused();
 });
 
-test("buttons compress only during a pointer press, without moving surrounding layout", async ({ page }) => {
-  await page.goto(server.url + "#mcp");
-  const button = page.getByRole("button", { name: "Add server", exact: true });
-  await button.hover();
-  const box = (await button.boundingBox())!;
-  await page.mouse.down();
-  await expect(button).toHaveCSS("transform", "matrix(0.97, 0, 0, 0.97, 0, 0)", { timeout: 3000 });
-  expect(await button.evaluate(element => getComputedStyle(element).translate)).toBe("none");
-  await page.mouse.move(box.x - 20, box.y);
-  await page.mouse.up();
-  await expect(button).toHaveCSS("transform", "none");
-  expect(await button.boundingBox()).toEqual(box);
-  await button.focus();
-  await page.keyboard.down("Space");
-  await expect(button).toHaveCSS("transform", "none");
-  await page.keyboard.up("Space");
-  await expect(page.getByRole("heading", { name: "Add MCP server", exact: true })).toBeVisible();
-});
-
-test("reduced motion menu fades without scaling and pointer buttons do not compress", async ({ page }) => {
+test("reduced motion settles a menu at once", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(server.url);
   await page.getByRole("button", { name: "File", exact: true }).click();
   const menu = page.getByRole("menu");
-  await expect(menu).toHaveCSS("animation-name", "none");
-  await expect(menu).toHaveCSS("transition-property", "opacity");
-  await expect(menu).toHaveCSS("transition-duration", "0.125s");
-  await expect(menu).toHaveCSS("transform", "none");
+  await expect(menu).toHaveCSS("animation-name", "enter");
+  // styles.css shortens every animation to 0.01ms, so end events still fire.
+  await expect(menu).toHaveCSS("animation-duration", "1e-05s");
   await page.keyboard.press("Escape");
-  await page.getByRole("tab", { name: "MCP", exact: true }).click();
-  const button = page.getByRole("button", { name: "Add server", exact: true });
-  await button.hover();
-  await page.mouse.down();
-  await expect(button).toHaveCSS("transform", "none");
-  await expect(button).toHaveCSS("translate", "none");
-  await page.mouse.up();
-});
-
-test("reduced motion keeps only a short opacity fade on disclosures", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(server.url);
-  const trigger = page.getByRole("button", { name: "Not editable here" });
-  await trigger.click();
-  const panel = page.locator(".not-here [data-slot=collapsible-content]");
-  await expect.poll(() => page.evaluate(() => window.motionEvents.filter(event => event.slot === "collapsible-content").map(event => event.property)), { timeout: 3000 }).toEqual(["opacity"]);
-  await expect(panel).toHaveCSS("transition-duration", "0.125s");
-  await expect(panel).toHaveCSS("transform", "none");
-  await trigger.click();
-  await expect(panel).toBeHidden();
+  await expect(menu).toBeHidden();
 });

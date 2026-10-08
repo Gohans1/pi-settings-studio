@@ -1,7 +1,8 @@
 import { useId, useState, type FormEvent } from "react";
 import type { PackageFilters, PackageView } from "../shared/resources";
 import { Button } from "./components/ui/button";
-import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "./components/ui/field";
 import { Textarea } from "./components/ui/textarea";
 import { OptionSelect } from "./OptionSelect";
 
@@ -31,9 +32,12 @@ export function PackageFilterForm({ pkg, busy, onSave, onCancel }: { pkg: Packag
     }
     onSave(patch);
   }
-  return <form className="package-filters" aria-label={title} onSubmit={submit}>
-    <h3>{title}</h3>
-    <FieldDescription>Filters narrow what the package declares; they cannot add resources. Patterns are relative to the package root: globs, <code>!pattern</code> to exclude, <code>+path</code> or <code>-path</code> for one exact file.</FieldDescription>
+  return <form className="mt-1 mb-2 basis-full" aria-label={title} onSubmit={submit}><Card size="sm">
+    <CardHeader>
+      <CardTitle role="heading" aria-level={3}>{title}</CardTitle>
+      <CardDescription>Filters narrow what the package declares; they cannot add resources. Patterns are relative to the package root: globs, <code>!pattern</code> to exclude, <code>+path</code> or <code>-path</code> for one exact file.</CardDescription>
+    </CardHeader>
+    <CardContent><FieldGroup>
     {TYPES.map(([key, label, singular]) => <Field key={key}>
       <FieldLabel htmlFor={id + key}>{label}</FieldLabel>
       <OptionSelect id={id + key} className="w-full" options={choiceOptions} value={choices[key]!} onChange={choice => setChoices(old => ({ ...old, [key]: choice }))} />
@@ -42,6 +46,7 @@ export function PackageFilterForm({ pkg, busy, onSave, onCancel }: { pkg: Packag
     </Field>)}
     <Field><FieldLabel htmlFor={id + "autoload"}>Autoload</FieldLabel>
       <OptionSelect id={id + "autoload"} className="w-full" options={autoloadOptions} value={autoload} onChange={setAutoload} /></Field>
-    <div className="actions"><Button type="submit" disabled={busy}>Save filters</Button><Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
-  </form>;
+    </FieldGroup></CardContent>
+    <CardFooter><div className="actions"><Button type="submit" disabled={busy}>Save filters</Button><Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div></CardFooter>
+  </Card></form>;
 }

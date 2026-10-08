@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Bot, Boxes, FileText, Layers, Puzzle, ScrollText, Server, SlidersHorizontal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Toaster } from "./components/ui/toast";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { ProjectPicker, TrustPanel, useProject } from "./ProjectBar";
 import { GeneralTab } from "./GeneralTab";
 import { InstructionsTab } from "./InstructionsTab";
@@ -70,7 +71,7 @@ export function App() {
     history.replaceState(null, "", "#" + id);
     setActive(id);
   }
-  return <Tabs className="app grid gap-0" value={active} onValueChange={value => select(String(value))}>
+  return <TooltipProvider><Tabs value={active} onValueChange={value => select(String(value))}><div className="app">
     <a className="skip-link" href="#main">Skip to content</a>
     <header>
       <div className="topbar">
@@ -88,5 +89,5 @@ export function App() {
       {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id} className="flex flex-col"><Panel project={project} loadsInProject={current?.trust.loadsInT3Code} /></TabsContent>)}
     </main>
     <Toaster />
-  </Tabs>;
+  </div></Tabs></TooltipProvider>;
 }

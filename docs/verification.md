@@ -1,3 +1,33 @@
+# Verification — every component from the shadcn registry, checked by @shadcn/lint, 2026-10-08
+
+Scope: the 27 files in `components/ui` installed or reinstalled one by one with `shadcn add <name> --overwrite` from `shadcn@4.21.4`, the latest release; six are new (alert-dialog, card, spinner, toggle, toggle-group, tooltip). What they replace: `window.confirm` (Update Pi, closing a draft), an inline review box (restore), native `title` tooltips, a hand-made spinner, Buttons kept pressed by hand, the browser's validation bubble, and boxes, list rows and settings rows drawn in `styles.css`. shadcn's own linter, `@shadcn/lint` 0.2.0, runs in `bun run lint` with all six rules as errors: 55 findings, now none, with two contracts (docs-mcp `shadcn-lint`: README, Rules, Adoption, How it works; `shadcn-ui`: CLI, AlertDialog, Tooltip, Combobox; `base-ui`: Tooltip, Autocomplete, Combobox, Collapsible, Composition; shadcn's agent skill).
+
+| Check | Result |
+|---|---|
+| `shadcn add <name> --dry-run --diff` | No changed line in any of the 27 files |
+| `bun test` | 277 passed (43 files), unchanged. Run with `HOME` pointed at an empty folder: with the real home, five skills tests fail on main as on this branch, because a skill installed today in `~/.agents/skills` leaks into their fixtures |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run build` | Passed. JS 768.0 → 807.2 kB (gzip 236.0 → 247.0 kB), CSS 104.8 → 112.2 kB (gzip 17.5 → 18.5 kB); the >500 kB chunk warning remains |
+| `bun run test:e2e` (same `HOME`) | 96 passed, up from 88 (5 failed on main with the real home, as above). New: Update Pi and closing a draft ask in an AlertDialog (only cancelled: confirming would update the real Pi), and so does restore; tooltips on icon buttons, a menu's trigger, file paths and pattern matches; why a skill's other files are disabled; spinners while settings load and a package check runs (both held with `page.route`); the tool filter as a ToggleGroup; invalid fields in four forms. Rewritten: motion, now shadcn's own. One full run timed out inside axe while the load average was 9.3; that spec passed 3 of 3 on repeat |
+
+RED/GREEN: each new behaviour failed first for its reason (no alertdialog, no tooltip, no spinner, arrows not moving focus, no error under the field, disclosure still animating), then passed.
+
+Found:
+- The MCP name pattern `[A-Za-z0-9_-]+` never ran. Browsers compile `pattern` with RegExp's v flag, where an unescaped `-` in a class is a syntax error, so the pattern was ignored and only the server refused a name with a space. It is escaped now.
+- shadcn's ItemGroup is `role="list"`, and an ItemSeparator among its children is a `separator`: axe reports aria-required-children, critical. The separators are `aria-hidden`.
+- Base UI's tooltip has no role, by design; tests find it by `data-slot`. base-nova's AlertDialogAction is a plain Button, so the dialogs are controlled.
+
+Decisions:
+- c7a1580 put pointer motion (a 0.97 press, transition-based menus, an animated collapsible) inside `components/ui`, against this repository's rule. Reinstalling restored shadcn's motion; the keyboard policy in `main.tsx` stays.
+- The toast stays Base UI's own: shadcn's skill uses Sonner only for Radix and React Aria.
+- Kept outside shadcn: Input with `datalist` for suggested free text (Base UI's Combobox refuses free text and the registry has no Autocomplete), definition lists, `pre` for code, links in sentences, General's section index.
+
+Manual: T3 preview, main and this branch side by side on temporary agent folders, 1280×800 light and 390 px dark: General, both AlertDialogs (Update Pi only cancelled), MCP with a finished job Card and a tooltip, Plugins packages with a filter Card, Skills folders, Models defaults. No horizontal overflow at 390 px; the real `~/.pi` was not written.
+
+Not verified: a real screen reader, forced-colors mode, Windows.
+
+---
+
 # Verification — remove a skill, model invocation by group, 2026-10-08
 
 Scope: Remove with Undo for user and project skills; "Let the model load all" and "Make all command only" in the menu of each group of the user's own skills; `PATCH /api/resource-files/invocation` takes `paths[]` and changes all or none.

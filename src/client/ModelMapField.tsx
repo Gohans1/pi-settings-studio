@@ -35,7 +35,7 @@ export function ModelMapField({ kind, label, value, disabled, onChange }: {
   }, [value]);
   const update = (next: Row[]) => { setRows(next); onChange(toValue(next, kind)); };
   const set = (index: number, patch: Partial<Row>) => update(rows.map((row, i) => i === index ? { ...row, ...patch } : row));
-  return <FieldSet className="model-map gap-2" aria-label={label} disabled={disabled}>
+  return <FieldSet aria-label={label} disabled={disabled}>
     {rows.map((row, index) => <div className="model-map-row" key={index}>
       <Input aria-label={`Model ${index + 1}`} list="model-ids" value={row.model} placeholder="provider/modelId" spellCheck={false} autoComplete="off"
         onChange={e => set(index, { model: e.target.value })} />

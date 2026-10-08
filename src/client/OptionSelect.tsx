@@ -1,4 +1,4 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
 
 export type Option<Value> = { value: Value; label: string };
 
@@ -13,6 +13,6 @@ export function OptionSelect<Value>({ options, value, onChange, placeholder, dis
 }) {
   return <Select items={options} value={value} onValueChange={next => { if (next !== null) onChange(next); }} disabled={disabled}>
     <SelectTrigger id={id} className={className} {...aria}><SelectValue placeholder={placeholder} /></SelectTrigger>
-    <SelectContent>{options.map(option => <SelectItem key={JSON.stringify(option.value)} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+    <SelectContent><SelectGroup>{options.map(option => <SelectItem key={JSON.stringify(option.value)} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent>
   </Select>;
 }

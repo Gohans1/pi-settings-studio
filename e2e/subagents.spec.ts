@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { mkdtemp, mkdir, writeFile, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { startServer, type RunningServer } from "../src/server/server.ts";
@@ -16,6 +16,24 @@ test.beforeEach(async () => {
   server = await startServer({ agentDir: agent, projectDir: join(root, "project"), port: 0, staticDir: resolve("dist/client") });
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
+
+test("a profile the browser would refuse says why under each field, focuses the first, and writes nothing", async ({ page }) => {
+  await page.goto(server.url + "#subagents");
+  await page.getByRole("button", { name: "Add profile" }).click();
+  const form = page.getByRole("form", { name: "Add profile" });
+  const name = form.getByLabel("Name");
+  await name.fill("bad name");
+  await form.getByRole("button", { name: "Save profile" }).click();
+  await expect(name).toBeFocused();
+  await expect(name).toHaveAttribute("aria-invalid", "true");
+  await expect(form).toContainText("Use letters, digits, ., _ and -, starting with a letter or digit.");
+  await expect(form).toContainText("Description is required.");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await name.fill("good-name");
+  await expect(form).not.toContainText("Use letters, digits");
+  await expect(name).not.toHaveAttribute("aria-invalid");
+  expect((await readdir(dir)).sort()).toEqual(["broken.md", "scout.md"]);
+});
 
 test("sub-agent profiles can be read, added, edited, removed and restored", async ({ page }) => {
   await page.goto(server.url + "#subagents");

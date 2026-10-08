@@ -68,7 +68,7 @@ export function CodemodePanel({ view, autoEnable, busy, project, scope, onScope,
       if (!validBudget) { budgetField.current?.focus(); return; }
       onChange({ inlineBudget: parsed }, `Tool list budget saved${where}.`);
     }}>
-      <Field className="w-[min(14rem,100%)]"><FieldLabel htmlFor={id + "budget"}>Tool list budget</FieldLabel>
+      <Field className="w-[min(14rem,100%)]" data-invalid={!validBudget || undefined}><FieldLabel htmlFor={id + "budget"}>Tool list budget</FieldLabel>
         <Input id={id + "budget"} ref={budgetField} type="number" min={0} max={1_000_000} step={1} value={budget} placeholder={String(effective?.inlineBudget ?? view.defaultInlineBudget)}
           aria-invalid={!validBudget || undefined} aria-describedby={id + "budget-help"} onChange={event => setBudget(event.target.value)} /></Field>
       <Button type="submit" disabled={busy}>Save budget</Button>

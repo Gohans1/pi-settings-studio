@@ -70,11 +70,26 @@ test("defaults are chosen from Pi's catalog and saved to settings.json", async (
   await enabled.getByLabel("Model or pattern").fill("anthropic/*");
   await enabled.getByRole("button", { name: "Add" }).click();
   await expect(enabled.getByRole("listitem").filter({ hasText: "anthropic/*" })).toContainText(/\d+ models/);
+  // The count names a few of the models it matched.
+  await enabled.getByText(/^\d+ models$/).hover();
+  await expect(page.locator("[data-slot=tooltip-content]")).toContainText("claude");
   await panel.getByRole("button", { name: "Save defaults" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
   const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
   expect(settings).toEqual({ defaultProvider: "anthropic", defaultModel: chosen, defaultThinkingLevel: "high", enabledModels: ["anthropic/*"] });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a custom provider the browser would refuse says why under its field and writes nothing", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: "Add custom provider" }).click();
+  const form = page.getByRole("form", { name: "Add custom provider" });
+  const providerId = form.getByLabel("Provider ID");
+  await providerId.fill("bad id");
+  await form.getByRole("button", { name: "Save provider" }).click();
+  await expect(providerId).toBeFocused();
+  await expect(form).toContainText("Use letters, digits, ., _ and -, starting with a letter or digit.");
+  await expect(readFile(join(agent, "models.json"), "utf8")).rejects.toThrow();
 });
 
 test("a custom provider is added to models.json, edited without seeing its key, removed and restored", async ({ page }) => {

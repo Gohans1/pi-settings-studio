@@ -13,10 +13,11 @@ import { Empty, EmptyDescription } from "./components/ui/empty";
 import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
+import { Spinner } from "./components/ui/spinner";
 import { ModelDefaults } from "./ModelDefaults";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
-import { EmptyDetail, ListItem, MoreMenu, Workbench } from "./Workbench";
+import { EmptyDetail, IconButton, ListItem, MoreMenu, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
 
 const DEFAULTS = "#defaults";
@@ -64,7 +65,7 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
   }
   return <section className="detail" aria-labelledby="provider-title" aria-describedby="provider-status">
     <header className="detail-header"><div className="detail-title"><h2 id="provider-title">{provider.name}</h2>
-      <Badge id="provider-status" variant="outline" className={provider.auth.configured ? undefined : "text-muted-foreground"}>
+      <Badge id="provider-status" variant={provider.auth.configured ? "outline" : "secondary"}>
         {provider.auth.configured ? <><CircleCheck aria-hidden="true" className="text-success" />{state(provider)}</> : state(provider) || "not set up"}</Badge></div>
       <div className="actions">
         {provider.oauth && <Button variant="outline" disabled={busy || login.running} onClick={() => void login.start({ action: "provider-login", provider: provider.id })} aria-label={`Sign in to ${provider.name}`}>Sign in</Button>}
@@ -78,7 +79,7 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
         : <span className="muted">Not in auth.json or models.json. Check credential also looks at the environment of this app.</span>}</dd></div>
       {provider.oauth && <div><dt>Sign-in</dt><dd>{provider.oauth.name}{provider.oauth.subscription ? " (subscription)" : ""}</dd></div>}
     </dl>
-    {check.job?.check && <Alert role="status" variant={check.job.check.status === "ready" ? "default" : "destructive"} className="check-result">
+    {check.job?.check && <Alert role="status" variant={check.job.check.status === "ready" ? "default" : "destructive"} className="mt-4">
       {check.job.check.status === "ready" ? <CircleCheck aria-hidden="true" /> : <CircleAlert aria-hidden="true" />}<AlertTitle>{verdict(check.job.check)}</AlertTitle></Alert>}
     {check.job && !check.job.check && <JobPanel job={check.job} error={check.error} onAnswer={() => {}} onCancel={() => void check.cancel()} onDismiss={check.dismiss} />}
     <JobPanel job={login.job} error={login.error} onAnswer={value => void login.answer(value)} onCancel={() => void login.cancel()} onDismiss={login.dismiss} />
@@ -90,7 +91,7 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
       {provider.stored === "oauth" && <FieldDescription className="basis-full">Saving a key replaces the stored sign-in.</FieldDescription>}
     </form>}
     {provider.keySetup && <p className="muted key-setup">Needs more than a key, such as an account ID, a region or a profile?{" "}
-      <Button variant="link" size="xs" className="px-0" disabled={busy || setup.running} onClick={() => void setup.start({ action: "provider-setup", provider: provider.id })}>Set up with Pi's questions</Button></p>}
+      <Button variant="link" size="xs" disabled={busy || setup.running} onClick={() => void setup.start({ action: "provider-setup", provider: provider.id })}>Set up with Pi's questions</Button></p>}
     <JobPanel job={setup.job} error={setup.error} onAnswer={value => void setup.answer(value)} onCancel={() => void setup.cancel()} onDismiss={setup.dismiss} />
     {provider.stored && <div className="actions remove-credential">
       <Button variant="destructive" disabled={busy} onClick={onRemove}>Remove credential</Button></div>}
@@ -160,7 +161,7 @@ export function ModelsTab({ project }: { project?: string }) {
   const open = !!selected;
   return <>
     <PageHeader title="Models" description="Providers and their credentials, from auth.json and models.json. Keys are never shown."
-      actions={<Button variant="outline" disabled={catalog.running} onClick={() => void catalog.start({ action: "models-refresh" })}><RefreshCw aria-hidden="true" />Refresh model catalogs</Button>} />
+      actions={<Button variant="outline" disabled={catalog.running} onClick={() => void catalog.start({ action: "models-refresh" })}><RefreshCw aria-hidden="true" data-icon="inline-start" />Refresh model catalogs</Button>} />
     <JobPanel job={catalog.job} error={catalog.error} onAnswer={value => void catalog.answer(value)} onCancel={() => void catalog.cancel()} onDismiss={catalog.dismiss} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && view && { label: "Undo", disabled: busy, onClick: () => undo === "auth" ? void run(restoreAuth, "Restored the previous auth.json.") : void runCustom(restoreCustomProviders, "Restored the previous models.json.") }} />
@@ -169,12 +170,12 @@ export function ModelsTab({ project }: { project?: string }) {
     {raw ? <RawJsonEditor file="models.json" load={loadModelsRaw} save={saveModelsRaw}
       note={`${SECRET_NOTE} modelOverrides, compat, cost, thinkingLevelMap and samplingParams are edited here. Pi checks the file before it is saved.`}
       onClose={saved => { setRaw(false); if (saved) { setMessage("Saved models.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
-    : !view ? !error && <div className="loading" aria-busy="true">Reading providers…</div> : <Workbench open={open} onBack={() => setSelected(undefined)} backLabel="All providers" list={<section aria-label="Providers">
+    : !view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading providers…</div> : <Workbench open={open} onBack={() => setSelected(undefined)} backLabel="All providers" list={<section aria-label="Providers">
       <div className="list-search"><SearchField label="Search providers" placeholder="Search providers…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned"><li><ListItem selected={selected === DEFAULTS} onSelect={() => setSelected(DEFAULTS)} icon={SlidersHorizontal} name="Defaults" state="provider, model, thinking" /></li></ul>
       <section className="item-group" aria-label="Custom providers">
         <div className="list-header"><h2>Custom providers</h2><span>{custom?.providers.length ?? 0} in models.json</span>
-          <Button variant="ghost" size="icon-xs" aria-label="Add custom provider" title="Add custom provider" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}><Plus aria-hidden="true" /></Button>
+          <IconButton label="Add custom provider" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}><Plus aria-hidden="true" /></IconButton>
           <MoreMenu label="More actions for models.json"><DropdownMenuItem disabled={busy} onClick={() => setRaw(true)}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem></MoreMenu>
         </div>
         {custom?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertDescription>{custom.error}</AlertDescription></Alert>}

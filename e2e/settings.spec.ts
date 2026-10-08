@@ -17,6 +17,19 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+test("while the settings load, a spinner says so", async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/settings/global", async route => { await held; await route.continue(); });
+  await page.reload();
+  await expect(page.getByText("Reading settings…")).toBeVisible();
+  await expect(page.getByRole("status", { name: "Loading" })).toBeVisible();
+  release();
+  await expect(page.getByRole("heading", { name: "Models & thinking" })).toBeVisible();
+  await expect(page.getByRole("status", { name: "Loading" })).toHaveCount(0);
+  await page.unrouteAll({ behavior: "wait" });
+});
+
 test("save writes native files directly, preserves unknown values, and survives reload", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Models & thinking" })).toBeVisible();
   await page.getByLabel("Shell command prefix", { exact: true }).fill("new-model");
@@ -51,8 +64,12 @@ test("backup restore is explicit and restores the original native document", asy
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   await page.getByRole("button", { name: "File", exact: true }).click();
   await page.getByRole("menuitem", { name: "Restore previous file" }).click();
-  await expect(page.getByRole("heading", { name: "Restore previous file?" })).toBeVisible();
-  await page.getByRole("button", { name: "Restore previous file" }).click();
+  const ask = page.getByRole("alertdialog", { name: "Restore previous file?" });
+  await expect(ask).toContainText("replaces the whole file with its latest backup");
+  // The settings stay in view behind the question.
+  await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("changed");
+  await ask.getByRole("button", { name: "Restore previous file" }).click();
+  await expect(ask).toBeHidden();
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("fixture-prefix");
   expect(JSON.parse(await readFile(file, "utf8")).shellCommandPrefix).toBe("fixture-prefix");
 });
@@ -188,11 +205,19 @@ test("the theme is chosen from Pi's themes: one theme, or a light and a dark one
   expect(JSON.parse(await readFile(file, "utf8")).theme).toBe("light/ocean");
 });
 
-test("the installed Pi version is shown with an Update Pi action", async ({ page }) => {
+test("the installed Pi version is shown with an Update Pi action that asks first", async ({ page }) => {
   const pi = page.getByRole("region", { name: "Pi" });
   await expect(pi).toContainText(/Pi \d+\.\d+\.\d+ is installed/);
-  // Not clicked: it would update the real Pi on this machine.
-  await expect(pi.getByRole("button", { name: "Update Pi" })).toBeEnabled();
+  const update = pi.getByRole("button", { name: "Update Pi" });
+  await update.click();
+  const ask = page.getByRole("alertdialog", { name: "Update Pi now?" });
+  await expect(ask).toContainText("Open T3Code threads keep the running version until they restart.");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  // Only ever cancelled: confirming would update the real Pi on this machine.
+  await ask.getByRole("button", { name: "Cancel" }).click();
+  await expect(ask).toBeHidden();
+  await expect(update).toBeFocused();
+  await expect(pi.getByRole("region")).toHaveCount(0);
 });
 
 test("unsaved changes keep their save action in view while scrolling", async ({ page }) => {

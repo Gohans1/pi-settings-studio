@@ -24,6 +24,23 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); registry?.close(); await rm(root, { recursive: true, force: true }); });
 
+
+test("while a check runs, its button shows a spinner and keeps its name", async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/plugins/updates", async route => { const response = await route.fetch(); await held; await route.fulfill({ response }); });
+  await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: /^Packages/ }).click();
+  const button = page.getByRole("button", { name: "Check for updates", exact: true });
+  await button.click();
+  await expect(button).toBeDisabled();
+  await expect(button.locator("[data-slot=spinner]")).toBeVisible();
+  release();
+  await expect(button).toBeEnabled();
+  await expect(button.locator("[data-slot=spinner]")).toHaveCount(0);
+  await page.unrouteAll({ behavior: "wait" });
+});
+
 test("an explicit keyboard check shows package notices, retains them on reload and replaces them on recheck", async ({ page }) => {
   const settings = await readFile(join(agent, "settings.json"), "utf8");
   await page.goto(server.url + "#plugins");
