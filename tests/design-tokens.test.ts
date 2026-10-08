@@ -91,6 +91,8 @@ describe("colour system", () => {
     ["--destructive", "--background", 4.5], ["--destructive", "--secondary", 4.5],
     ["--ring", "--background", 3], ["--ring", "--sidebar", 3],
     ["--input", "--background", 3], ["--input", "--sidebar", 3], ["--warning", "--background", 3],
+    // The ready mark is an icon beside its words: 3:1 on the list pane, its hovered and chosen rows and the detail pane.
+    ["--success", "--sidebar", 3], ["--success", "--muted", 3], ["--success", "--selected", 3], ["--success", "--background", 3],
     // The selected list row and floating layers (menus) keep body and muted text readable.
     ["--foreground", "--selected", 4.5], ["--muted-foreground", "--selected", 4.5],
     ["--foreground", "--popover", 4.5], ["--muted-foreground", "--popover", 4.5],

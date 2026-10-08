@@ -36,6 +36,8 @@
   --selected: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
   --destructive: light-dark(var(--flexoki-red-600), var(--flexoki-red-300));
   --warning: light-dark(var(--flexoki-orange-600), var(--flexoki-orange-400));
+  /* Ready: the mark beside a provider that has a credential. An icon colour, like --warning. */
+  --success: light-dark(var(--flexoki-green-600), var(--flexoki-green-400));
   --radius: .375rem;
   /* A frame's corner is its inset row's corner plus the inset, so nested corners stay concentric. */
   --radius-frame: calc(var(--radius-md) + --spacing(2));
@@ -60,7 +62,7 @@
   --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
-  --color-selected: var(--selected); --color-warning: var(--warning);
+  --color-selected: var(--selected); --color-warning: var(--warning); --color-success: var(--success);
   /* shadcn's radius scale, derived from --radius. */
   --radius-sm: calc(var(--radius) * 0.6); --radius-md: calc(var(--radius) * 0.8); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8); --radius-3xl: calc(var(--radius) * 2.2); --radius-4xl: calc(var(--radius) * 2.6);
@@ -153,10 +155,11 @@
   .workbench-detail { overflow: auto; overscroll-behavior: contain; padding: --spacing(5) --spacing(7) 0; }
   .workbench-detail > :last-child { padding-bottom: --spacing(7); }
   .list-search { position: sticky; top: calc(--spacing(2) * -1); z-index: 1; margin: calc(--spacing(2) * -1) calc(--spacing(2) * -1) 0; padding: --spacing(2); background: var(--sidebar); }
-  .list-count { margin: 0; padding: --spacing(2) --spacing(2) 0; color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
-  .item-group { margin-top: --spacing(4); }
-  .list-header { display: flex; align-items: center; gap: --spacing(2); min-height: --spacing(8); padding-inline: --spacing(2); }
-  .list-header h2 { margin: 0; margin-inline-end: auto; font-size: var(--text-caption); font-weight: var(--font-weight-semibold); line-height: var(--leading-tight); color: var(--muted-foreground); overflow-wrap: anywhere; text-wrap: wrap; }
+  .list-count { margin: 0; padding: --spacing(2) --spacing(2) 0; padding-inline-start: --spacing(2.5); color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
+  /* A group's name leads its rows: body size, semibold, the body colour; rows are regular weight (ListItem). */
+  .item-group { margin-top: --spacing(5); }
+  .list-header { display: flex; align-items: center; gap: --spacing(2); min-height: --spacing(8); padding-inline: --spacing(2.5) --spacing(2); }
+  .list-header h2 { margin: 0; margin-inline-end: auto; font-size: var(--text-body); font-weight: var(--font-weight-semibold); line-height: var(--leading-tight); overflow-wrap: anywhere; text-wrap: wrap; }
   .list-header > span { color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .item-list { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(0.25); }
   /* A row is its Item, then the switch that turns it on or off. */
@@ -164,14 +167,18 @@
   .item-list li:has(> [data-slot=switch]) { padding-inline-end: --spacing(2); }
   .item-state { margin-inline-start: auto; font-size: var(--text-caption); color: var(--muted-foreground); white-space: nowrap; }
   .item-state[data-state=refused] { color: var(--destructive); }
-  .item-state[data-state=shadowed] { display: inline-flex; align-items: center; gap: --spacing(1); }
-  .item-state[data-state=shadowed] svg { width: --spacing(3.5); height: --spacing(3.5); color: var(--warning); }
+  .item-state:has(svg) { display: inline-flex; align-items: center; gap: --spacing(1); }
+  .item-state svg { width: --spacing(3.5); height: --spacing(3.5); }
+  .item-state[data-state=shadowed] svg { color: var(--warning); }
+  .item-state[data-state=ready] svg { color: var(--success); }
   .pinned { padding-bottom: --spacing(2); border-bottom: 1px solid var(--border); }
 
   /* Detail pane. */
   .detail { min-width: 0; }
   .detail-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: --spacing(2) --spacing(4); margin-bottom: --spacing(4); }
   .detail-header h2 { margin: 0; overflow-wrap: anywhere; }
+  /* The name and its status badge. */
+  .detail-title { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(3); min-width: 0; }
   .detail-header .actions { margin-inline-start: auto; }
   .detail > [data-slot=alert] { margin-bottom: --spacing(4); }
   /* An editor's heading block: title, what it does, the file. */
@@ -286,7 +293,7 @@
   /* Sub-agents and resources. */
   .prompt-preview pre { margin: --spacing(1) 0 0; max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .plain-list { list-style: none; margin: 0; padding: --spacing(1) --spacing(2); display: grid; gap: --spacing(1); }
-  .list-note { margin: 0; padding: --spacing(1) --spacing(2); }
+  .list-note { margin: 0; padding: --spacing(1) --spacing(2.5); }
 
   /* System prompt. */
   .prompt-pickers { max-width: 45rem; margin-bottom: --spacing(5); }

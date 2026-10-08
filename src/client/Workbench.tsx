@@ -34,14 +34,17 @@ export function Workbench({ list, detail, open, onBack, backLabel }: {
 
 /**
  * A row of a workbench list: an Item that chooses what the detail pane shows. Its state reads after the
- * name ("off", "Tool search"); a tone marks a state Pi refuses or skips.
+ * name ("off", "Tool search"); a tone marks a state Pi refuses or skips, or one that is ready to use.
+ * Names are regular weight, so the group headers above them lead; a quiet row (nothing set up yet)
+ * recedes until it is hovered or chosen.
  */
-export function ListItem({ selected, onSelect, icon: Icon, name, state, tone }: {
-  selected: boolean; onSelect: () => void; icon?: LucideIcon; name: ReactNode; state?: ReactNode; tone?: "refused" | "shadowed";
+export function ListItem({ selected, onSelect, icon: Icon, name, state, tone, quiet = false }: {
+  selected: boolean; onSelect: () => void; icon?: LucideIcon; name: ReactNode; state?: ReactNode; tone?: "refused" | "shadowed" | "ready"; quiet?: boolean;
 }) {
-  return <Item size="xs" render={<button type="button" aria-pressed={selected} onClick={onSelect} />} className="flex-nowrap text-start hover:bg-muted aria-pressed:bg-selected">
+  return <Item size="xs" render={<button type="button" aria-pressed={selected} onClick={onSelect} />}
+    className={"flex-nowrap text-start hover:bg-muted aria-pressed:bg-selected" + (quiet ? " text-muted-foreground hover:text-foreground focus-visible:text-foreground aria-pressed:text-foreground" : "")}>
     {Icon && <ItemMedia variant="icon"><Icon aria-hidden="true" /></ItemMedia>}
-    <ItemContent className="min-w-0"><ItemTitle className="w-full">{name}</ItemTitle></ItemContent>
+    <ItemContent className="min-w-0"><ItemTitle className="w-full font-normal">{name}</ItemTitle></ItemContent>
     {state !== undefined && <span className="item-state" data-state={tone}>{state}</span>}
   </Item>;
 }

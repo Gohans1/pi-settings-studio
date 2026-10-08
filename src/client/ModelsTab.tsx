@@ -7,6 +7,7 @@ import { CustomProviderForm } from "./CustomProviderForm";
 import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Empty, EmptyDescription } from "./components/ui/empty";
 import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
@@ -61,8 +62,10 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
     event.preventDefault();
     if (await onSaveKey(key)) setKey("");
   }
-  return <section className="detail" aria-labelledby="provider-title">
-    <header className="detail-header"><h2 id="provider-title">{provider.name}</h2>
+  return <section className="detail" aria-labelledby="provider-title" aria-describedby="provider-status">
+    <header className="detail-header"><div className="detail-title"><h2 id="provider-title">{provider.name}</h2>
+      <Badge id="provider-status" variant="outline" className={provider.auth.configured ? undefined : "text-muted-foreground"}>
+        {provider.auth.configured ? <><CircleCheck aria-hidden="true" className="text-success" />{state(provider)}</> : state(provider) || "not set up"}</Badge></div>
       <div className="actions">
         {provider.oauth && <Button variant="outline" disabled={busy || login.running} onClick={() => void login.start({ action: "provider-login", provider: provider.id })} aria-label={`Sign in to ${provider.name}`}>Sign in</Button>}
         <Button variant="outline" disabled={check.running} onClick={() => void check.start({ action: "provider-check", provider: provider.id })}>Check credential</Button>
@@ -170,7 +173,7 @@ export function ModelsTab({ project }: { project?: string }) {
       <div className="list-search"><SearchField label="Search providers" placeholder="Search providers…" value={query} onChange={setQuery} /></div>
       <ul className="item-list pinned"><li><ListItem selected={selected === DEFAULTS} onSelect={() => setSelected(DEFAULTS)} icon={SlidersHorizontal} name="Defaults" state="provider, model, thinking" /></li></ul>
       <section className="item-group" aria-label="Custom providers">
-        <div className="list-header"><h2>models.json</h2><span>{custom?.providers.length ?? 0}</span>
+        <div className="list-header"><h2>Custom providers</h2><span>{custom?.providers.length ?? 0} in models.json</span>
           <Button variant="ghost" size="icon-xs" aria-label="Add custom provider" title="Add custom provider" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}><Plus aria-hidden="true" /></Button>
           <MoreMenu label="More actions for models.json"><DropdownMenuItem disabled={busy} onClick={() => setRaw(true)}><FileJson aria-hidden="true" />Edit as JSON</DropdownMenuItem></MoreMenu>
         </div>
@@ -178,12 +181,13 @@ export function ModelsTab({ project }: { project?: string }) {
         {custom && !custom.error && !custom.providers.length && <p className="muted list-note">Ollama, LM Studio, a proxy: any endpoint that speaks an API Pi knows.</p>}
         <ul className="item-list">{(custom?.providers ?? []).map(entry => <li key={entry.id}>
           <ListItem selected={selected === CUSTOM + entry.id} onSelect={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}
-            name={entry.name ?? entry.id} state={entry.models.length ? `${entry.models.length} models` : entry.otherKeys.join(", ")} /></li>)}</ul>
+            name={entry.name ?? entry.id} state={entry.models.length ? `${entry.models.length} ${entry.models.length === 1 ? "model" : "models"}` : entry.otherKeys.join(", ")} /></li>)}</ul>
       </section>
       {groups.map(([title, members]) => members.length > 0 && <div key={title} className="item-group">
         <div className="list-header"><h2>{title}</h2><span>{members.length}</span></div>
         <ul className="item-list">{members.map(provider => <li key={provider.id}>
-          <ListItem selected={provider.id === selected} onSelect={() => setSelected(provider.id)} name={provider.name} state={state(provider)} />
+          <ListItem selected={provider.id === selected} onSelect={() => setSelected(provider.id)} name={provider.name} quiet={!provider.auth.configured}
+            tone={provider.auth.configured ? "ready" : undefined} state={provider.auth.configured ? <><CircleCheck aria-hidden="true" />{state(provider)}</> : state(provider)} />
         </li>)}</ul>
       </div>)}
       {!visible.length && <Empty><EmptyDescription>No providers match “{query.trim()}”.</EmptyDescription></Empty>}

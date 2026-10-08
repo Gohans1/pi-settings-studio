@@ -39,6 +39,20 @@ test("API keys are stored, removed and restored without ever being shown", async
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("the list names its groups and says which providers are ready, and the chosen one says it too", async ({ page }) => {
+  await writeFile(join(agent, "models.json"), JSON.stringify({ providers: { ollama: { baseUrl: "http://localhost:1/v1", api: "openai-completions", apiKey: "ollama", models: [{ id: "llama-3" }] } } }));
+  await page.goto(server.url + "#models");
+  const custom = page.getByRole("region", { name: "Custom providers" });
+  await expect(custom.getByRole("heading")).toHaveText("Custom providers");
+  await expect(custom.getByRole("button", { name: /^ollama/ })).toHaveAccessibleName("ollama 1 model");
+  await page.getByRole("button", { name: /^Anthropic\b/ }).first().click();
+  await expect(page.getByRole("region", { name: "Anthropic" })).toHaveAccessibleDescription("API key");
+  await page.getByRole("searchbox", { name: "Search providers" }).fill("openai");
+  await page.getByRole("button", { name: /^OpenAI\b/ }).first().click();
+  await expect(page.getByRole("region", { name: "OpenAI" })).toHaveAccessibleDescription("not set up");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
 test("defaults are chosen from Pi's catalog and saved to settings.json", async ({ page }) => {
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: /^Defaults/ }).click();
