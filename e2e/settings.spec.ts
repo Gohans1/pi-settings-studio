@@ -51,8 +51,12 @@ test("backup restore is explicit and restores the original native document", asy
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
   await page.getByRole("button", { name: "File", exact: true }).click();
   await page.getByRole("menuitem", { name: "Restore previous file" }).click();
-  await expect(page.getByRole("heading", { name: "Restore previous file?" })).toBeVisible();
-  await page.getByRole("button", { name: "Restore previous file" }).click();
+  const ask = page.getByRole("alertdialog", { name: "Restore previous file?" });
+  await expect(ask).toContainText("replaces the whole file with its latest backup");
+  // The settings stay in view behind the question.
+  await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("changed");
+  await ask.getByRole("button", { name: "Restore previous file" }).click();
+  await expect(ask).toBeHidden();
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("fixture-prefix");
   expect(JSON.parse(await readFile(file, "utf8")).shellCommandPrefix).toBe("fixture-prefix");
 });

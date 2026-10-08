@@ -5,6 +5,7 @@ import { fields, sections, type Field, type SettingsChange, type SettingsView } 
 import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Disclosure } from "./Disclosure";
@@ -143,7 +144,7 @@ export function GeneralTab({ project }: { project?: string }) {
   const needle = query.trim().toLowerCase();
   const results = fields.filter(field => field.section !== "modelDefaults" && (!needle || (field.label + " " + field.key + " " + field.help).toLowerCase().includes(needle)));
   const shownSections = [...sections.filter(section => results.some(field => field.section === section.id)), ...(scope === "global" && !needle ? [KEYBINDINGS] : [])];
-  const [currentGroup, setCurrentGroup] = useCurrentGroup(view && !restore ? shownSections.map(section => section.id) : []);
+  const [currentGroup, setCurrentGroup] = useCurrentGroup(view ? shownSections.map(section => section.id) : []);
   async function closeRaw(saved: boolean) {
     setRaw(false);
     if (!saved) return;
@@ -188,11 +189,7 @@ export function GeneralTab({ project }: { project?: string }) {
     {error && <Alert variant="destructive" className="mb-4"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription>
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>
         <Button variant="outline" size="sm" disabled={busy || !!changes.length} onClick={openRaw}>Edit as JSON</Button></div></Alert>}
-    {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && (restore
-      ? <section className="review" aria-labelledby="restore-title"><h2 id="restore-title">Restore previous file?</h2>
-        <p>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</p>
-        <div className="actions"><Button variant="outline" disabled={busy} onClick={() => setRestore(false)}>Cancel</Button><Button disabled={busy} onClick={() => void recover()}>Restore previous file</Button></div></section>
-      : <div className="settings-layout">
+    {loading ? <div className="loading" aria-busy="true">Reading settings…</div> : view && <div className="settings-layout">
         <nav className="section-nav" aria-label="Setting groups">{shownSections.map(section => {
           // What the reader has made of each group: a dot for unsaved edits, else how many keys the file sets.
           const keys = fields.filter(field => field.section === section.id).map(field => field.key);
@@ -236,7 +233,20 @@ export function GeneralTab({ project }: { project?: string }) {
           {scope === "global" && !needle && <NotHere />}
           <p className="scope-footnote">Saved values apply to new T3Code threads, or after /reload. Unknown keys in the file are kept as they are.</p>
         </div>
-      </div>)}
+      </div>}
+    <AlertDialog open={restore} onOpenChange={setRestore}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Restore previous file?</AlertDialogTitle>
+          <AlertDialogDescription>This replaces the whole file with its latest backup, including settings this page does not display. The current file becomes the next backup.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          {/* Closes first, so a failure shows on the page rather than behind the dialog. */}
+          <AlertDialogAction disabled={busy} onClick={() => { setRestore(false); void recover(); }}>Restore previous file</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <datalist id="model-ids">{modelIds.map(id => <option key={id} value={id} />)}</datalist>
   </>;
 }

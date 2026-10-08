@@ -315,9 +315,6 @@
   .save-bar { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); margin-top: --spacing(4); padding: --spacing(3) 0; background: var(--background); border-top: 1px solid var(--border); }
   .save-bar p { margin: 0; font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; }
   @media (prefers-reduced-motion: no-preference) { .save-bar { transition: translate 200ms var(--ease-out), opacity 200ms var(--ease-out); @starting-style { translate: 0 --spacing(3); opacity: 0; } } }
-  .review { padding: --spacing(5); border: 1px solid var(--border); border-radius: var(--radius); }
-  .review h2 { margin: 0; }
-  .review p { margin: --spacing(2) 0 --spacing(4); max-width: 72ch; color: var(--muted-foreground); }
   .pi-panel { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2) --spacing(3); margin-bottom: --spacing(6); }
   .pi-panel > p { margin: 0; }
   .pi-panel code { color: var(--muted-foreground); }
