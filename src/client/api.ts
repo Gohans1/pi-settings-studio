@@ -130,6 +130,9 @@ export const saveResourceFile = (body: { type: ResourceType; path: string; file:
 /** All or none: the paths of the files that changed come back, so the change can be reverted exactly. */
 export const setModelInvocation = (paths: string[], modelInvocation: boolean, project?: string) =>
   request<{ changed: string[] }>(withProject("/api/resource-files/invocation", project), "PATCH", { paths, modelInvocation });
+/** Moves the skill's folder (or its one file) aside; restoreSkill puts it back. */
+export const removeSkill = (path: string, project?: string) => request<void>(withProject("/api/resource-files/skill", project), "DELETE", { path });
+export const restoreSkill = (path: string, project?: string) => request<void>(withProject("/api/resource-files/skill/restore", project), "POST", { path });
 export const createResource = (body: { scope: "global" | "project"; type: ResourceType; name: string; description?: string }, project?: string) =>
   request<{ type: ResourceType; path: string }>(withProject("/api/resource-files", project), "POST", body);
 export const loadPi = () => request<{ bin: string; installed?: string; builtFor: string }>("/api/pi");
