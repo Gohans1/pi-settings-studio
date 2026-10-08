@@ -13,6 +13,8 @@ import type { PackageView, PluginsView, ResourceType, ResourceView, SkillsView }
 import { isRecord } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 import type { ProjectRegistry } from "./projects.ts";
+import { runToolProbe } from "./plugin-tools.ts";
+import { knownSecrets, redact } from "./jobs.ts";
 
 /** Pi's built-in extensions, as named in docs/settings.md (a test keeps the two in step). */
 export const BUILTIN_EXTENSIONS = ["mcp", "llama.cpp", "codemode", "tool-search"];
@@ -213,6 +215,24 @@ export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agen
   }
   return new Hono()
     .get("/", async c => c.json(await view(c.req.query("project"))))
+    .post("/tools", async c => {
+      const project = c.req.query("project");
+      const { path } = z.object({ path: z.string().min(1).max(4096) }).strict().parse(await c.req.json());
+      const { resolved, settings } = await context.resolve(project);
+      const selected = resolved.extensions.find(item => item.path === path);
+      if (!selected) throw new ConfigError("Choose an extension from the current project's plugin list.", 400);
+      const secrets = await knownSecrets(store, project ? registry.storeFor(project) : undefined);
+      try {
+        return c.json(redact(await runToolProbe({
+          agentDir, cwd: project ?? agentDir, project: !!project, path, enabled: selected.enabled,
+          paths: resolved.extensions.filter(item => item.enabled || item.path === path).map(item => item.path),
+          globalSettings: settings.global, projectSettings: settings.project,
+        }, c.req.raw.signal), secrets));
+      } catch (error) {
+        if (error instanceof ConfigError) throw new ConfigError(redact(error.message, secrets), error.status);
+        throw error;
+      }
+    })
     .put("/packages", async c => {
       const project = c.req.query("project");
       const list = z.array(z.string().max(500)).max(200).nullable().optional();

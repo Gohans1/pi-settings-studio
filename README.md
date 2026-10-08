@@ -37,7 +37,7 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 - **Models**: providers, keys, sign-in, credential check, defaults, custom providers in `models.json` with model lists from their endpoint.
 - **Skills**: switches, a file editor for each skill folder, new skills.
 - **Sub-agents**: profiles in Pi's example format.
-- **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (install, update, remove, filters).
+- **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (install, update, remove, filters). Select an extension to inspect all registered tools and direct model declarations for the chosen project. Installed extensions are trusted and run automatically for this preview; see [Extension tools](docs/plugin-tools.md).
 - **MCP**: servers with exposure rules, OAuth and provider sign-in, Code mode, import from other clients, connection test, sign-in state, `mcp.log`.
 - **Instructions**: `AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`.
 - **System prompt**: what Pi recorded in a session.

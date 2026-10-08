@@ -3,6 +3,7 @@ import type { McpFileView, McpImportPreview, McpServerInput } from "../shared/mc
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
+import type { PluginToolsView } from "../shared/plugin-tools";
 import type { AgentInput, AgentsView } from "../shared/agents";
 import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelScopeView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
@@ -11,9 +12,9 @@ import type { KeybindingsView } from "../shared/keybindings";
 import type { JobView } from "../shared/jobs";
 import type { ThemeView } from "../shared/themes";
 type Scope = SettingsView["scope"];
-async function request<T>(url: string, method = "GET", body?: unknown): Promise<T> {
+async function request<T>(url: string, method = "GET", body?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, {
-    method, credentials: "same-origin",
+    method, credentials: "same-origin", signal,
     ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
   });
   if (!response.ok) {
@@ -67,6 +68,8 @@ export const loadRawSettings = (scope: Scope = "global", project?: string) => re
 export const saveRawSettings = (revision: string, text: string, scope: Scope = "global", project?: string) =>
   request<RawSettings>(withProject(`/api/settings/${scope}/raw`, project), "PUT", { revision, text });
 export const loadPlugins = (project?: string) => request<PluginsView>(withProject("/api/plugins", project));
+export const loadPluginTools = (path: string, project?: string, signal?: AbortSignal) =>
+  request<PluginToolsView>(withProject("/api/plugins/tools", project), "POST", { path }, signal);
 export const savePlugins = (scope: Scope, revision: string, items: { type: string; path: string }[], enabled: boolean, project?: string) =>
   request<PluginsView>(withProject("/api/plugins", project), "PATCH", { scope, revision, items, enabled });
 export type AgentScope = "user" | "project";

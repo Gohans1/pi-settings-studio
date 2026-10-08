@@ -30,7 +30,7 @@ export function useProject() {
 export function ProjectPicker({ projects, project, onChoose }: { projects?: ProjectView[]; project?: string; onChoose: (path?: string) => void }) {
   const options = [{ value: "", label: "None (global only)" }, ...(projects ?? []).map(entry => ({ value: entry.path, label: home(entry.path) }))];
   return <div className="project-picker"><Folder aria-hidden="true" /><Label htmlFor="project-picker">Project</Label>
-    <OptionSelect id="project-picker" className="w-72 max-sm:w-auto" options={options} value={project ?? ""} disabled={!projects} onChange={path => onChoose(path || undefined)} />
+    <OptionSelect id="project-picker" className="w-72 min-w-0 max-sm:w-auto *:data-[slot=select-value]:min-w-0" options={options} value={project ?? ""} disabled={!projects} onChange={path => onChoose(path || undefined)} />
   </div>;
 }
 

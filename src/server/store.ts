@@ -13,7 +13,7 @@ const MAX_BYTES = 1024 * 1024;
 const forbidden = new Set(["__proto__", "constructor", "prototype"]);
 
 export class ConfigError extends Error {
-  constructor(message: string, readonly status: 400 | 404 | 409 | 422 = 422) { super(message); }
+  constructor(message: string, readonly status: 400 | 404 | 408 | 409 | 422 | 502 | 504 = 422) { super(message); }
 }
 
 function isMissing(error: unknown): boolean {

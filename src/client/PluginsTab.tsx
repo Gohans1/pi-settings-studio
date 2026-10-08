@@ -18,6 +18,7 @@ import { PageHeader } from "./PageHeader";
 import { EmptyDetail, ListItem, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
 import { ResourceFolders, type FolderChange } from "./ResourceFolders";
+import { PluginTools } from "./PluginTools";
 
 const typeLabels: Record<string, string> = { extensions: "extension", prompts: "prompt", themes: "theme" };
 const newLabels = { prompts: "Prompt template", themes: "Theme", extensions: "Extension" } as const;
@@ -28,7 +29,7 @@ const builtinNotes: Record<string, string> = {
   "llama.cpp": "Local llama.cpp provider support.",
 };
 
-function PluginDetail({ item, onOpen }: { item: ResourceView; onOpen: () => void }) {
+function PluginDetail({ item, project, onOpen }: { item: ResourceView; project?: string; onOpen: () => void }) {
   const builtin = item.group.startsWith("Built-in");
   const editable = item.origin === "top-level";
   return <section className="detail" aria-labelledby="plugin-title">
@@ -42,6 +43,7 @@ function PluginDetail({ item, onOpen }: { item: ResourceView; onOpen: () => void
       <div><dt>Source</dt><dd>{item.group}</dd></div>
       <div><dt>{builtin ? "Name" : "File"}</dt><dd><code>{item.path}</code></dd></div>
     </dl>
+    {item.type === "extensions" && <PluginTools path={item.path} project={project} />}
   </section>;
 }
 
@@ -176,7 +178,7 @@ export function PluginsTab({ project }: { project?: string }) {
           onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
       : current && mode === "edit" ? <ResourceEditor key={current.path} type={current.type} path={current.path} name={current.name} editable={current.origin === "top-level"}
           project={project} onMessage={setMessage} onClose={() => { setMode(undefined); void refresh(); }} />
-      : current ? <PluginDetail item={current} onOpen={() => setMode("edit")} />
+      : current ? <PluginDetail key={JSON.stringify([project, current.path, view.revision, view.projectRevision])} item={current} project={project} onOpen={() => setMode("edit")} />
       : <EmptyDetail icon={Puzzle} title="No plugin selected">Choose an extension, prompt template or theme to see where it comes from, or open Packages to install more.</EmptyDetail>} />}
   </>;
 }
