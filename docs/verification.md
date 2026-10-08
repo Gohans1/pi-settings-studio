@@ -1,3 +1,11 @@
+# Merge readiness — package update notices, 2026-10-08
+
+Integrated main's project-trust banner fix (`1645d4f`) into the feature before deployment. The combined tree passed **252 unit/integration tests and 70 Playwright tests**, typecheck, lint and production build. No package versions or lockfile entries changed.
+
+**Dependency audit triage:** `bun audit` reports one High, [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm), in `braces@3.0.3` (deeply nested brace patterns can exhaust the call stack). `bun pm why braces` places it only under the development CLI `shadcn → fast-glob → micromatch` (including shadcn's registry/ts-morph branches). Application code, Vite configuration, test and deploy commands do not invoke that CLI; the app imports only its static Tailwind CSS. No runtime/build/test/deploy call path to the vulnerable parser was found. The official GitHub advisory API reports no patched version as of this review. Deferred as non-blocking for this deployment; **review by 2026-10-15**, or before running the shadcn CLI on untrusted input. This is a documented deferral, not a clean audit; no forced upgrade or audit suppression was applied.
+
+---
+
 # Verification — package update notices, 2026-10-08
 
 Scope: explicit package update checks, per-package badges and a Packages count, historical check timestamp, offline/error states, scoped results and project-aware update jobs. Native Pi `DefaultPackageManager.checkForAvailableUpdates()`; no new dependency or port.
