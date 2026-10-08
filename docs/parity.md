@@ -2,7 +2,7 @@
 
 Reference: [agegr/pi-web](https://github.com/agegr/pi-web) settings panel, re-implemented (not forked). Last reviewed commit: `fdeea87329a291fcebcd54ba41fd2dd0387bfca7` (2026-10-07). On update, review pi-web settings changes after this commit.
 
-Pi baseline: `@earendil-works/pi-coding-agent` 1.0.3 (installed). Ported Pi logic records this version; tests fail when the SDK or Pi's documentation moves.
+Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.0.3 on 2026-10-08, no settings key added). Ported Pi logic records this version; tests fail when the SDK or Pi's documentation moves.
 
 ## Pi configuration (docs/configuration.md)
 

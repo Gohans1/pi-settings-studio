@@ -1,4 +1,4 @@
-// Sub-agent profiles in the format of Pi's example subagent extension (Pi 1.0.3,
+// Sub-agent profiles in the format of Pi's example subagent extension (Pi 1.0.3, re-checked against 1.1.0;
 // examples/extensions/subagent/agents.ts, MIT): <agentDir>/agents/*.md with `name`,
 // `description`, optional `tools` and `model`, and the system prompt as the body.
 import { readdir } from "node:fs/promises";

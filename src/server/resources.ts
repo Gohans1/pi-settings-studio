@@ -1,4 +1,4 @@
-// Resource listing and toggles the way `pi config` does them (Pi 1.0.3,
+// Resource listing and toggles the way `pi config` does them (Pi 1.0.3, re-checked against 1.1.0;
 // dist/modes/interactive/components/config-selector.js, MIT): Pi's DefaultPackageManager resolves
 // the resources; a toggle writes `+pattern`/`-pattern` to the settings array, or to the
 // package's own filter for package resources.

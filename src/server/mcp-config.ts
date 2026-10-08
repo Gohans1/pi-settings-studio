@@ -1,10 +1,10 @@
-// Ported from @earendil-works/pi-coding-agent 1.0.3 (MIT, Copyright Mario Zechner):
+// Ported from @earendil-works/pi-coding-agent 1.0.3, re-checked against 1.1.0 (MIT, Copyright Mario Zechner):
 // dist/core/mcp-servers.js (validation) and dist/extensions/mcp/config.js (file rules, edits).
 // Pi does not export these functions. When PI_PORT_VERSION stops matching the SDK, a test
 // fails: diff Pi's two source files between versions and update this port.
 import type { McpExposure, McpServerConfig } from "@earendil-works/pi-coding-agent";
 
-export const PI_PORT_VERSION = "1.0.3";
+export const PI_PORT_VERSION = "1.1.0";
 export const MCP_EXPOSURES: readonly McpExposure[] = ["codemode", "deferred", "direct", "hidden"];
 const MCP_EXPOSURE_ALIASES: Record<string, McpExposure> = { "codemode-deferred": "codemode" };
 const LOOPBACK_HOSTS = ["localhost", "127.0.0.1", "[::1]"];

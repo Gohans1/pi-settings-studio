@@ -15,8 +15,8 @@
     "start": "bun src/server/cli.ts"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "1.0.3",
-    "@earendil-works/pi-coding-agent": "1.0.3",
+    "@earendil-works/pi-ai": "1.1.0",
+    "@earendil-works/pi-coding-agent": "1.1.0",
     "@hono/bun": "1.0.0",
     "hono": "4.13.13",
     "proper-lockfile": "4.1.2",

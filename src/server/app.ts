@@ -122,7 +122,6 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/instructions", instructionRoutes(store, registry, agentDir));
   app.route("/api/keybindings", keybindingRoutes(store));
   app.route("/api/jobs", jobRoutes(store, registry, agentDir));
-  app.get("/api/status", c => c.json({ source: "persisted-files", liveSession: false, catalogue: "Pi 1.0.3", parityComplete: false }));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));
   app.onError((error, c) => {

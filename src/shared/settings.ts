@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Field catalogue for the General tab, from Pi 1.0.3 docs/settings.md. tests/settings-drift.test.ts
+// Field catalogue for the General tab, from Pi 1.1.0 docs/settings.md. tests/settings-drift.test.ts
 // fails when Pi's Settings interface gains or loses a key that has no home here.
 
 export const sections = [
@@ -109,7 +109,7 @@ export const fields: Field[] = [
   { key: "fullscreenWheelScrollLines", label: "Wheel scroll lines", section: "terminal", kind: "text", help: "auto, or 1 to 100 lines per mouse-wheel event.", defaultValue: "auto",
     schema: z.preprocess(value => value === "auto" || value === undefined ? value : Number(value), z.union([z.literal("auto"), int(1, 100)])) },
   { key: "editorPaddingX", label: "Editor padding", section: "terminal", help: "Horizontal editor padding, 0 to 3 cells.", defaultValue: 0, ...number(0, 3) },
-  { key: "outputPad", label: "Transcript padding", section: "terminal", help: "Horizontal transcript padding.", defaultValue: 1, ...select(choices(1, 0)) },
+  { key: "outputPad", label: "Transcript padding", section: "terminal", help: "Horizontal padding for messages, tool output, ! command output and summary blocks.", defaultValue: 1, ...select(choices(1, 0)) },
   { key: "autocompleteMaxVisible", label: "Autocomplete entries", section: "terminal", help: "Visible autocomplete entries, 3 to 20.", defaultValue: 5, ...number(3, 20) },
   { key: "showHardwareCursor", label: "Hardware cursor", section: "terminal", help: "Show the terminal cursor while Pi positions it for input methods.", defaultValue: false, ...bool },
   { key: "hideThinkingBlock", label: "Hide thinking", section: "terminal", help: "Hide thinking blocks in the transcript.", defaultValue: false, ...bool },

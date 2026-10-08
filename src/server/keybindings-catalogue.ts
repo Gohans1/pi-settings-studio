@@ -1,7 +1,7 @@
-// Generated from @earendil-works/pi-coding-agent 1.0.3 dist/core/keybindings.js (MIT, Copyright Mario Zechner),
+// Generated from @earendil-works/pi-coding-agent 1.1.0 dist/core/keybindings.js (MIT, Copyright Mario Zechner),
 // which is not a public export: action ids, descriptions and the defaults Pi uses on Linux under WSL.
 // tests/keybindings.test.ts compares the ids with Pi's docs/keybindings.md; regenerate when it fails.
-export const KEYBINDINGS_PI_VERSION = "1.0.3";
+export const KEYBINDINGS_PI_VERSION = "1.1.0";
 export const KEYBINDING_ACTIONS: readonly (readonly [id: string, description: string, defaults: readonly string[]])[] = [
   ["tui.editor.cursorUp", "Move cursor up", ["up"]],
   ["tui.editor.cursorDown", "Move cursor down", ["down"]],
