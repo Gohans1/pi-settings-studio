@@ -6,6 +6,7 @@ import { Switch } from "./components/ui/switch";
 import { Textarea } from "./components/ui/textarea";
 import { OptionSelect } from "./OptionSelect";
 import { ModelMapField } from "./ModelMapField";
+import type { Suggestion } from "./SuggestInput";
 import { ThemeField } from "./ThemeField";
 import { ToolsField } from "./ToolsField";
 
@@ -28,8 +29,10 @@ const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
  * One setting: its control and, under it, where its value comes from. Globally a value is Pi's default or
  * custom, and only a custom one offers "Use default"; in a project it is inherited or set there.
  */
-export function SettingField({ field, value, inherited, overridden, invalid, scope = "global", disabled = false, project, piDefault, isDefault, unsaved, onChange, onReset }: {
+export function SettingField({ field, value, inherited, overridden, invalid, scope = "global", disabled = false, project, models = [], piDefault, isDefault, unsaved, onChange, onReset }: {
   field: Field; value: unknown; inherited?: unknown; overridden: boolean; invalid: boolean; scope?: "global" | "project"; disabled?: boolean; project?: string;
+  /** Models to suggest in per-model maps. */
+  models?: readonly Suggestion[];
   /** Pi's real default in words; isDefault: the value Pi ends up with is that default. */
   piDefault: DefaultText; isDefault: boolean; unsaved: boolean;
   onChange: (value: unknown) => void; onReset: () => void;
@@ -51,7 +54,7 @@ export function SettingField({ field, value, inherited, overridden, invalid, sco
     control = <ToolsField label={field.label} list={overridden ? list(value) : undefined} global={scope === "project" ? list(inherited) : undefined}
       scope={scope} disabled={disabled} onChange={next => next === undefined ? onReset() : onChange(next)} />;
   } else if (field.kind === "thinkingMap" || field.kind === "compactionMap") {
-    control = <ModelMapField kind={field.kind} label={field.label} value={value} disabled={disabled} onChange={onChange} />;
+    control = <ModelMapField kind={field.kind} label={field.label} value={value} disabled={disabled} suggestions={models} onChange={onChange} />;
   } else if (field.kind === "lines") {
     control = <Textarea {...common} rows={3} value={Array.isArray(value) ? value.join("\n") : ""} spellCheck={false}
       placeholder={Array.isArray(field.defaultValue) ? field.defaultValue.join("\n") : sentence(piDefault.value)} onChange={e => onChange(e.target.value.split("\n"))} />;

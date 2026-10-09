@@ -7,12 +7,12 @@ import { checkModelScope, loadAvailableModels, loadModels, loadSettings, saveSet
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "./components/ui/field";
-import { Input } from "./components/ui/input";
 import { Spinner } from "./components/ui/spinner";
 import { OptionSelect } from "./OptionSelect";
 import { ScopeChoice } from "./ScopeChoice";
 import { EnabledModels } from "./EnabledModels";
 import { levelOptions, ModelMapField } from "./ModelMapField";
+import { modelSuggestions, providerSuggestions, SuggestInput } from "./SuggestInput";
 
 const hasGlob = (text: string) => /[*?[]/.test(text);
 
@@ -53,7 +53,6 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
   }
   useEffect(() => { setView(undefined); loadSettings(scope, target).then(fill).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read settings.json.")); }, [scope, target]);
   useEffect(() => { loadAvailableModels().then(setAvailable).catch(() => setAvailable([])); }, []);
-  const ids = available.map(entry => `${entry.provider}/${entry.id}`);
   const catalogued = providers.find(entry => entry.id === provider.trim());
   useEffect(() => {
     setModels([]);
@@ -128,30 +127,23 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
     {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
       <FieldGroup>
       <Field><FieldLabel htmlFor="default-provider">Default provider</FieldLabel>
-        <Input id="default-provider" value={provider} list="default-provider-options" placeholder={String(inherited("defaultProvider") ?? "Automatic")} autoComplete="off" spellCheck={false}
-          aria-describedby={providerWarning ? "provider-warning" : undefined} onChange={event => setProvider(event.target.value)} />
+        <SuggestInput id="default-provider" value={provider} placeholder={String(inherited("defaultProvider") ?? "Automatic")}
+          suggestions={[...providerSuggestions(providers), ...extraProviders.map(name => ({ value: name, group: "From Enabled models" }))]}
+          aria-describedby={providerWarning ? "provider-warning" : undefined} onChange={setProvider} />
         {providerWarning && <Warning id="provider-warning">{provider.trim()} is not in the catalog this app reads. An extension or package may provide it; this app does not run them, so it cannot check the name. If Pi cannot find it, new sessions start with another available model.</Warning>}</Field>
-      <datalist id="default-provider-options">
-        {providers.map(entry => <option key={entry.id} value={entry.id} label={`${entry.name}${entry.auth.configured ? "" : " (not set up)"}`} />)}
-        {extraProviders.map(name => <option key={name} value={name} label="From Enabled models" />)}
-      </datalist>
       <Field><FieldLabel htmlFor="default-model">Default model</FieldLabel>
-        <Input id="default-model" value={model} list="default-model-options" placeholder={String(inherited("defaultModel") ?? "Automatic")} autoComplete="off" spellCheck={false}
-          aria-describedby={[modelWarning && "model-warning", outOfScope && "scope-warning"].filter(Boolean).join(" ") || undefined} onChange={event => setModel(event.target.value)} />
+        <SuggestInput id="default-model" value={model} placeholder={String(inherited("defaultModel") ?? "Automatic")}
+          suggestions={[...models.map(entry => ({ value: entry.id, label: entry.name })), ...extraModels.map(id => ({ value: id, group: "From Enabled models" }))]}
+          aria-describedby={[modelWarning && "model-warning", outOfScope && "scope-warning"].filter(Boolean).join(" ") || undefined} onChange={setModel} />
         {modelWarning && <Warning id="model-warning">{catalogued!.name} has no model {model.trim()} in the catalog this app reads. Check the ID, or refresh the model catalogs. If Pi cannot find it, new sessions start with another available model.</Warning>}
         {outOfScope && <Warning id="scope-warning">Not in Enabled models, so new sessions start with {modelScope!.first} instead. {addToScope ? "Saving adds it to Enabled models, as Pi does when you save a default with Ctrl+S." : "Add it to Enabled models to start with it."}</Warning>}</Field>
-      <datalist id="default-model-ids">{ids.map(id => <option key={id} value={id} />)}</datalist>
-      <datalist id="default-model-options">
-        {models.map(entry => <option key={entry.id} value={entry.id} label={entry.name === entry.id ? undefined : entry.name} />)}
-        {extraModels.map(id => <option key={id} value={id} label="From Enabled models" />)}
-      </datalist>
       <Field><FieldLabel htmlFor="default-thinking">Thinking level</FieldLabel>
         <OptionSelect id="default-thinking" className="w-full" options={[{ value: "", label: "Pi's default (medium)" }, ...levelOptions(offered, thinking)]} value={thinking} onChange={setThinking}
           aria-describedby={["default-thinking-help", thinkingNote && "thinking-warning"].filter(Boolean).join(" ")} />
         <FieldDescription id="default-thinking-help">{offeredText || "Pi limits the level to what the model offers."}</FieldDescription>
         {thinkingNote && <Warning id="thinking-warning">{thinkingNote}</Warning>}</Field>
       <Field><FieldLabel id="per-model-label">Thinking level per model</FieldLabel>
-        <ModelMapField kind="thinkingMap" label="Thinking level per model" value={perModel} list="default-model-ids"
+        <ModelMapField kind="thinkingMap" label="Thinking level per model" value={perModel} suggestions={modelSuggestions(available)}
           levels={ref => known(ref)?.thinkingLevels} onChange={setPerModel} />
         <FieldDescription>{scope === "project" && !perModel && inherited("modelThinkingLevels") ? "None here, so the global ones apply. " : ""}
           Overrides the level above for these models. <a href="#general/models">Thinking budgets and prompt caching</a> are in General.</FieldDescription></Field>

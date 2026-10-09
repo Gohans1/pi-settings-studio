@@ -5,12 +5,12 @@ import { selected, setEnabled } from "../shared/enabled-models";
 import { Button } from "./components/ui/button";
 import { Checkbox } from "./components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
-import { Input } from "./components/ui/input";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator, ItemTitle } from "./components/ui/item";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 import { Disclosure } from "./Disclosure";
 import { SearchField } from "./SearchField";
+import { modelSuggestions, SuggestInput } from "./SuggestInput";
 import { IconButton } from "./Workbench";
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
@@ -50,8 +50,10 @@ export function EnabledModels({ patterns, scope, available, providers, inherited
     if (pattern && !patterns.includes(pattern)) onChange([...patterns, pattern]);
     setText("");
   }
-  // Enter adds the pattern here instead of submitting the whole form.
-  const onKey = (event: KeyboardEvent) => { if (event.key === "Enter") { event.preventDefault(); add(); } };
+  // Enter adds the pattern here instead of submitting the whole form; on a highlighted suggestion it fills that in first.
+  const onKey = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" && !event.currentTarget.hasAttribute("aria-activedescendant")) { event.preventDefault(); add(); }
+  };
   const matched = (pattern: string) => scope?.patterns.find(entry => entry.pattern === pattern);
   return <FieldSet>
     <FieldLegend variant="label">Enabled models</FieldLegend>
@@ -90,10 +92,8 @@ export function EnabledModels({ patterns, scope, available, providers, inherited
         </Item></Fragment>;
       })}</ItemGroup> : <FieldDescription>{inherited?.length ? `None here, so the global list applies: ${inherited.join(", ")}.` : "None: every model that has a credential."}</FieldDescription>}
       <div className="pattern-add">
-        <Input aria-label="Model or pattern" list="enabled-model-options" value={text} placeholder="anthropic/* or provider/model" autoComplete="off" spellCheck={false}
-          onChange={event => setText(event.target.value)} onKeyDown={onKey} />
+        <SuggestInput aria-label="Model or pattern" value={text} placeholder="anthropic/* or provider/model" suggestions={modelSuggestions(available)} onChange={setText} onKeyDown={onKey} />
         <Button type="button" variant="outline" onClick={add}>Add</Button>
-        <datalist id="enabled-model-options">{all.map(ref => <option key={ref} value={ref} />)}</datalist>
       </div>
       <FieldDescription>Pi's --models format: anthropic/* or *sonnet* selects several, and :high adds a thinking level. Ticking a model adds its exact name.</FieldDescription>
     </FieldSet>
