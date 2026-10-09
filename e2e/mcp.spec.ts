@@ -109,6 +109,17 @@ test("while a server saves, Save server shows a spinner", async ({ page }) => {
   await page.unrouteAll({ behavior: "wait" });
 });
 
+test("a long form in the detail pane keeps its save row in view on a wide screen", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "Add server", exact: true }).click();
+  const form = page.getByRole("form", { name: "Add MCP server" });
+  await expect(form.getByRole("button", { name: "Save server" })).toBeInViewport();
+  await form.getByLabel("Timeout (seconds)").scrollIntoViewIfNeeded();
+  await expect(form.getByRole("button", { name: "Save server" })).toBeInViewport();
+  expect(await page.locator("main").evaluate(element => element.scrollTop)).toBe(0);
+});
+
 test("add a server, edit it without seeing its secret, remove it and undo", async ({ page }) => {
   await page.goto(server.url + "#mcp");
   const readServers = async () => JSON.parse(await readFile(file, "utf8")).mcpServers;
@@ -250,6 +261,25 @@ startup_timeout_sec = 20`);
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored");
   expect((await readServers()).context7).toBeUndefined();
+});
+
+test("a long mcp.log scrolls inside its frame, from the keyboard too", async ({ page }) => {
+  const lines = Array.from({ length: 300 }, (_, i) => `2026-10-08T06:00:00.000Z [echo] line ${i + 1}`);
+  await writeFile(join(root, "agent", "mcp.log"), lines.join("\n") + "\n");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "View mcp.log" }).click();
+  const contents = page.getByLabel("mcp.log contents");
+  await expect(contents).toContainText("line 300");
+  // 32rem at most; the rest scrolls.
+  expect((await contents.boundingBox())!.height).toBeLessThanOrEqual(512);
+  const scrolled = () => contents.evaluate(element => [element, ...element.querySelectorAll("*")]
+    .find(node => node.scrollHeight > node.clientHeight + 1 && getComputedStyle(node).overflowY !== "visible")?.scrollTop ?? -1);
+  expect(await scrolled()).toBe(0);
+  for (let i = 0; i < 20 && !(await contents.evaluate(element => element.contains(document.activeElement))); i++) await page.keyboard.press("Tab");
+  expect(await contents.evaluate(element => element.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press("End");
+  await expect.poll(scrolled).toBeGreaterThan(0);
 });
 
 test("an OAuth server shows its sign-in state, and mcp.log is shown with secrets hidden", async ({ page }) => {
