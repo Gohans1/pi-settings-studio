@@ -21,6 +21,7 @@ import { Switch } from "./components/ui/switch";
 import { Spinner } from "./components/ui/spinner";
 import { Item, ItemActions, ItemContent, ItemGroup, ItemSeparator, ItemTitle } from "./components/ui/item";
 import { Separator } from "./components/ui/separator";
+import { ScrollArea } from "./components/ui/scroll-area";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, IconButton, ListItem, MoreMenu, Workbench } from "./Workbench";
@@ -241,7 +242,7 @@ export function McpTab({ project }: { project?: string }) {
       <header className="detail-header"><h2 id="log-title">mcp.log</h2>
         <div className="actions"><Button variant="outline" onClick={showLog}>Reload</Button><Button variant="ghost" onClick={() => setLog(undefined)}>Close</Button></div></header>
       <p className="muted">Messages servers log while Pi runs, newest last; known secrets are hidden. <code>{log.path}</code></p>
-      {log.exists ? <pre className="log-tail" tabIndex={0} aria-label="mcp.log contents">{log.text || "Empty."}</pre> : <Empty><EmptyHeader><EmptyDescription>No server has logged anything yet.</EmptyDescription></EmptyHeader></Empty>}
+      {log.exists ? <div className="log-tail" role="group" aria-label="mcp.log contents"><ScrollArea className="flex max-h-128 flex-col"><pre>{log.text || "Empty."}</pre></ScrollArea></div> : <Empty><EmptyHeader><EmptyDescription>No server has logged anything yet.</EmptyDescription></EmptyHeader></Empty>}
     </section>;
   } else if (form?.mode === "import" && views[form.scope]) {
     const scope = form.scope;

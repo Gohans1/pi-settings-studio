@@ -1,12 +1,13 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { cn } from "cn";
 import { ChevronDown, CircleAlert, FileJson, History, RotateCcw } from "lucide-react";
 import { fields, sections, type Field, type SettingsChange, type SettingsView } from "../shared/settings";
 import { loadModelIds, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
-import { Button } from "./components/ui/button";
+import { Button, buttonVariants } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { FieldGroup, FieldSeparator } from "./components/ui/field";
 import { Separator } from "./components/ui/separator";
@@ -201,7 +202,9 @@ export function GeneralTab({ project }: { project?: string }) {
           const keys = fields.filter(field => field.section === section.id).map(field => field.key);
           const unsaved = changes.some(change => keys.includes(change.key));
           const set = keys.filter(key => Object.hasOwn(view.values, key)).length;
+          // A link that looks like a button: shadcn's buttonVariants on a plain <a> keeps the link role.
           return <a key={section.id} href={"#group-" + section.id} aria-current={section.id === currentGroup ? "true" : undefined}
+            className={cn(buttonVariants({ variant: section.id === currentGroup ? "secondary" : "ghost", size: "sm" }), "justify-between")}
             onClick={event => { event.preventDefault(); setCurrentGroup(section.id); document.getElementById("group-" + section.id)?.scrollIntoView({ block: "start" }); }}>
             {section.title}
             {unsaved ? <span className="nav-dot"><span className="sr-only">(unsaved changes)</span></span>

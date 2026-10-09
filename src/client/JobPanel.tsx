@@ -8,6 +8,7 @@ import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from
 import { Field, FieldContent, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
+import { ScrollArea } from "./components/ui/scroll-area";
 import { Disclosure } from "./Disclosure";
 
 /** Start a job on click and follow it until it ends. */
@@ -82,7 +83,7 @@ export function JobPanel({ job, error, onAnswer, onCancel, onDismiss, children }
     {children}
     {(job.error || error) && <FieldError>{job.error || error}</FieldError>}
     {/* Output opens by itself when the job fails; the key starts it over at each change of status. */}
-    {job.output && <Disclosure key={job.status} label="Output" defaultOpen={job.status === "failed"}><pre>{job.output}</pre></Disclosure>}
+    {job.output && <Disclosure key={job.status} label="Output" defaultOpen={job.status === "failed"}><ScrollArea className="flex max-h-80 flex-col"><pre>{job.output}</pre></ScrollArea></Disclosure>}
     </div></CardContent>
     <CardFooter>{job.status === "running"
       ? <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>

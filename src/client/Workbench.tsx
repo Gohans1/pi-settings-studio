@@ -5,6 +5,7 @@ import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./components/ui/empty";
 import { Item, ItemContent, ItemMedia, ItemTitle } from "./components/ui/item";
+import { ScrollArea } from "./components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 
 /**
@@ -27,11 +28,11 @@ export function Workbench({ list, detail, open, onBack, backLabel }: {
     }
   }, [open]);
   return <div ref={frame} className="workbench" data-open={open || undefined}>
-    <div className="workbench-list">{list}</div>
-    <div className="workbench-detail">
+    <div className="workbench-list"><ScrollArea className="h-full"><div className="workbench-list-content">{list}</div></ScrollArea></div>
+    <div className="workbench-detail"><ScrollArea className="h-full"><div className="workbench-detail-content">
       {open && <Button ref={back} variant="ghost" size="sm" className="mb-3 -ms-2 min-[56rem]:hidden" onClick={onBack}><ChevronLeft aria-hidden="true" data-icon="inline-start" />{backLabel}</Button>}
       {detail}
-    </div>
+    </div></ScrollArea></div>
   </div>;
 }
 

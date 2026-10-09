@@ -8,6 +8,7 @@ import { Button } from "./components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { Field, FieldLabel } from "./components/ui/field";
 import { Spinner } from "./components/ui/spinner";
+import { ScrollArea } from "./components/ui/scroll-area";
 import { OptionSelect } from "./OptionSelect";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -65,10 +66,10 @@ export function SystemPromptTab({ project }: { project?: string }) {
             {/* Closed sections stay in the page (hidden until found), so the browser's find still reaches them. */}
             <Accordion multiple hiddenUntilFound defaultValue={["#base"]}>
               {prompt.content && <AccordionItem value="#base"><AccordionTrigger><span>Base prompt <span className="muted">{count(prompt.content)}</span></span></AccordionTrigger>
-                <AccordionContent><pre>{prompt.content}</pre></AccordionContent></AccordionItem>}
+                <AccordionContent><ScrollArea className="flex max-h-120 flex-col"><pre>{prompt.content}</pre></ScrollArea></AccordionContent></AccordionItem>}
               {prompt.sections.map(section => <AccordionItem key={section.name} value={section.name}>
                 <AccordionTrigger><span>{section.name} <span className="muted">{count(section.text)}</span></span></AccordionTrigger>
-                <AccordionContent><pre>{section.text}</pre></AccordionContent>
+                <AccordionContent><ScrollArea className="flex max-h-120 flex-col"><pre>{section.text}</pre></ScrollArea></AccordionContent>
               </AccordionItem>)}
               <AccordionItem value="#tools"><AccordionTrigger>Tools ({prompt.tools.length})</AccordionTrigger>
                 <AccordionContent><ul className="tool-list" aria-label="Tools">{prompt.tools.map(tool => <li key={tool.name}><code>{tool.name}</code><span className="muted">{tool.description}</span></li>)}</ul></AccordionContent>

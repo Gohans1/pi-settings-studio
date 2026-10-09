@@ -1,3 +1,27 @@
+# Verification — ScrollArea and the section index, 2026-10-09
+
+Scope: seven boxes that scrolled with `overflow: auto` (the workbench's two panes, the mcp.log, a job's output, both prompt views, an endpoint's model list) now scroll in shadcn's ScrollArea (base-nova, added with the CLI); General's section index is drawn with `buttonVariants` on plain links. Left native on purpose: `main`, the page's one scroller, and the two strips that scroll sideways with a faded edge and no scrollbar (the tab bar, the narrow section index).
+
+| Check | Result |
+|---|---|
+| `shadcn add <name> --dry-run --diff` | 28 of 28 unchanged |
+| `bun test` (`HOME` an empty folder) | 277 passed |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings; `@shadcn/lint` 0 findings |
+| `bun run test:e2e` (same `HOME`) | 108 passed, up from 104 |
+
+Guards written first, passing on the native scrollers and still passing on ScrollArea: the provider list scrolls on its own with its search in view; a long form keeps its save row in view on a wide screen; on a narrow screen the page scrolls the form and its save row stays in view; a 300-line mcp.log stays within 32rem and scrolls from the keyboard.
+
+Found:
+- Base UI puts `overflow: scroll` on the viewport inline. On a narrow screen that would make an unscrolled pane the sticky save row's scroller, so there the ScrollArea's boxes are `display: contents` and the page scrolls (the narrow guard).
+- `<Button render={<a />} nativeButton={false}>` gives the link `role="button"` (Base UI `useButton`); shadcn's Button docs say to use `buttonVariants` on `<a>` instead. The previous report recommended the wrong one.
+- `buttonVariants` does not merge classes, so `justify-between` needs `cn`; the base link colour turned the index blue and now applies only to links without classes.
+- The index's visually hidden counts had relied on a hand-written `position: relative` on each link; without it they widened the page at 390 px. The existing 320 px overflow check failed with the bug and passed with the fix (`.section-nav` is `position: relative`).
+- A labelled region for the log's contents clashed with the region named mcp.log; it is a group.
+
+Manual (`agent-browser`, own session): main and this branch side by side, 1280×800 light and 390 px dark: General's index (current group, counts, unsaved dot), the provider list, the mcp.log with its ScrollArea thumb. No horizontal overflow at 390 px on General, Models, MCP, Skills and Plugins.
+
+---
+
 # Verification — Tools tab, 2026-10-09
 
 Scope: a Tools tab listing every tool a new session registers at startup, grouped by source (Pi built-in, each extension including built-in ones, each MCP server by its configured name) with how the model reaches it. `POST /api/tools` runs the existing tool probe without a selected extension; the extension tool list moved into a shared `ToolList`.

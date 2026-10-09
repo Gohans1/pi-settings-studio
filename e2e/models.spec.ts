@@ -15,6 +15,18 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+test("on a wide screen the provider list scrolls on its own and keeps its search in view", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(server.url + "#models");
+  const rows = page.getByRole("region", { name: "Providers" }).getByRole("listitem");
+  await expect(rows.last()).not.toBeInViewport();
+  await rows.first().hover();
+  await page.mouse.wheel(0, 10_000);
+  await expect(rows.last()).toBeInViewport();
+  await expect(page.getByRole("searchbox", { name: "Search providers" })).toBeInViewport();
+  expect(await page.locator("main").evaluate(element => element.scrollTop)).toBe(0);
+});
+
 test("API keys are stored, removed and restored without ever being shown", async ({ page }) => {
   const auth = async () => JSON.parse(await readFile(join(agent, "auth.json"), "utf8"));
   await page.goto(server.url + "#models");
