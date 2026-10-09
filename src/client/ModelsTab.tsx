@@ -26,7 +26,8 @@ const NEW_CUSTOM = "#custom-new";
 
 export function ModelsTab({ project }: { project?: string }) {
   const [view, setView] = useState<ProvidersView>();
-  const [selected, setSelected] = useState<string>();
+  // A link to #models/defaults opens on Defaults.
+  const [selected, setSelected] = useState<string | undefined>(() => location.hash.split("/")[1] === "defaults" ? DEFAULTS : undefined);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");

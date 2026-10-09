@@ -8,7 +8,7 @@ import { DEFAULT_TOOLS, effectiveTools } from "./tools";
 export const sections = [
   { id: "tools", title: "Tools" },
   { id: "interaction", title: "Messages & interaction" },
-  { id: "models", title: "Models & thinking" },
+  { id: "models", title: "Models & thinking", see: { text: "Default provider and model, thinking levels and Enabled models are set in", label: "Models → Defaults", href: "#models/defaults" } },
   { id: "context", title: "Sessions & context" },
   { id: "shell", title: "Shell & packages" },
   { id: "images", title: "Images" },
@@ -62,7 +62,7 @@ export const fields: Field[] = [
   { key: "defaultModel", label: "Default model", section: "modelDefaults", kind: "text", help: "Exact model ID, not its display name. Pi checks availability and credentials at startup.", schema: text },
   { key: "defaultThinkingLevel", label: "Thinking level", section: "modelDefaults", help: "Startup reasoning effort. Support depends on the model.", defaultValue: "medium", ...select(thinking) },
   { key: "enabledModels", label: "Enabled models", section: "modelDefaults", kind: "lines", help: "One model pattern per line, in Pi's --models format. Used for startup selection and model cycling. Empty means all available models.", schema: lines },
-  { key: "modelThinkingLevels", label: "Thinking level per model", section: "models", kind: "thinkingMap", help: "Startup thinking level for specific models, keyed by exact provider/modelId. Overrides the default thinking level.",
+  { key: "modelThinkingLevels", label: "Thinking level per model", section: "modelDefaults", kind: "thinkingMap", help: "Startup thinking level for specific models, keyed by exact provider/modelId. Overrides the default thinking level.",
     defaultText: { value: "none", note: "every model starts at the default thinking level" }, schema: z.record(modelKey, z.enum(THINKING)) },
   { key: "showCacheMissNotices", label: "Cache notices", section: "models", help: "Show notices for significant cache misses, cache warming, compaction usage and provider recovery.", defaultValue: false, ...bool },
   { key: "cacheWarming", globalOnly: true, label: "Prompt cache warming", section: "models", advanced: true, help: "Keep provider prompt caches warm during runs (streaming) or also between runs (idle). Only when it saves at least $0.05.", defaultValue: "streaming", ...select(choices("off", "streaming", "idle")) },

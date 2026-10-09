@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
 import { CircleAlert, TriangleAlert, X } from "lucide-react";
-import type { ModelScopeView, ModelSummary, ProviderView } from "../shared/models";
+import type { AvailableModel, ModelScopeView, ModelSummary, ProviderView } from "../shared/models";
 import type { SettingsChange, SettingsView } from "../shared/settings";
-import { checkModelScope, loadModelIds, loadModels, loadSettings, saveSettings } from "./api";
+import { clampLevel } from "../shared/thinking";
+import { checkModelScope, loadAvailableModels, loadModels, loadSettings, saveSettings } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
@@ -12,9 +13,9 @@ import { Spinner } from "./components/ui/spinner";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator, ItemTitle } from "./components/ui/item";
 import { OptionSelect } from "./OptionSelect";
 import { ScopeChoice } from "./ScopeChoice";
+import { levelOptions, ModelMapField } from "./ModelMapField";
 import { IconButton } from "./Workbench";
 
-const LEVELS = [{ value: "", label: "Pi's default (medium)" }, ...["off", "minimal", "low", "medium", "high", "xhigh", "max"].map(level => ({ value: level, label: level }))];
 const hasGlob = (text: string) => /[*?[]/.test(text);
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 const misses = {
@@ -81,7 +82,8 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
   const [thinking, setThinking] = useState("");
   const [enabled, setEnabled] = useState<string[]>([]);
   const [models, setModels] = useState<ModelSummary[]>([]);
-  const [ids, setIds] = useState<string[]>([]);
+  const [available, setAvailable] = useState<AvailableModel[]>([]);
+  const [perModel, setPerModel] = useState<unknown>();
   const [modelScope, setModelScope] = useState<ModelScopeView>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -92,10 +94,12 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
     setModel(String(next.values.defaultModel ?? ""));
     setThinking(String(next.values.defaultThinkingLevel ?? ""));
     setEnabled(Array.isArray(next.values.enabledModels) ? next.values.enabledModels.map(String) : []);
+    setPerModel(next.values.modelThinkingLevels);
     if (preset) { setProvider(preset.provider); setModel(preset.model); onPresetUsed?.(); }
   }
   useEffect(() => { setView(undefined); loadSettings(scope, target).then(fill).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read settings.json.")); }, [scope, target]);
-  useEffect(() => { loadModelIds().then(setIds).catch(() => setIds([])); }, []);
+  useEffect(() => { loadAvailableModels().then(setAvailable).catch(() => setAvailable([])); }, []);
+  const ids = available.map(entry => `${entry.provider}/${entry.id}`);
   const catalogued = providers.find(entry => entry.id === provider.trim());
   useEffect(() => {
     setModels([]);
@@ -117,6 +121,17 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
     return () => clearTimeout(timer);
   }, [view, effectiveEnabled.join("\n"), reference]);
 
+  // What the catalog knows of a provider/modelId: the models of set-up providers, or the typed provider's.
+  const known = (ref: string): ModelSummary | undefined => available.find(entry => `${entry.provider}/${entry.id}` === ref)
+    ?? (catalogued ? models.find(entry => `${catalogued.id}/${entry.id}` === ref) : undefined);
+  const startModel = reference ? known(reference) : undefined;
+  const askedLevel = thinking || String(inherited("defaultThinkingLevel") ?? "") || "medium";
+  const startsAt = startModel && clampLevel(startModel.thinkingLevels, askedLevel);
+  const offered = startModel?.thinkingLevels;
+  const thinkingNote = startModel && startsAt !== askedLevel && (startsAt === "off" ? "Pi starts it with thinking off." : `Pi starts it at ${startsAt} instead.`);
+  const offeredText = startModel && offered && (offered.length === 1 && offered[0] === "off" ? `${startModel.name} does not think.`
+    : offered.length === 1 ? `${startModel.name} offers only ${offered[0]}.` : `${startModel.name} offers ${offered[0]} to ${offered.at(-1)}.`);
+
   // Pi keeps a saved default inside a non-empty scope (AgentSession._addPersistedDefaultToNonEmptyScope);
   // outside it, new sessions start with the scope's first model.
   const outOfScope = modelScope?.defaultInScope === false && !!modelScope.first;
@@ -130,6 +145,7 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
     const wanted: Record<string, unknown> = {
       defaultProvider: provider.trim() || undefined, defaultModel: model.trim() || undefined, defaultThinkingLevel: thinking || undefined,
       enabledModels: patterns.length ? patterns : undefined,
+      modelThinkingLevels: perModel,
     };
     const changes: SettingsChange[] = Object.entries(wanted).flatMap(([key, value]): SettingsChange[] =>
       value === undefined ? (Object.hasOwn(view.values, key) ? [{ key, remove: true }] : [])
@@ -170,13 +186,21 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
           aria-describedby={[modelWarning && "model-warning", outOfScope && "scope-warning"].filter(Boolean).join(" ") || undefined} onChange={event => setModel(event.target.value)} />
         {modelWarning && <Warning id="model-warning">{catalogued!.name} has no model {model.trim()} in the catalog this app reads. Check the ID, or refresh the model catalogs. If Pi cannot find it, new sessions start with another available model.</Warning>}
         {outOfScope && <Warning id="scope-warning">Not in Enabled models, so new sessions start with {modelScope!.first} instead. {addToScope ? "Saving adds it to Enabled models, as Pi does when you save a default with Ctrl+S." : "Add it to Enabled models to start with it."}</Warning>}</Field>
+      <datalist id="default-model-ids">{ids.map(id => <option key={id} value={id} />)}</datalist>
       <datalist id="default-model-options">
         {models.map(entry => <option key={entry.id} value={entry.id} label={entry.name === entry.id ? undefined : entry.name} />)}
         {extraModels.map(id => <option key={id} value={id} label="From Enabled models" />)}
       </datalist>
       <Field><FieldLabel htmlFor="default-thinking">Thinking level</FieldLabel>
-        <OptionSelect id="default-thinking" className="w-full" options={LEVELS} value={thinking} onChange={setThinking} aria-describedby="default-thinking-help" />
-        <FieldDescription id="default-thinking-help">Pi limits the level to what the model supports.</FieldDescription></Field>
+        <OptionSelect id="default-thinking" className="w-full" options={[{ value: "", label: "Pi's default (medium)" }, ...levelOptions(offered, thinking)]} value={thinking} onChange={setThinking}
+          aria-describedby={["default-thinking-help", thinkingNote && "thinking-warning"].filter(Boolean).join(" ")} />
+        <FieldDescription id="default-thinking-help">{offeredText || "Pi limits the level to what the model offers."}</FieldDescription>
+        {thinkingNote && <Warning id="thinking-warning">{thinkingNote}</Warning>}</Field>
+      <Field><FieldLabel id="per-model-label">Thinking level per model</FieldLabel>
+        <ModelMapField kind="thinkingMap" label="Thinking level per model" value={perModel} list="default-model-ids"
+          levels={ref => known(ref)?.thinkingLevels} onChange={setPerModel} />
+        <FieldDescription>{scope === "project" && !perModel && inherited("modelThinkingLevels") ? "None here, so the global ones apply. " : ""}
+          Overrides the level above for these models. <a href="#general/models">Thinking budgets and prompt caching</a> are in General.</FieldDescription></Field>
       <EnabledModels patterns={enabled} scope={modelScope} ids={ids} inherited={inheritedEnabled} onChange={setEnabled} />
       </FieldGroup>
       <div className="form-actions"><Button type="submit" disabled={busy}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save defaults"}</Button></div>

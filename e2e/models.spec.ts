@@ -207,6 +207,46 @@ test("defaults are chosen from Pi's catalog and saved to settings.json", async (
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("the thinking level offers what the default model supports, and says the level Pi starts it at", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProvider: "anthropic", defaultModel: "claude-haiku-4-5", defaultThinkingLevel: "max" }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const thinking = panel.getByRole("combobox", { name: "Thinking level" });
+  await expect(thinking).toHaveAccessibleDescription(/^Claude Haiku 4\.5.* offers off to high\. Pi starts it at high instead\.$/);
+  await thinking.click();
+  await expect(page.getByRole("option")).toHaveText(["Pi's default (medium)", "off", "minimal", "low", "medium", "high", "max (not offered)"]);
+  await page.getByRole("option", { name: "high", exact: true }).click();
+  await expect(thinking).not.toHaveAccessibleDescription(/instead/);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("thinking levels per model sit beside the default, each offering its own model's levels", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const perModel = panel.getByRole("group", { name: "Thinking level per model" });
+  await perModel.getByRole("button", { name: "Add model" }).click();
+  await perModel.getByLabel("Model 1", { exact: true }).fill("anthropic/claude-haiku-4-5");
+  await perModel.getByRole("combobox", { name: "Thinking level for model 1" }).click();
+  await expect(page.getByRole("option", { name: "xhigh" })).toHaveCount(0);
+  await page.getByRole("option", { name: "low", exact: true }).click();
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).modelThinkingLevels).toEqual({ "anthropic/claude-haiku-4-5": "low" });
+});
+
+test("Models and General point to each other where thinking is set", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  await page.getByRole("region", { name: "Defaults" }).getByRole("link", { name: "Thinking budgets and prompt caching" }).click();
+  const general = page.getByRole("region", { name: "Models & thinking" });
+  await expect(general.getByLabel("Thinking budget: minimal", { exact: true })).toBeVisible();
+  await expect(general.getByRole("group", { name: "Thinking level per model" })).toHaveCount(0);
+  await general.getByRole("link", { name: "Models → Defaults" }).click();
+  await expect(page.getByRole("region", { name: "Defaults" }).getByRole("group", { name: "Thinking level per model" })).toBeVisible();
+});
+
 test("a custom provider the browser would refuse says why under its field and writes nothing", async ({ page }) => {
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: "Add custom provider" }).click();
