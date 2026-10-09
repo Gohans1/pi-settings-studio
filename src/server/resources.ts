@@ -11,8 +11,8 @@ import { z } from "zod";
 import { DefaultPackageManager, loadSkills, parseFrontmatter, ProjectTrustStore, SettingsManager, type ResolvedResource } from "@earendil-works/pi-coding-agent";
 import type { PackageUpdateCheck, PackageView, PluginsView, ResourceType, ResourceView, SkillsView } from "../shared/resources.ts";
 import type { ToolSource, ToolsView } from "../shared/plugin-tools.ts";
-import { isRecord, mcpNamespace } from "./mcp-config.ts";
-import { ConfigError, type ConfigStore } from "./store.ts";
+import { isRecord, mcpNamespace, readMcpServers } from "./mcp-config.ts";
+import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
 import type { ProjectRegistry } from "./projects.ts";
 import { runToolProbe, runToolsProbe } from "./plugin-tools.ts";
 import { knownSecrets, redact } from "./jobs.ts";
@@ -202,7 +202,17 @@ async function redacted<T>(secrets: string[], run: () => Promise<T>): Promise<T>
   }
 }
 
-/** Every tool a new session registers, with the Pi feature, extension or MCP server it comes from. */
+/** The MCP servers a session loads here, each on or off: the global file, then the project's overrides and servers, as Pi merges them. */
+async function mcpServersOf(store: ConfigStore, projectStore?: ConfigStore): Promise<Map<string, boolean>> {
+  async function file(target: ConfigStore, scope: Scope) {
+    try { return (await target.read(scope, "mcp.json")).value; } catch (error) { if (error instanceof ConfigError) return {}; throw error; }
+  }
+  const configs = new Map(readMcpServers(await file(store, "global")).servers.flatMap(server => server.config ? [[server.name, server.config] as const] : []));
+  if (projectStore) for (const server of readMcpServers(await file(projectStore, "project"), new Map(configs)).servers) if (server.config) configs.set(server.name, server.config);
+  return new Map([...configs].map(([name, config]) => [name, config.enabled !== false]));
+}
+
+/** Every tool a new session registers, with the Pi feature, extension or MCP server it comes from, and the sources it takes none from. */
 export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
   const context = resourceContext(store, registry, agentDir);
   return new Hono().post("/", async c => {
@@ -211,12 +221,11 @@ export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentD
     const { resolved, settings } = await context.resolve(project);
     const projectStore = project ? registry.storeFor(project) : undefined;
     const extensions = new Map(await Promise.all(resolved.extensions.map(async item => [item.path, await describe("extensions", item, agentDir)] as const)));
-    // Server names as configured: tool names only carry the sanitized namespace.
-    const servers = (await Promise.all([store.read("global", "mcp.json"), projectStore?.read("project", "mcp.json")].map(read => read?.catch(() => undefined))))
-      .flatMap(file => isRecord(file?.value.mcpServers) ? Object.keys(file.value.mcpServers) : []);
+    const servers = await mcpServersOf(store, projectStore);
     function sourceOf(path: string, namespace?: string): ToolSource {
+      // Server names as configured: tool names only carry the sanitized namespace.
       if (path === BUILTIN_PREFIX + "mcp" && namespace?.startsWith("mcp__")) {
-        return { kind: "mcp", server: servers.find(name => mcpNamespace(name) === namespace) ?? namespace.slice("mcp__".length) };
+        return { kind: "mcp", server: [...servers.keys()].find(name => mcpNamespace(name) === namespace) ?? namespace.slice("mcp__".length) };
       }
       const extension = extensions.get(path);
       if (extension) return { kind: "extension", name: extension.name, group: extension.group };
@@ -228,7 +237,18 @@ export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentD
         paths: resolved.extensions.filter(item => item.enabled).map(item => item.path),
         globalSettings: settings.global, projectSettings: settings.project,
       }, c.req.raw.signal);
-      return { ...view, tools: view.tools.map(({ path, namespace, ...tool }) => ({ ...tool, source: sourceOf(path, namespace) })) };
+      const tools = view.tools.map(({ path, namespace, ...tool }) => ({ ...tool, source: sourceOf(path, namespace) }));
+      const used = new Set(tools.map(tool => JSON.stringify(tool.source)));
+      const idle = (source: ToolSource, on: boolean) => used.has(JSON.stringify(source)) ? [] : [{ source, status: on ? "empty" as const : "off" as const }];
+      const idleSources = [
+        // The MCP extension's own tools are listed under their servers.
+        ...resolved.extensions.filter(item => item.path !== BUILTIN_PREFIX + "mcp").flatMap(item => {
+          const { name, group } = extensions.get(item.path)!;
+          return idle({ kind: "extension", name, group }, item.enabled);
+        }),
+        ...[...servers].flatMap(([server, on]) => idle({ kind: "mcp", server }, on)),
+      ];
+      return { ...view, tools, idleSources };
     }));
   });
 }

@@ -1,3 +1,27 @@
+# Verification — Tools as a workbench, 2026-10-09
+
+Scope: the Tools tab rebuilt as the variant the user chose after two rounds behind a `?variant=` picker (round 1: Lanes, Sources, Ledger, Split, Focus; round 2 around Split: Pair, Trio, Overview; chosen: Pair). `/api/tools` adds `idleSources`. The harness and its branch were deleted.
+
+| Check | Result |
+|---|---|
+| `bun test` (`HOME` an empty folder) | 285 passed (44 files), up from 283: idle sources (turned off, on without tools, the MCP extension excluded) and a project `mcp.json` override that turns a global server off |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings; `@shadcn/lint` 0 findings |
+| `bun run build` | Passed. JS 837.4 kB (gzip 256.0 kB), CSS 116.7 kB (gzip 19.1 kB); the >500 kB chunk warning remains |
+| `bun run test:e2e` (same `HOME`) | 115 passed. `e2e/tools.spec.ts` rewritten for the workbench: the sees view by source beside every source and its state (axe), doesn't-see with on demand apart from folded off and links to turn sources on (axe), a source's reach tally, change link and opening row, search across the list and views, the project picker at 320px with the panes taking turns (axe), a failed inspection and Refresh tools |
+| `impeccable detect` | 0 findings on the variants, run once per round |
+
+RED/GREEN: the two API tests failed on the missing `idleSources`, and the six browser tests on the old tab, then passed.
+
+Decisions:
+- Built-in extensions (code mode, tool search, llama.cpp) are listed as built into Pi; the MCP extension's own tools stay under their servers, so it is never an idle source.
+- On demand and off stay apart in "doesn't see": the model can still call on-demand tools. Off is folded with the sources that give no tools.
+- MCP servers are ordered by name: they register as they connect, which changes between inspections.
+- Not taken from the rounds: the overview sentence moving into the pinned view, and a full tally in every list row (the source's detail has it).
+
+Manual: `agent-browser` in its own session on temporary agent folders (an extension with direct and code-mode tools, a turned-off and a tool-less extension, five fake MCP servers in direct, code-mode and deferred exposure, two turned off), 1280×900 and 320 px light: sees, doesn't see with off opened, an extension's detail, docs-mcp-server on a phone; no horizontal overflow, no page errors. Not checked: dark mode, 200% zoom. The real `~/.pi` was not written; the user looked at the variants with their own configuration on a separate server.
+
+---
+
 # Verification — selects drop below their field, 2026-10-09
 
 Scope: every Select (21, all through `OptionSelect`) opened over its field, with the chosen option laid on the field and the list growing both ways (Base UI's `alignItemWithTrigger`, true by default). It now drops below the field, or above it when there is no room, like the menus.
