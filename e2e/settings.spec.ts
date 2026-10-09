@@ -219,13 +219,7 @@ test("keyboard shortcuts are edited, disabled and reset in keybindings.json", as
   expect(JSON.parse(await readFile(keys, "utf8"))).toEqual({ "app.session.new": "ctrl+shift+n", "tui.altScreen.pageUp": [] });
 });
 
-test("per-model thinking levels and compaction overrides are edited as rows", async ({ page }) => {
-  await open(page, "Models & thinking");
-  const thinking = page.getByRole("group", { name: "Thinking level per model" });
-  await thinking.getByRole("button", { name: "Add model" }).click();
-  await thinking.getByLabel("Model 1", { exact: true }).fill("anthropic/claude-sonnet");
-  await thinking.getByRole("combobox", { name: "Thinking level for model 1" }).click();
-  await page.getByRole("option", { name: "high", exact: true }).click();
+test("compaction overrides per model are edited as rows", async ({ page }) => {
   await open(page, "Sessions & context");
   const compaction = page.getByRole("group", { name: "Compaction per model" });
   await compaction.getByRole("button", { name: "Add model" }).click();
@@ -233,13 +227,11 @@ test("per-model thinking levels and compaction overrides are edited as rows", as
   await compaction.getByLabel("Reserved tokens for model 1").fill("8000");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
-  const saved = JSON.parse(await readFile(file, "utf8"));
-  expect([saved.modelThinkingLevels, saved.compaction]).toEqual([{ "anthropic/claude-sonnet": "high" }, { modelOverrides: { "openai/gpt": { reserveTokens: 8000 } } }]);
-  await open(page, "Models & thinking");
-  await thinking.getByLabel("Model 1", { exact: true }).fill("no-slash");
+  expect(JSON.parse(await readFile(file, "utf8")).compaction).toEqual({ modelOverrides: { "openai/gpt": { reserveTokens: 8000 } } });
+  await compaction.getByLabel("Model 1", { exact: true }).fill("no-slash");
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(thinking.getByLabel("Model 1", { exact: true })).toBeFocused();
-  expect(JSON.parse(await readFile(file, "utf8")).modelThinkingLevels).toEqual({ "anthropic/claude-sonnet": "high" });
+  await expect(compaction.getByLabel("Model 1", { exact: true })).toBeFocused();
+  expect(JSON.parse(await readFile(file, "utf8")).compaction).toEqual({ modelOverrides: { "openai/gpt": { reserveTokens: 8000 } } });
 });
 
 test("the theme is chosen from Pi's themes: one theme, or a light and a dark one", async ({ page }) => {
@@ -373,7 +365,7 @@ test("the list opens on everyday groups, with the terminal-only ones last", asyn
 test("a group's advanced settings follow its everyday ones under their own heading", async ({ page }) => {
   await open(page, "Models & thinking");
   const models = page.getByRole("region", { name: "Models & thinking" });
-  await expect(models.getByRole("group", { name: "Thinking level per model" })).toBeVisible();
+  await expect(models.getByRole("switch", { name: "Cache notices" })).toBeVisible();
   await expect(models.getByRole("region", { name: "Advanced" }).getByLabel("Thinking budget: minimal", { exact: true })).toBeVisible();
 });
 

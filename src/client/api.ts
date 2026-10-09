@@ -5,7 +5,7 @@ import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PackageUpdateCheck, PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
 import type { PluginToolsView, ToolsView } from "../shared/plugin-tools";
 import type { AgentInput, AgentsView } from "../shared/agents";
-import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelScopeView, ModelSummary, ProvidersView } from "../shared/models";
+import type { AvailableModel, CustomModel, CustomProviderInput, CustomProvidersView, ModelScopeView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
 import type { InstructionsView } from "../shared/instructions";
 import type { KeybindingsView } from "../shared/keybindings";
@@ -88,8 +88,6 @@ export const removeAgent = (scope: AgentScope, file: string, revision: string, p
 export const restoreAgent = (scope: AgentScope, file: string, project?: string) =>
   request<AgentsView>(agentUrl(scope, project, `/${encodeURIComponent(file)}/restore`), "POST", {});
 export const loadProviders = () => request<ProvidersView>("/api/models/providers");
-export const saveProviderKey = (id: string, revision: string, key: string) =>
-  request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "PUT", { revision, key });
 export const removeProviderKey = (id: string, revision: string) =>
   request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "DELETE", { revision });
 export const restoreAuth = (revision: string) => request<ProvidersView>("/api/models/auth/restore", "POST", { revision });
@@ -121,7 +119,9 @@ export const answerJob = (id: string, promptId: string, value: string) => reques
 export const cancelJob = (id: string) => request<JobView>(`/api/jobs/${id}/cancel`, "POST", {});
 export const loadModelsRaw = () => request<RawSettings>("/api/models/custom/raw");
 export const saveModelsRaw = (revision: string, text: string) => request<RawSettings>("/api/models/custom/raw", "PUT", { revision, text });
-export const loadModelIds = () => request<string[]>("/api/models/ids");
+export const loadAvailableModels = () => request<AvailableModel[]>("/api/models/available");
+/** provider/modelId of every model whose provider is set up here. */
+export const loadModelIds = () => loadAvailableModels().then(models => models.map(model => `${model.provider}/${model.id}`));
 export const checkModelScope = (patterns: string[], model?: string) =>
   request<ModelScopeView>("/api/models/scope", "POST", { patterns, ...(model ? { default: model } : {}) });
 export const savePackageFilters = (scope: Scope, revision: string, source: string, filters: Record<string, unknown>, project?: string) =>

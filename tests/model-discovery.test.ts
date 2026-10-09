@@ -5,10 +5,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ConfigStore } from "../src/server/store.ts";
 import { createApp } from "../src/server/app.ts";
-import { resolveTemplate } from "../src/server/model-discovery.ts";
+import type { KnownApi } from "@earendil-works/pi-ai";
+import { DISCOVERY_APIS, resolveTemplate } from "../src/server/model-discovery.ts";
+import { APIS } from "../src/shared/models.ts";
 
 const origin = "http://127.0.0.1:43123";
 const json = { origin, "content-type": "application/json" };
+
+// Typecheck fails when Pi implements an API the custom-provider form does not offer, or the form offers one Pi dropped.
+const offered: Exclude<KnownApi, typeof APIS[number]["id"]> | Exclude<typeof APIS[number]["id"], KnownApi> extends never ? true : false = true;
+
+test("the form offers every API Pi implements, and lists models for exactly those whose endpoint the app knows", () => {
+  assert.equal(offered, true);
+  assert.deepEqual(APIS.filter(api => api.listsModels).map(api => api.id).sort(), [...DISCOVERY_APIS].sort());
+});
 
 test("resolveTemplate interpolates like Pi's internal resolver, without running commands", async () => {
   // Not a public export: imported by path to catch drift.

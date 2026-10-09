@@ -55,28 +55,83 @@ test("a select drops its options beside its field, never over it, whichever opti
   await clear(api);
 });
 
-test("API keys are stored, removed and restored without ever being shown", async ({ page }) => {
+test("an API key is set up with Pi's own question, removed and restored without ever being shown", async ({ page }) => {
   const auth = async () => JSON.parse(await readFile(join(agent, "auth.json"), "utf8"));
   await page.goto(server.url + "#models");
   await page.getByRole("searchbox", { name: "Search providers" }).fill("openai");
   await page.getByRole("button", { name: /^OpenAI\b/ }).first().click();
   const detail = page.getByRole("region", { name: "OpenAI" });
-  await detail.getByLabel("API key").fill("fixture-new-key");
-  await detail.getByRole("button", { name: "Save key" }).click();
-  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("API key saved for OpenAI");
+  // Every key goes through Pi's own setup, which asks only what that provider needs.
+  await expect(detail).not.toContainText("Needs more than a key");
+  await detail.getByRole("button", { name: "Set up OpenAI API key" }).click();
+  const job = page.getByRole("region", { name: "Set up OpenAI API key" });
+  await job.getByLabel("Enter OpenAI API key").fill("fixture-new-key");
+  await job.getByRole("button", { name: "Continue" }).click();
+  await expect(job).toContainText("Finished");
   expect((await auth()).openai).toEqual({ type: "api_key", key: "fixture-new-key" });
-  await expect(detail.getByLabel("API key")).toHaveValue("");
+  await expect(detail.getByRole("button", { name: "Replace OpenAI API key" })).toBeVisible();
   expect(await page.content()).not.toContain("fixture-");
 
   await page.getByRole("searchbox", { name: "Search providers" }).fill("anthropic");
   await page.getByRole("button", { name: /^Anthropic\b/ }).first().click();
-  await page.getByRole("region", { name: "Anthropic" }).getByRole("button", { name: "Remove credential" }).click();
+  await page.getByRole("region", { name: "Anthropic" }).getByRole("button", { name: "Remove stored key" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Removed the stored credential for Anthropic");
   expect((await auth()).anthropic).toBeUndefined();
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored");
   expect((await auth()).anthropic.key).toBe("fixture-secret-anthropic");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a signed-in provider offers to sign in again or sign out, in Pi's words", async ({ page }) => {
+  await writeFile(join(agent, "auth.json"), JSON.stringify({ "github-copilot": { type: "oauth", refresh: "fixture-refresh", access: "fixture-access", expires: 1 } }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("searchbox", { name: "Search providers" }).fill("copilot");
+  await page.getByRole("button", { name: /^GitHub Copilot/ }).click();
+  const detail = page.getByRole("region", { name: "GitHub Copilot" });
+  await expect(detail.getByRole("button", { name: "Sign in again to GitHub Copilot" })).toBeVisible();
+  // A key is another way in, and says that it replaces the sign-in.
+  await expect(detail.getByRole("button", { name: "Set up GitHub Copilot token" })).toBeVisible();
+  await expect(detail).toContainText("A key replaces the sign-in.");
+  await detail.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Signed out of GitHub Copilot");
+  expect(JSON.parse(await readFile(join(agent, "auth.json"), "utf8"))["github-copilot"]).toBeUndefined();
+});
+
+test("a provider lists its models with what Pi knows of each, and one becomes the default in a click", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Anthropic\b/ }).first().click();
+  const models = page.getByRole("region", { name: "Anthropic" }).getByRole("region", { name: "Models" });
+  const catalog = await page.evaluate(() => fetch("/api/models/providers/anthropic/models").then(response => response.json()));
+  await expect(models.getByRole("listitem")).toHaveCount(catalog.length);
+  await models.getByRole("searchbox", { name: "Search Anthropic models" }).fill("haiku-4-5");
+  const haiku = models.getByRole("listitem").filter({ hasText: "claude-haiku-4-5" }).first();
+  // Its limits, image input, the thinking levels Pi offers for it and its price, in words.
+  await expect(haiku).toContainText(/\d+K context · \d+K output · images · thinking off–high · \$\d+(\.\d+)? in, \$\d+(\.\d+)? out per 1M tokens/);
+  const id = (await haiku.locator("code").textContent())!;
+  await haiku.getByRole("button", { name: /^Use as default model/ }).click();
+  const defaults = page.getByRole("region", { name: "Defaults" });
+  await expect(defaults.getByLabel("Default provider")).toHaveValue("anthropic");
+  await expect(defaults.getByLabel("Default model")).toHaveValue(id);
+  await defaults.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  expect([settings.defaultProvider, settings.defaultModel]).toEqual(["anthropic", id]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a provider names its models that do not chat, which scripts reach through codemode", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("searchbox", { name: "Search providers" }).fill("openrouter");
+  await page.getByRole("button", { name: /^OpenRouter/ }).click();
+  await expect(page.getByRole("region", { name: "OpenRouter" }).getByRole("region", { name: "Models" }))
+    .toContainText(/Also \d+ image and \d+ classifier models, which scripts reach through codemode/);
+  // TypeSafe has only a classifier: no chat model to start a session with, and the list says so rather than "0".
+  await page.getByRole("searchbox", { name: "Search providers" }).fill("typesafe");
+  await page.getByRole("button", { name: /^TypeSafe/ }).click();
+  const typesafe = page.getByRole("region", { name: "TypeSafe" }).getByRole("region", { name: "Models" });
+  await expect(typesafe).toContainText("1 classifier model, which scripts reach through codemode");
+  await expect(typesafe).toContainText("No chat models");
 });
 
 test("the list names its groups and says which providers are ready, and the chosen one says it too", async ({ page }) => {
@@ -152,6 +207,134 @@ test("defaults are chosen from Pi's catalog and saved to settings.json", async (
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("the thinking level offers what the default model supports, and says the level Pi starts it at", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProvider: "anthropic", defaultModel: "claude-haiku-4-5", defaultThinkingLevel: "max" }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const thinking = panel.getByRole("combobox", { name: "Thinking level" });
+  await expect(thinking).toHaveAccessibleDescription(/^Claude Haiku 4\.5.* offers off to high\. Pi starts it at high instead\.$/);
+  await thinking.click();
+  await expect(page.getByRole("option")).toHaveText(["Pi's default (medium)", "off", "minimal", "low", "medium", "high", "max (not offered)"]);
+  await page.getByRole("option", { name: "high", exact: true }).click();
+  await expect(thinking).not.toHaveAccessibleDescription(/instead/);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("thinking levels per model sit beside the default, each offering its own model's levels", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const perModel = panel.getByRole("group", { name: "Thinking level per model" });
+  await perModel.getByRole("button", { name: "Add model" }).click();
+  await perModel.getByLabel("Model 1", { exact: true }).fill("anthropic/claude-haiku-4-5");
+  await perModel.getByRole("combobox", { name: "Thinking level for model 1" }).click();
+  await expect(page.getByRole("option", { name: "xhigh" })).toHaveCount(0);
+  await page.getByRole("option", { name: "low", exact: true }).click();
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).modelThinkingLevels).toEqual({ "anthropic/claude-haiku-4-5": "low" });
+});
+
+test("Models and General point to each other where thinking is set", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  await page.getByRole("region", { name: "Defaults" }).getByRole("link", { name: "Thinking budgets and prompt caching" }).click();
+  const general = page.getByRole("region", { name: "Models & thinking" });
+  await expect(general.getByLabel("Thinking budget: minimal", { exact: true })).toBeVisible();
+  await expect(general.getByRole("group", { name: "Thinking level per model" })).toHaveCount(0);
+  await general.getByRole("link", { name: "Models → Defaults" }).click();
+  await expect(page.getByRole("region", { name: "Defaults" }).getByRole("group", { name: "Thinking level per model" })).toBeVisible();
+});
+
+test("enabled models are ticked in a checklist by provider, and patterns it does not touch stay", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ enabledModels: ["anthropic/*", "claude-bridge/*"] }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const enabled = panel.getByRole("group", { name: "Enabled models" });
+  const anthropic: string[] = await page.evaluate(() => fetch("/api/models/available").then(response => response.json())
+    .then((models: { provider: string; id: string }[]) => models.filter(model => model.provider === "anthropic").map(model => `anthropic/${model.id}`)));
+  const all = enabled.getByRole("checkbox", { name: "All Anthropic models" });
+  await expect(all).toBeChecked();
+  await expect(enabled).toContainText(`${anthropic.length} of ${anthropic.length}`);
+  await enabled.getByRole("searchbox", { name: "Search enabled models" }).fill("claude-haiku-4-5");
+  await enabled.getByRole("checkbox", { name: /claude-haiku-4-5$/ }).uncheck();
+  await expect(all).not.toBeChecked();
+  await expect(enabled).toContainText(`${anthropic.length - 1} of ${anthropic.length}`);
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  // anthropic/* is spelled out without the model turned off; the extension's pattern is kept as written.
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).enabledModels)
+    .toEqual([...anthropic.filter(ref => ref !== "anthropic/claude-haiku-4-5"), "claude-bridge/*"]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a whole provider is turned off and back on with its checkbox", async ({ page }) => {
+  await writeFile(join(agent, "auth.json"), JSON.stringify({ anthropic: { type: "api_key", key: "fixture-a" }, openai: { type: "api_key", key: "fixture-o" } }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const enabled = panel.getByRole("group", { name: "Enabled models" });
+  const openai: string[] = await page.evaluate(() => fetch("/api/models/available").then(response => response.json())
+    .then((models: { provider: string; id: string }[]) => models.filter(model => model.provider === "openai").map(model => `openai/${model.id}`)));
+  const settings = async () => JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  await enabled.getByRole("checkbox", { name: "All Anthropic models" }).uncheck();
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  expect((await settings()).enabledModels).toEqual(openai);
+  await enabled.getByRole("checkbox", { name: "All Anthropic models" }).check();
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  // Every model again: Pi's empty list.
+  expect((await settings()).enabledModels).toBeUndefined();
+});
+
+test("the custom provider form says what each API is for, lists models only where it can, and labels each model column", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: "Add custom provider" }).click();
+  const form = page.getByRole("form", { name: "Add custom provider" });
+  const api = form.getByRole("combobox", { name: "API", exact: true });
+  await form.getByLabel("Base URL").fill("http://localhost:1/v1");
+  await api.click();
+  await page.getByRole("option", { name: "Anthropic Messages", exact: true }).click();
+  await expect(api).toHaveAccessibleDescription(/^Writes api: anthropic-messages\. Anthropic's API, and proxies that speak it/);
+  await expect(form.getByRole("button", { name: "List models from the endpoint" })).toBeEnabled();
+  await api.click();
+  await page.getByRole("option", { name: "Amazon Bedrock Converse", exact: true }).click();
+  await expect(form.getByRole("button", { name: "List models from the endpoint" })).toBeDisabled();
+  await expect(form).toContainText("Listing models works for OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, Google Generative AI and Mistral Conversations.");
+  await form.getByRole("button", { name: "Add model" }).click();
+  await expect(form.locator(".model-row-head")).toHaveText(["Model ID", "Display name", "Context", "Max output"].join(""));
+  await expect(form).toContainText("Empty context and output use Pi's defaults");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a custom provider is listed once, and a provider Pi ships has its endpoint changed in models.json", async ({ page }) => {
+  await writeFile(join(agent, "models.json"), JSON.stringify({ providers: { ollama: { baseUrl: "http://localhost:1/v1", api: "openai-completions", apiKey: "ollama", models: [{ id: "llama-3" }] } } }));
+  await page.goto(server.url + "#models");
+  const list = page.getByRole("region", { name: "Providers" });
+  await expect(list.getByRole("button", { name: /^ollama/ })).toHaveCount(1);
+  await list.getByRole("button", { name: /^Anthropic\b/ }).click();
+  const detail = page.getByRole("region", { name: "Anthropic" });
+  await expect(detail).toContainText("https://api.anthropic.com");
+  await detail.getByRole("button", { name: "Change in models.json" }).click();
+  const form = page.getByRole("form", { name: "Change Anthropic" });
+  await expect(form.getByLabel("Provider ID")).toHaveValue("anthropic");
+  await form.getByLabel("Base URL").fill("http://localhost:9/proxy");
+  await form.getByRole("button", { name: "Save provider" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("anthropic saved");
+  expect(JSON.parse(await readFile(join(agent, "models.json"), "utf8")).providers.anthropic).toEqual({ baseUrl: "http://localhost:9/proxy" });
+  // The change sits in models.json; Anthropic stays Pi's provider, now saying where it sends requests.
+  await expect(page.getByRole("region", { name: "Custom providers" }).getByRole("button", { name: /^anthropic/ })).toHaveAccessibleName("anthropic changes Anthropic");
+  await list.getByRole("button", { name: /^Anthropic\b/ }).click();
+  await expect(detail).toContainText("changed in models.json");
+  await expect(detail).toContainText("http://localhost:9/proxy");
+  await detail.getByRole("button", { name: "Edit in models.json" }).click();
+  await expect(page.getByRole("form", { name: "Edit anthropic" })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
 test("a custom provider the browser would refuse says why under its field and writes nothing", async ({ page }) => {
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: "Add custom provider" }).click();
@@ -172,7 +355,7 @@ test("a custom provider is added to models.json, edited without seeing its key, 
   await form.getByLabel("Provider ID").fill("lmstudio");
   await form.getByLabel("Base URL").fill("http://localhost:1234/v1");
   await form.getByRole("combobox", { name: "API", exact: true }).click();
-  await page.getByRole("option", { name: "openai-completions", exact: true }).click();
+  await page.getByRole("option", { name: "OpenAI Chat Completions", exact: true }).click();
   await form.getByLabel("API key", { exact: true }).fill("fixture-lm-key");
   await form.getByRole("button", { name: "Add model" }).click();
   await form.getByLabel("Model ID 1").fill("llama-3");
@@ -303,8 +486,8 @@ test("a provider whose key comes with more fields is set up with Pi's own questi
   await page.goto(server.url + "#models");
   await page.getByRole("searchbox", { name: "Search providers" }).fill("workers");
   await page.getByRole("button", { name: /^Cloudflare Workers AI/ }).click();
-  await page.getByRole("button", { name: "Set up with Pi's questions" }).click();
-  const job = page.getByRole("region", { name: "Set up cloudflare-workers-ai" });
+  await page.getByRole("button", { name: "Set up Cloudflare API key" }).click();
+  const job = page.getByRole("region", { name: "Set up Cloudflare API key" });
   await job.getByLabel("Enter Cloudflare API key").fill("fixture-cloudflare-key");
   await job.getByRole("button", { name: "Continue" }).click();
   await job.getByLabel("Enter Cloudflare account ID").fill("acct-1");

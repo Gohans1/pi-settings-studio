@@ -1,19 +1,17 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
 import { Boxes, CircleAlert, CircleCheck, FileJson, Plus, RefreshCw, SlidersHorizontal } from "lucide-react";
 import type { CustomProvidersView, ProvidersView, ProviderView } from "../shared/models";
-import { loadModelsRaw, saveModelsRaw, addCustomProvider, editCustomProvider, loadCustomProviders, loadProviders, removeCustomProvider, removeProviderKey, restoreAuth, restoreCustomProviders, saveProviderKey } from "./api";
+import { loadModelsRaw, saveModelsRaw, addCustomProvider, editCustomProvider, loadCustomProviders, loadProviders, removeCustomProvider, removeProviderKey, restoreAuth, restoreCustomProviders } from "./api";
 import { CustomProviderForm } from "./CustomProviderForm";
 import { JobPanel, useJob } from "./JobPanel";
-import type { JobView } from "../shared/jobs";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
-import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
-import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
-import { Input } from "./components/ui/input";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Spinner } from "./components/ui/spinner";
+import { ProviderDetail, providerState } from "./ProviderDetail";
+import { ProviderModels } from "./ProviderModels";
 import { ItemGroup } from "./components/ui/item";
 import { Separator } from "./components/ui/separator";
 import { ModelDefaults } from "./ModelDefaults";
@@ -25,84 +23,12 @@ import { SearchField } from "./SearchField";
 const DEFAULTS = "#defaults";
 const CUSTOM = "#custom:";
 const NEW_CUSTOM = "#custom-new";
-
-const sources: Record<string, string> = {
-  stored: "Stored in auth.json",
-  models_json_key: "API key in models.json",
-  models_json_command: "Command in models.json",
-  environment: "Environment variable",
-  runtime: "Runtime key",
-  fallback: "Fallback",
-};
-
-function state(provider: ProviderView): string {
-  if (provider.stored === "oauth") return "signed in";
-  if (provider.stored === "api_key") return "API key";
-  if (provider.auth.configured) return provider.custom ? "models.json" : "ready";
-  return "";
-}
-
-const authTypes: Record<string, string> = { api_key: "API key", oauth: "sign-in" };
-/** pi auth check's result in words; reasons are Pi's codes made readable. */
-function verdict(check: NonNullable<JobView["check"]>): string {
-  if (check.status === "ready") return `Pi can use it: ${authTypes[check.authType ?? ""] ?? check.authType ?? "configured"}.`;
-  const reason = check.reason ? `: ${check.reason.replaceAll("_", " ")}` : "";
-  return check.status === "invalid" ? `Pi finds the credential invalid${reason}.` : `Pi cannot use it yet${reason}.`;
-}
-
-function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
-  provider: ProviderView; busy: boolean; onSaveKey: (key: string) => Promise<boolean>; onRemove: () => void; onSignedIn: () => void;
-}) {
-  const [key, setKey] = useState("");
-  const keyId = useId();
-  // Pi's own sign-in flow; its questions and links are shown here and Pi writes auth.json.
-  const login = useJob({ actions: ["provider-login"], provider: provider.id }, job => { if (job.status === "done") onSignedIn(); });
-  // pi auth check: Pi resolves the credential as a session would, environment included.
-  const check = useJob({ actions: ["provider-check"], provider: provider.id });
-  // Pi's own key setup: its questions (a key, an account ID, a region…) are answered here.
-  const setup = useJob({ actions: ["provider-setup"], provider: provider.id }, job => { if (job.status === "done") onSignedIn(); });
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (await onSaveKey(key)) setKey("");
-  }
-  return <section className="detail" aria-labelledby="provider-title" aria-describedby="provider-status">
-    <header className="detail-header"><div className="detail-title"><h2 id="provider-title">{provider.name}</h2>
-      <Badge id="provider-status" variant={provider.auth.configured ? "outline" : "secondary"}>
-        {provider.auth.configured ? <><CircleCheck aria-hidden="true" className="text-success" />{state(provider)}</> : state(provider) || "not set up"}</Badge></div>
-      <div className="actions">
-        {provider.oauth && <Button variant="outline" disabled={busy || login.running} onClick={() => void login.start({ action: "provider-login", provider: provider.id })} aria-label={`Sign in to ${provider.name}`}>Sign in</Button>}
-        <Button variant="outline" disabled={check.running} onClick={() => void check.start({ action: "provider-check", provider: provider.id })}>Check credential</Button>
-      </div></header>
-    <dl className="detail-list">
-      <div><dt>ID</dt><dd><code>{provider.id}</code>{provider.custom && <span className="muted"> · defined in models.json</span>}</dd></div>
-      <div><dt>Models</dt><dd>{provider.models}</dd></div>
-      <div><dt>Authentication</dt><dd>{provider.auth.configured
-        ? <>{sources[provider.auth.source ?? ""] ?? provider.auth.source ?? "Configured"}{provider.stored === "oauth" && " (signed in)"}</>
-        : <span className="muted">Not in auth.json or models.json. Check credential also looks at the environment of this app.</span>}</dd></div>
-      {provider.oauth && <div><dt>Sign-in</dt><dd>{provider.oauth.name}{provider.oauth.subscription ? " (subscription)" : ""}</dd></div>}
-    </dl>
-    {check.job?.check && <Alert role="status" variant={check.job.check.status === "ready" ? "default" : "destructive"} className="mt-4">
-      {check.job.check.status === "ready" ? <CircleCheck aria-hidden="true" /> : <CircleAlert aria-hidden="true" />}<AlertTitle>{verdict(check.job.check)}</AlertTitle></Alert>}
-    {check.job && !check.job.check && <JobPanel job={check.job} error={check.error} onAnswer={() => {}} onCancel={() => void check.cancel()} onDismiss={check.dismiss} />}
-    <JobPanel job={login.job} error={login.error} onAnswer={value => void login.answer(value)} onCancel={() => void login.cancel()} onDismiss={login.dismiss} />
-    {provider.apiKey && <form className="key-form" onSubmit={event => void submit(event)}>
-      <Field className="w-[min(22rem,100%)]"><FieldLabel htmlFor={keyId}>API key</FieldLabel>
-        <Input id={keyId} type="password" value={key} autoComplete="new-password" spellCheck={false}
-          placeholder={provider.stored === "api_key" ? "Stored. Enter a new key to replace it." : "Paste a key"} onChange={event => setKey(event.target.value)} /></Field>
-      <Button type="submit" disabled={busy || !key}>Save key</Button>
-      {provider.stored === "oauth" && <FieldDescription className="basis-full">Saving a key replaces the stored sign-in.</FieldDescription>}
-    </form>}
-    {provider.keySetup && <p className="muted key-setup">Needs more than a key, such as an account ID, a region or a profile?{" "}
-      <Button variant="link" size="xs" disabled={busy || setup.running} onClick={() => void setup.start({ action: "provider-setup", provider: provider.id })}>Set up with Pi's questions</Button></p>}
-    <JobPanel job={setup.job} error={setup.error} onAnswer={value => void setup.answer(value)} onCancel={() => void setup.cancel()} onDismiss={setup.dismiss} />
-    {provider.stored && <div className="actions remove-credential">
-      <Button variant="destructive" disabled={busy} onClick={onRemove}>Remove credential</Button></div>}
-  </section>;
-}
+const CHANGE = "#change:";
 
 export function ModelsTab({ project }: { project?: string }) {
   const [view, setView] = useState<ProvidersView>();
-  const [selected, setSelected] = useState<string>();
+  // A link to #models/defaults opens on Defaults.
+  const [selected, setSelected] = useState<string | undefined>(() => location.hash.split("/")[1] === "defaults" ? DEFAULTS : undefined);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -111,6 +37,8 @@ export function ModelsTab({ project }: { project?: string }) {
   const [formError, setFormError] = useState("");
   const [raw, setRaw] = useState(false);
   const [busy, setBusy] = useState(false);
+  // A model chosen in a provider's list, filled into Defaults until the reader saves or leaves it.
+  const [preset, setPreset] = useState<{ provider: string; model: string }>();
 
   async function refresh() {
     setError("");
@@ -155,10 +83,13 @@ export function ModelsTab({ project }: { project?: string }) {
   const customEntry = custom?.providers.find(entry => entry.id === customId);
   const needle = query.trim().toLowerCase();
   const visible = providers.filter(provider => !needle || `${provider.name} ${provider.id}`.toLowerCase().includes(needle));
+  // A provider only models.json defines is listed once, with the custom providers.
+  const listed = visible.filter(provider => provider.builtIn || !provider.custom);
   const groups: [string, ProviderView[]][] = [
-    ["Set up", visible.filter(provider => provider.auth.configured)],
-    ["Not set up", visible.filter(provider => !provider.auth.configured)],
+    ["Set up", listed.filter(provider => provider.auth.configured)],
+    ["Not set up", listed.filter(provider => !provider.auth.configured)],
   ];
+  const changing = selected?.startsWith(CHANGE) ? providers.find(provider => provider.id === selected.slice(CHANGE.length)) : undefined;
   const current = providers.find(provider => provider.id === selected);
   const open = !!selected;
   return <>
@@ -183,28 +114,40 @@ export function ModelsTab({ project }: { project?: string }) {
         </div>
         {custom?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertDescription>{custom.error}</AlertDescription></Alert>}
         {custom && !custom.error && !custom.providers.length && <p className="muted list-note">Ollama, LM Studio, a proxy: any endpoint that speaks an API Pi knows.</p>}
-        <ItemGroup>{(custom?.providers ?? []).map(entry => <div key={entry.id} role="listitem" className="list-row">
-          <ListItem selected={selected === CUSTOM + entry.id} onSelect={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}
-            name={entry.name ?? entry.id} state={entry.models.length ? `${entry.models.length} ${entry.models.length === 1 ? "model" : "models"}` : entry.otherKeys.join(", ")} /></div>)}</ItemGroup>
+        <ItemGroup>{(custom?.providers ?? []).map(entry => {
+          const known = providers.find(provider => provider.id === entry.id);
+          const state = entry.models.length ? `${entry.models.length} ${entry.models.length === 1 ? "model" : "models"}` : known?.builtIn ? `changes ${known.name}` : entry.otherKeys.join(", ");
+          const ready = !!known?.auth.configured && !known.builtIn;
+          return <div key={entry.id} role="listitem" className="list-row">
+            <ListItem selected={selected === CUSTOM + entry.id} onSelect={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}
+              name={entry.name ?? entry.id} tone={ready ? "ready" : undefined} state={ready ? <><CircleCheck aria-hidden="true" />{state}</> : state} /></div>;
+        })}</ItemGroup>
       </section>
       {groups.map(([title, members]) => members.length > 0 && <div key={title} className="item-group">
         <div className="list-header"><h2>{title}</h2><span>{members.length}</span></div>
         <ItemGroup>{members.map(provider => <div key={provider.id} role="listitem" className="list-row">
           <ListItem selected={provider.id === selected} onSelect={() => setSelected(provider.id)} name={provider.name} quiet={!provider.auth.configured}
-            tone={provider.auth.configured ? "ready" : undefined} state={provider.auth.configured ? <><CircleCheck aria-hidden="true" />{state(provider)}</> : state(provider)} />
+            tone={provider.auth.configured ? "ready" : undefined} state={provider.auth.configured ? <><CircleCheck aria-hidden="true" />{providerState(provider)}</> : providerState(provider)} />
         </div>)}</ItemGroup>
       </div>)}
       {!visible.length && <Empty><EmptyHeader><EmptyDescription>No providers match “{query.trim()}”.</EmptyDescription></EmptyHeader></Empty>}
-    </section>} detail={selected === NEW_CUSTOM || customEntry ? <CustomProviderForm key={selected + (customEntry ? custom!.revision : "")} provider={customEntry} busy={busy} error={formError}
+    </section>} detail={selected === NEW_CUSTOM || customEntry || changing ? <CustomProviderForm key={selected + (customEntry ? custom!.revision : "")} provider={customEntry}
+          changes={changing && { id: changing.id, name: changing.name }} busy={busy} error={formError}
           onCancel={() => setSelected(undefined)}
           onSave={(id, input) => void runCustom(revision => customEntry ? editCustomProvider(customEntry.id, revision, input) : addCustomProvider(revision, id, input),
             `${customEntry?.id ?? id} saved.`, () => setSelected(CUSTOM + (customEntry?.id ?? id)))}
           onRemove={customEntry ? () => void runCustom(revision => removeCustomProvider(customEntry.id, revision), `Removed ${customEntry.id} from models.json.`, () => setSelected(undefined), true) : undefined} />
-      : selected === DEFAULTS ? <ModelDefaults providers={providers} project={project} onSaved={text => { setMessage(text); setUndo(undefined); }} />
+      : selected === DEFAULTS ? <ModelDefaults providers={providers} project={project} preset={preset} onPresetUsed={() => setPreset(undefined)} onSaved={text => { setMessage(text); setUndo(undefined); }} />
         : current ? <ProviderDetail key={current.id} provider={current} busy={busy}
-        onSaveKey={key => run(revision => saveProviderKey(current.id, revision, key), `API key saved for ${current.name}.`)}
-        onRemove={() => void run(revision => removeProviderKey(current.id, revision), `Removed the stored credential for ${current.name}.`, true)}
-        onSignedIn={() => void refresh()} />
+        onRemove={() => void run(revision => removeProviderKey(current.id, revision),
+          current.stored === "oauth" ? `Signed out of ${current.name}.` : `Removed the stored credential for ${current.name}.`, true)}
+        onChanged={() => void refresh()}
+        onEndpoint={() => { setSelected(current.custom ? CUSTOM + current.id : CHANGE + current.id); setFormError(""); }}>
+          <ProviderModels provider={current} onUse={model => {
+            setPreset({ provider: current.id, model: model.id }); setSelected(DEFAULTS); setUndo(undefined);
+            setMessage(`${model.name} is filled in as the default model. Save defaults to keep it.`);
+          }} />
+        </ProviderDetail>
         : <EmptyDetail icon={Boxes} title="No provider selected">Choose a provider to sign in, store a key or check its credential. Defaults sets what new sessions start with.</EmptyDetail>} />}
   </>;
 }

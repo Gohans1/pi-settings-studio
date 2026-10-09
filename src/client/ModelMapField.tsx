@@ -4,9 +4,14 @@ import { Button } from "./components/ui/button";
 import { FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { OptionSelect } from "./OptionSelect";
+import { THINKING_LEVELS } from "../shared/thinking";
 
 type Row = { model: string; level: string; reserve: string; recent: string; extra: Record<string, unknown> };
-const LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"].map(level => ({ value: level, label: level }));
+/** Thinking levels for a select: those the model offers when known, and the chosen one in any case. */
+export function levelOptions(offered: readonly string[] | undefined, chosen: string) {
+  return THINKING_LEVELS.filter(level => !offered || offered.includes(level) || level === chosen)
+    .map(level => ({ value: level as string, label: offered && !offered.includes(level) ? `${level} (not offered)` : level }));
+}
 
 function toRows(value: unknown, kind: "thinkingMap" | "compactionMap"): Row[] {
   const entries = value && typeof value === "object" ? Object.entries(value as Record<string, unknown>) : [];
@@ -24,9 +29,13 @@ function toValue(rows: Row[], kind: "thinkingMap" | "compactionMap"): Record<str
     : { ...(row.reserve ? { reserveTokens: Number(row.reserve) } : {}), ...(row.recent ? { keepRecentTokens: Number(row.recent) } : {}), ...row.extra }]));
 }
 
-/** Per-model settings keyed by provider/modelId, edited as rows. Model ids come from Pi's catalog as suggestions. */
-export function ModelMapField({ kind, label, value, disabled, onChange }: {
-  kind: "thinkingMap" | "compactionMap"; label: string; value: unknown; disabled?: boolean; onChange: (value: unknown) => void;
+/**
+ * Per-model settings keyed by provider/modelId, edited as rows. Model ids come from Pi's catalog as suggestions
+ * (the datalist `list`); `levels` gives the thinking levels a model offers, where the catalog knows it.
+ */
+export function ModelMapField({ kind, label, value, disabled, list = "model-ids", levels, onChange }: {
+  kind: "thinkingMap" | "compactionMap"; label: string; value: unknown; disabled?: boolean; list?: string;
+  levels?: (model: string) => readonly string[] | undefined; onChange: (value: unknown) => void;
 }) {
   const [rows, setRows] = useState(() => toRows(value, kind));
   // Follow outside changes (reload, reset) without fighting the rows being typed.
@@ -37,10 +46,10 @@ export function ModelMapField({ kind, label, value, disabled, onChange }: {
   const set = (index: number, patch: Partial<Row>) => update(rows.map((row, i) => i === index ? { ...row, ...patch } : row));
   return <FieldSet aria-label={label} disabled={disabled}>
     {rows.map((row, index) => <div className="model-map-row" key={index}>
-      <Input aria-label={`Model ${index + 1}`} list="model-ids" value={row.model} placeholder="provider/modelId" spellCheck={false} autoComplete="off"
+      <Input aria-label={`Model ${index + 1}`} list={list} value={row.model} placeholder="provider/modelId" spellCheck={false} autoComplete="off"
         onChange={e => set(index, { model: e.target.value })} />
       {kind === "thinkingMap"
-        ? <OptionSelect aria-label={`Thinking level for model ${index + 1}`} options={LEVELS} value={row.level} disabled={disabled} onChange={level => set(index, { level })} />
+        ? <OptionSelect aria-label={`Thinking level for model ${index + 1}`} options={levelOptions(levels?.(row.model.trim()), row.level)} value={row.level} disabled={disabled} onChange={level => set(index, { level })} />
         : <>
           <Input aria-label={`Reserved tokens for model ${index + 1}`} type="number" min={0} className="w-28" value={row.reserve} placeholder="Reserved" onChange={e => set(index, { reserve: e.target.value })} />
           <Input aria-label={`Recent tokens kept for model ${index + 1}`} type="number" min={0} className="w-28" value={row.recent} placeholder="Recent kept" onChange={e => set(index, { recent: e.target.value })} />

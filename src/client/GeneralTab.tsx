@@ -49,8 +49,10 @@ export function GeneralTab({ project }: { project?: string }) {
   const [modelIds, setModelIds] = useState<string[]>([]);
   const [pi, setPi] = useState<string>();
   // The chosen entry of the list; on a narrow screen, open shows it in place of the list.
-  const [pane, setPane] = useState<string>(sections[0].id);
-  const [open, setOpen] = useState(false);
+  // A link to #general/<group> opens on that group.
+  const linked = sections.find(section => section.id === location.hash.split("/")[1])?.id;
+  const [pane, setPane] = useState<string>(linked ?? sections[0].id);
+  const [open, setOpen] = useState(!!linked);
   useEffect(() => { loadModelIds().then(setModelIds).catch(() => setModelIds([])); }, []);
   useEffect(() => { loadPi().then(found => setPi(found.installed)).catch(() => setPi(undefined)); }, []);
   const title = useRef<HTMLHeadingElement>(null);
@@ -205,6 +207,7 @@ export function GeneralTab({ project }: { project?: string }) {
           : `${count(own.length, "setting", "settings")} · ${scope === "project" ? (differ ? `${differ} set in this project` : "all inherited") : (differ ? `${differ} custom` : "all at Pi's default")}`}</p>
       </div></header>
       {"note" in group && <Alert role="note"><AlertDescription>{group.note}</AlertDescription></Alert>}
+      {"see" in group && <Alert role="note"><AlertDescription>{group.see.text} <a href={group.see.href}>{group.see.label}</a>.</AlertDescription></Alert>}
       {everyday.length > 0 && rows(everyday)}
       {advanced.length > 0 && <section className="settings-part" data-first={!everyday.length || undefined} aria-labelledby="advanced-title">
         <header><h3 id="advanced-title">Advanced</h3><p className="muted">Tuning most people never change.</p></header>

@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { getSupportedThinkingLevels, InMemoryCredentialStore } from "@earendil-works/pi-ai";
 import { ConfigStore } from "../src/server/store.ts";
 import { createApp } from "../src/server/app.ts";
 
@@ -36,7 +38,7 @@ test("providers come from Pi's model runtime with their auth status, never a sec
   const text = await response.text();
   assert.doesNotMatch(text, /fixture-/);
   const byId = Object.fromEntries((JSON.parse(text).providers as Array<Record<string, any>>).map(provider => [provider.id, provider]));
-  assert.deepEqual([byId.anthropic.auth.configured, byId.anthropic.auth.source, byId.anthropic.stored, byId.anthropic.apiKey], [true, "stored", "api_key", true]);
+  assert.deepEqual([byId.anthropic.auth.configured, byId.anthropic.auth.source, byId.anthropic.stored, byId.anthropic.keySetup], [true, "stored", "api_key", true]);
   assert.equal(byId["github-copilot"].stored, "oauth");
   assert.deepEqual([byId.ollama.custom, byId.ollama.models, byId.ollama.auth.configured], [true, 1, true]);
   assert.equal(byId.openai.auth.configured, false);
@@ -44,17 +46,27 @@ test("providers come from Pi's model runtime with their auth status, never a sec
   assert.deepEqual((await readdir(agent)).sort(), before);
 });
 
-test("an API key is stored in auth.json without touching other credentials, and never echoed", async (t) => {
-  const { request, providers, auth } = await fixture(t);
-  const { revision } = await providers();
-  const response = await request("/api/models/providers/openai/key", { method: "PUT", headers: json, body: JSON.stringify({ revision, key: "fixture-new-key" }) });
-  assert.equal(response.status, 200);
-  assert.doesNotMatch(await response.text(), /fixture-/);
-  const saved = await auth();
-  assert.deepEqual(saved.openai, { type: "api_key", key: "fixture-new-key" });
-  assert.equal(saved.anthropic.key, "fixture-secret-anthropic");
-  assert.equal(saved["github-copilot"].type, "oauth");
-  assert.equal((await providers()).providers.find(provider => provider.id === "openai")!.auth.configured, true);
+test("each provider says what Pi calls its key, where it sends requests, whether Pi ships it, and its models that do not chat", async (t) => {
+  const { agent, providers } = await fixture(t);
+  await writeFile(join(agent, "models.json"), JSON.stringify({ providers: {
+    ollama: { baseUrl: "http://localhost:11434/v1", api: "openai-completions", apiKey: "ollama", models: [{ id: "qwen" }] },
+    anthropic: { baseUrl: "http://localhost:9/proxy" },
+  } }));
+  const pi = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, modelsStorePath: join(agent, "models-store.json"), allowModelNetwork: false, refreshOnCreate: false });
+  const byId = Object.fromEntries((await providers()).providers.map(provider => [provider.id, provider]));
+  assert.equal(byId["amazon-bedrock"].keyName, pi.getProvider("amazon-bedrock")!.auth.apiKey!.name);
+  assert.equal(byId["openai-codex"].keyName, undefined);
+  assert.deepEqual([byId.ollama.builtIn, byId.ollama.custom], [false, true]);
+  // models.json may change a provider Pi ships; it stays Pi's provider.
+  assert.deepEqual([byId.anthropic.builtIn, byId.anthropic.custom, byId.anthropic.baseUrl], [true, true, "http://localhost:9/proxy"]);
+  assert.equal(byId.openai.baseUrl, pi.getProvider("openai")!.baseUrl);
+  const kinds = (id: string) => pi.getAllModels(id).filter(model => model.type && model.type !== "chat");
+  assert.deepEqual(byId.openrouter.otherModels, {
+    image: kinds("openrouter").filter(model => model.type === "image").length,
+    classifier: kinds("openrouter").filter(model => model.type === "classifier").length,
+  });
+  assert.ok(byId.openrouter.otherModels.image > 0);
+  assert.equal(byId.anthropic.otherModels, undefined);
 });
 
 test("removing a stored credential is limited to known providers with a stored credential", async (t) => {
@@ -70,22 +82,31 @@ test("removing a stored credential is limited to known providers with a stored c
   assert.equal(((await stat(join(agent, "auth.json"))).mode & 0o777), 0o600);
 });
 
-test("a provider's models come from Pi's catalog; unknown providers are 404", async (t) => {
-  const { request } = await fixture(t);
-  const models = await (await request("/api/models/providers/ollama/models")).json();
-  assert.deepEqual(models.map((model: { id: string }) => model.id), ["qwen"]);
-  const anthropic = await (await request("/api/models/providers/anthropic/models")).json();
-  assert.ok(anthropic.length > 3);
-  assert.equal(typeof anthropic[0].name, "string");
+test("a provider's models come from Pi's catalog with what Pi knows of each; unknown providers are 404", async (t) => {
+  const { agent, request } = await fixture(t);
+  const pi = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: join(agent, "models.json"), modelsStorePath: join(agent, "models-store.json"), allowModelNetwork: false, refreshOnCreate: false });
+  // A models.json entry without limits gets the ones Pi fills in, which are what Pi works with.
+  const ollama = pi.getModel("ollama", "qwen")!;
+  assert.deepEqual(await (await request("/api/models/providers/ollama/models")).json(),
+    [{ id: "qwen", name: "qwen", reasoning: false, contextWindow: ollama.contextWindow, maxTokens: ollama.maxTokens, thinkingLevels: ["off"] }]);
+  const anthropic = await (await request("/api/models/providers/anthropic/models")).json() as Array<Record<string, any>>;
+  assert.deepEqual(anthropic.map(model => model.id), pi.getModels("anthropic").map(model => model.id));
+  for (const model of pi.getModels("anthropic")) {
+    const ours = anthropic.find(entry => entry.id === model.id)!;
+    assert.deepEqual([ours.name, ours.reasoning, ours.contextWindow, ours.maxTokens, !!ours.image, ours.thinkingLevels, ours.cost],
+      [model.name, model.reasoning, model.contextWindow, model.maxTokens, model.input.includes("image"), getSupportedThinkingLevels(model), { input: model.cost.input, output: model.cost.output }]);
+  }
   assert.equal((await request("/api/models/providers/nope/models")).status, 404);
 });
 
-test("model ids for suggestions list models of providers that are set up", async (t) => {
+test("available models are those of providers that are set up, each with its provider and thinking levels", async (t) => {
   const { request } = await fixture(t);
-  const ids = await (await request("/api/models/ids")).json() as string[];
-  assert.ok(ids.includes("ollama/qwen"));
-  assert.ok(ids.some(id => id.startsWith("anthropic/")));
-  assert.equal(ids.some(id => id.startsWith("openai/")), false);
+  const models = await (await request("/api/models/available")).json() as Array<{ provider: string; id: string; thinkingLevels: string[] }>;
+  const refs = models.map(model => `${model.provider}/${model.id}`);
+  assert.ok(refs.includes("ollama/qwen"));
+  assert.ok(refs.some(ref => ref.startsWith("anthropic/")));
+  assert.equal(refs.some(ref => ref.startsWith("openai/")), false);
+  assert.deepEqual(models.find(model => model.id === "qwen")!.thinkingLevels, ["off"]);
 });
 
 test("enabled model patterns are matched as Pi matches them, over providers that are set up, and no key command runs", async (t) => {
@@ -99,6 +120,9 @@ test("enabled model patterns are matched as Pi matches them, over providers that
   assert.deepEqual(view.patterns.map((entry: { pattern: string; matches: number }) => [entry.pattern, entry.matches > 0]),
     [["ollama/*", true], ["claude-bridge/*", false], ["anthropic/*", true]]);
   assert.equal(view.patterns[0].matches, 2);
+  // Every model a pattern selects, so the checklist can tick them.
+  assert.deepEqual(view.patterns[0].models, ["ollama/qwen", "ollama/llama"]);
+  assert.deepEqual(view.patterns[1].models, []);
   assert.equal(view.first, "ollama/qwen");
   assert.equal(view.defaultInScope, true);
   assert.equal((await scope({ patterns: ["anthropic/*"], default: "ollama/llama" })).defaultInScope, false);

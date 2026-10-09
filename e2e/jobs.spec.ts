@@ -76,7 +76,7 @@ test("a provider sign-in shows Pi's questions and can be cancelled", async ({ pa
   await page.getByRole("searchbox", { name: "Search providers" }).fill("anthropic");
   await page.getByRole("button", { name: /^Anthropic\b/ }).first().click();
   await page.getByRole("button", { name: "Sign in to Anthropic" }).click();
-  const job = page.getByRole("region", { name: "Sign in to anthropic" });
+  const job = page.getByRole("region", { name: "Sign in to Anthropic" });
   await expect(job.getByRole("radiogroup")).toBeVisible();
   await job.getByRole("button", { name: "Cancel" }).click();
   await expect(job).toContainText("Cancelled");
@@ -91,7 +91,7 @@ test("a sign-in waiting for an answer still asks it after the reader leaves Mode
   };
   await open();
   await page.getByRole("button", { name: "Sign in to Anthropic" }).click();
-  const job = page.getByRole("region", { name: "Sign in to anthropic" });
+  const job = page.getByRole("region", { name: "Sign in to Anthropic" });
   await expect(job.getByRole("radiogroup")).toBeVisible();
   await page.getByRole("tab", { name: "General" }).click();
   await page.getByRole("tab", { name: "Models" }).click();
