@@ -18,7 +18,7 @@ import { RawJsonEditor } from "./RawJsonEditor";
 import { KeybindingsPanel } from "./KeybindingsPanel";
 import { SearchField } from "./SearchField";
 import { ScopeChoice } from "./ScopeChoice";
-import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { Spinner } from "./components/ui/spinner";
 
 const KEYBINDINGS = { id: "keybindings", title: "Keyboard shortcuts" };
@@ -225,7 +225,7 @@ export function GeneralTab({ project }: { project?: string }) {
                 </Disclosure></div>}
               </section>;
             })}
-            {!results.length && <Empty><EmptyDescription>No settings match “{query.trim()}”. Try a label such as “model” or “budget”, or a key.</EmptyDescription></Empty>}
+            {!results.length && <Empty><EmptyHeader><EmptyDescription>No settings match “{query.trim()}”. Try a label such as “model” or “budget”, or a key.</EmptyDescription></EmptyHeader></Empty>}
             {changes.length > 0 && <div className="save-bar" role="region" aria-label="Unsaved changes">
               <p>{changes.length} unsaved {changes.length === 1 ? "change" : "changes"}</p>
               <div className="actions">

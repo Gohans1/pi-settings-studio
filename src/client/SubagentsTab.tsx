@@ -5,7 +5,7 @@ import { Bot, CircleAlert, Plus, TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
-import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
@@ -124,12 +124,12 @@ export function SubagentsTab({ project }: { project?: string }) {
     {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading profiles…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode("view"); }} backLabel="All profiles" list={<>
       <section className="item-group" aria-label="Global profiles">
         <div className="list-header"><h2>Global</h2><span>{agents.filter(agent => agent.scope === "user").length}</span></div>
-        {agents.some(agent => agent.scope === "user") ? list("user") : <Empty><EmptyDescription>No profiles yet.</EmptyDescription></Empty>}
+        {agents.some(agent => agent.scope === "user") ? list("user") : <Empty><EmptyHeader><EmptyDescription>No profiles yet.</EmptyDescription></EmptyHeader></Empty>}
       </section>
       {project && <section className="item-group" aria-label="This project's profiles">
         <div className="list-header"><h2>This project</h2><span>{agents.filter(agent => agent.scope === "project").length} in .pi/agents</span>
           <IconButton label="Add profile to project" disabled={busy} onClick={() => add("project")}><Plus aria-hidden="true" /></IconButton></div>
-        {agents.some(agent => agent.scope === "project") ? list("project") : <Empty><EmptyDescription>No profiles in this project yet.</EmptyDescription></Empty>}
+        {agents.some(agent => agent.scope === "project") ? list("project") : <Empty><EmptyHeader><EmptyDescription>No profiles in this project yet.</EmptyDescription></EmptyHeader></Empty>}
       </section>}
     </>} detail={mode !== "view" ? <AgentForm key={mode + addScope + (selected?.file ?? "")} agent={mode === "edit" ? current : undefined} busy={busy} error={formError}
         title={mode === "add" && addScope === "project" ? "Add profile to this project" : undefined}

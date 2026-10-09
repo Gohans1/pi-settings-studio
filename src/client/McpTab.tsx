@@ -13,7 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Card, CardContent } from "./components/ui/card";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
-import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { FieldDescription, FieldLegend, FieldSet } from "./components/ui/field";
 import { OptionSelect } from "./OptionSelect";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
@@ -237,7 +237,7 @@ export function McpTab({ project }: { project?: string }) {
       <header className="detail-header"><h2 id="log-title">mcp.log</h2>
         <div className="actions"><Button variant="outline" onClick={showLog}>Reload</Button><Button variant="ghost" onClick={() => setLog(undefined)}>Close</Button></div></header>
       <p className="muted">Messages servers log while Pi runs, newest last; known secrets are hidden. <code>{log.path}</code></p>
-      {log.exists ? <pre className="log-tail" tabIndex={0} aria-label="mcp.log contents">{log.text || "Empty."}</pre> : <Empty><EmptyDescription>No server has logged anything yet.</EmptyDescription></Empty>}
+      {log.exists ? <pre className="log-tail" tabIndex={0} aria-label="mcp.log contents">{log.text || "Empty."}</pre> : <Empty><EmptyHeader><EmptyDescription>No server has logged anything yet.</EmptyDescription></EmptyHeader></Empty>}
     </section>;
   } else if (form?.mode === "import" && views[form.scope]) {
     const scope = form.scope;
@@ -317,14 +317,14 @@ export function McpTab({ project }: { project?: string }) {
           <IconButton label="Add server" disabled={busy || !!global.error} onClick={() => add("global")}><Plus aria-hidden="true" /></IconButton>
           {fileMenu("global", global)}
         </div>
-        {globalServers.length ? serverList("global", globalServers) : !global.error && <Empty><EmptyDescription>No MCP servers yet. Add one, or import them from another client.</EmptyDescription></Empty>}
+        {globalServers.length ? serverList("global", globalServers) : !global.error && <Empty><EmptyHeader><EmptyDescription>No MCP servers yet. Add one, or import them from another client.</EmptyDescription></EmptyHeader></Empty>}
       </section>
       {project && local && <section aria-label="This project's servers" className="item-group">
         <div className="list-header"><h2>This project</h2><span>{projectServers.length} in .pi/mcp.json</span>
           <IconButton label="Add server to project" disabled={busy || !!local.error} onClick={() => add("project")}><Plus aria-hidden="true" /></IconButton>
           {fileMenu("project", local)}
         </div>
-        {projectServers.length ? serverList("project", projectServers) : !local.error && <Empty><EmptyDescription>No servers in this project's .pi/mcp.json yet.</EmptyDescription></Empty>}
+        {projectServers.length ? serverList("project", projectServers) : !local.error && <Empty><EmptyHeader><EmptyDescription>No servers in this project's .pi/mcp.json yet.</EmptyDescription></EmptyHeader></Empty>}
       </section>}
     </>} />}
   </>;

@@ -9,7 +9,7 @@ import type { JobView } from "../shared/jobs";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
-import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
@@ -191,7 +191,7 @@ export function ModelsTab({ project }: { project?: string }) {
             tone={provider.auth.configured ? "ready" : undefined} state={provider.auth.configured ? <><CircleCheck aria-hidden="true" />{state(provider)}</> : state(provider)} />
         </li>)}</ul>
       </div>)}
-      {!visible.length && <Empty><EmptyDescription>No providers match “{query.trim()}”.</EmptyDescription></Empty>}
+      {!visible.length && <Empty><EmptyHeader><EmptyDescription>No providers match “{query.trim()}”.</EmptyDescription></EmptyHeader></Empty>}
     </section>} detail={selected === NEW_CUSTOM || customEntry ? <CustomProviderForm key={selected + (customEntry ? custom!.revision : "")} provider={customEntry} busy={busy} error={formError}
           onCancel={() => setSelected(undefined)}
           onSave={(id, input) => void runCustom(revision => customEntry ? editCustomProvider(customEntry.id, revision, input) : addCustomProvider(revision, id, input),

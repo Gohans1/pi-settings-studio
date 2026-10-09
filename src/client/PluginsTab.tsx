@@ -7,7 +7,7 @@ import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
-import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { Field, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { OptionSelect } from "./OptionSelect";
@@ -183,7 +183,7 @@ export function PluginsTab({ project }: { project?: string }) {
       </ItemActions>
       {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
         onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}
-    </Item></Fragment>)}</ItemGroup> : <Empty><EmptyDescription>No packages yet. Install one by its npm name, git URL or folder.</EmptyDescription></Empty>}
+    </Item></Fragment>)}</ItemGroup> : <Empty><EmptyHeader><EmptyDescription>No packages yet. Install one by its npm name, git URL or folder.</EmptyDescription></EmptyHeader></Empty>}
   </section>;
   return <>
     <PageHeader title="Plugins" description="Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab."
@@ -201,7 +201,7 @@ export function PluginsTab({ project }: { project?: string }) {
       <ul className="item-list pinned">
         <li><ListItem selected={pinned === "packages"} onSelect={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }} icon={Package} name="Packages" state={updateCount ? `${updateCount} ${updateCount === 1 ? "update" : "updates"}` : view.packages.length} /></li>
         <li><ListItem selected={pinned === "folders"} onSelect={() => { setPinned("folders"); setSelected(undefined); setMode(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds plugins" /></li></ul>
-      {!visible.length && <Empty><EmptyDescription>{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</EmptyDescription></Empty>}
+      {!visible.length && <Empty><EmptyHeader><EmptyDescription>{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</EmptyDescription></EmptyHeader></Empty>}
       {groups.map(group => {
         const members = visible.filter(item => item.group === group);
         return <div key={group} className="item-group">
