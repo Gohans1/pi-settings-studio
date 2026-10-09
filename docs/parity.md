@@ -8,11 +8,11 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 
 | File or folder | Global | Project | Notes |
 |---|---|---|---|
-| `settings.json` | Done | Done | Every documented key (drift test), startup tools as a checklist (Pi's `defaultTools` resolution, ported and compared with Pi), model maps as row editors, theme picker, raw JSON, global-only keys locked in projects |
+| `settings.json` | Done | Done | Every documented key (drift test), startup tools as a checklist (Pi's `defaultTools` resolution, ported and compared with Pi), compaction per model as row editors (thinking level per model is in Models > Defaults), theme picker, raw JSON, global-only keys locked in projects |
 | `mcp.json` | Done | Done | Add/edit/remove/undo, switches, exposure, `toolExposure` rules and each tool's exposure after a connection test, `oauth.*` (client secret write-only), `auth.provider` (global only, as Pi requires), Code mode per project, overrides per project, import from other clients, raw JSON with secrets masked, connection test, OAuth sign-in/out and sign-in state, `mcp.log` tail |
-| `auth.json` | Done | n/a | API keys (write-only); Pi's own key setup for providers that need more than a key (Cloudflare account and gateway IDs, Bedrock profile, Vertex project and location); provider OAuth sign-in through Pi's runtime; `pi auth check`. Providers that extensions register (llama.cpp included) are not listed in Models; extension execution is confined to the tool inspector (Plugins and Tools) |
-| `models.json` | Done | n/a | Custom providers and models, model list from the endpoint, raw JSON with keys masked (refused when Pi rejects the file) |
-| Defaults (`settings.json`) | Done | Done | Any provider and model can be typed, with Pi's catalog as suggestions and a warning when the catalog this app reads does not have it; Enabled models as a list matched as Pi matches it (ported, compared with Pi), with why a pattern selects nothing; a default outside a non-empty scope is added to it on save, as Pi does |
+| `auth.json` | Done | n/a | Every credential through Pi's own login, as `/login` asks for it: a key, or a key with more (Cloudflare account and gateway IDs, Bedrock profile, Vertex project and location), named as Pi names it; provider OAuth sign-in and sign-out; `pi auth check`. All 42 providers of Pi's model runtime are listed. llama.cpp is a provider Pi ships as a built-in extension (`/login llama.cpp`, `/llama`); Models does not load extensions, so it is not listed: set it up in Pi. Providers that third-party extensions register are not listed either; extension execution is confined to the tool inspector (Plugins and Tools) |
+| `models.json` | Done | n/a | Custom providers and models, each API named with what it is for, model list from the endpoint, a provider Pi ships changed by an entry of its own (endpoint, headers, models), raw JSON with keys masked (refused when Pi rejects the file). Per-model `compat`, `cost`, `samplingParams`, `inputLimits`, `promptCache` and `modelOverrides` are edited as raw JSON |
+| Defaults (`settings.json`) | Done | Done | Any provider and model can be typed, with Pi's catalog as suggestions and a warning when the catalog this app reads does not have it, or picked from a provider's model list; the thinking levels the default model offers, and the level Pi starts it at otherwise (Pi's clamp, ported and compared with Pi); thinking level per model; Enabled models as a checklist by provider, as `/scoped-models` edits it, and as patterns matched as Pi matches them (ported, compared with Pi), with why a pattern selects nothing; a default outside a non-empty scope is added to it on save, as Pi does |
 | `keybindings.json` | Done | n/a | Every terminal action |
 | `AGENTS.md` / `CLAUDE.md` (context files) | Done | Done | Pi's candidate order, parent-folder files listed read-only |
 | `SYSTEM.md`, `APPEND_SYSTEM.md` | Done | Done | |
@@ -27,7 +27,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 
 | pi-web | Here |
 |---|---|
-| Models: providers, keys, OAuth, custom providers, defaults | Done, plus model discovery from a custom endpoint and credential check |
+| Models: providers, keys, OAuth, custom providers, defaults | Done, plus each provider's models with their limits, thinking levels and price, model discovery from a custom endpoint and credential check |
 | MCP: list, toggle, exposure, add/edit/remove, test, OAuth, codemode | Done, plus import from Claude, Cursor, VS Code, OpenCode and Codex |
 | Skills | Switches, details, file editor, new skills, remove with Undo, model invocation per skill or group; install/update of skills comes from packages |
 | Plugins | Done, plus prompt, theme and extension editors; automatic runtime tool catalogue and direct model-declaration preview, scoped by the project picker ([details](plugin-tools.md)) |
@@ -40,7 +40,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 Listed in the app too (General, "Not editable here"):
 
 - Environment variables (`PI_*`, provider keys) of the process Pi starts in; Check credential sees this app's environment only.
-- Providers and models that extensions or packages register (claude-bridge, llama.cpp…): Models does not load extensions; the Plugins tool inspector does not export their provider catalogues. Their names can still be typed as defaults and patterns, with a warning.
+- llama.cpp, which Pi ships as a built-in extension, and providers and models that extensions or packages register (claude-bridge…): Models does not load extensions; the Plugins tool inspector does not export their provider catalogues. Their names can still be typed as defaults and patterns, with a warning.
 - Command-line options of a run (`--model`, `--tools`, `--session-dir`, `--no-mcp`…).
 - Live state of running threads; files apply after `/reload` or in a new thread.
 - Sessions and chat history, files inside installed packages, third-party extension settings.

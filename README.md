@@ -34,7 +34,7 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 ## Tabs
 
 - **General**: every documented `settings.json` key, raw JSON, keyboard shortcuts, the installed Pi version with Update Pi, and what cannot be edited here.
-- **Models**: providers, keys, sign-in, credential check, defaults, custom providers in `models.json` with model lists from their endpoint.
+- **Models**: every provider of Pi's model runtime with its models (limits, image input, thinking levels, price), sign-in and key setup through Pi's own login, credential check, defaults with the thinking levels each model offers and enabled models as a checklist, custom providers and changes to a shipped provider in `models.json`, with model lists from their endpoint.
 - **Skills**: switches, whether the model may load a skill (one, or a whole group from its menu), a file editor for each skill folder, new skills, Remove with Undo.
 - **Sub-agents**: profiles in Pi's example format.
 - **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (check for updates, update notices, install, update, remove, filters). Select an extension to inspect all registered tools and direct model declarations for the chosen project. Installed extensions are trusted and run automatically for this preview; see [Extension tools](docs/plugin-tools.md).

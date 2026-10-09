@@ -31,3 +31,4 @@
 - [x] Slow tabs: kept tool inspections and session listings on the server, the last result shown at once in the browser.
 - [x] Leaving a tab mid-work: inspections run on and are joined, job panels pick their job up again, a running package check shows on return.
 - [x] General as a workbench (chosen from a variant round): each setting's real default, and defaults saved the way VS Code does.
+- [x] Models in depth: each provider's models as Pi knows them, credentials through Pi's own login, enabled models as a checklist, the thinking levels each model offers and per-model thinking in Defaults, named APIs in the custom form, a shipped provider's endpoint changed in models.json.
