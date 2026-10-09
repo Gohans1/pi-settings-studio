@@ -23,6 +23,7 @@ import { SearchField } from "./SearchField";
 const DEFAULTS = "#defaults";
 const CUSTOM = "#custom:";
 const NEW_CUSTOM = "#custom-new";
+const CHANGE = "#change:";
 
 export function ModelsTab({ project }: { project?: string }) {
   const [view, setView] = useState<ProvidersView>();
@@ -82,10 +83,13 @@ export function ModelsTab({ project }: { project?: string }) {
   const customEntry = custom?.providers.find(entry => entry.id === customId);
   const needle = query.trim().toLowerCase();
   const visible = providers.filter(provider => !needle || `${provider.name} ${provider.id}`.toLowerCase().includes(needle));
+  // A provider only models.json defines is listed once, with the custom providers.
+  const listed = visible.filter(provider => provider.builtIn || !provider.custom);
   const groups: [string, ProviderView[]][] = [
-    ["Set up", visible.filter(provider => provider.auth.configured)],
-    ["Not set up", visible.filter(provider => !provider.auth.configured)],
+    ["Set up", listed.filter(provider => provider.auth.configured)],
+    ["Not set up", listed.filter(provider => !provider.auth.configured)],
   ];
+  const changing = selected?.startsWith(CHANGE) ? providers.find(provider => provider.id === selected.slice(CHANGE.length)) : undefined;
   const current = providers.find(provider => provider.id === selected);
   const open = !!selected;
   return <>
@@ -110,9 +114,14 @@ export function ModelsTab({ project }: { project?: string }) {
         </div>
         {custom?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertDescription>{custom.error}</AlertDescription></Alert>}
         {custom && !custom.error && !custom.providers.length && <p className="muted list-note">Ollama, LM Studio, a proxy: any endpoint that speaks an API Pi knows.</p>}
-        <ItemGroup>{(custom?.providers ?? []).map(entry => <div key={entry.id} role="listitem" className="list-row">
-          <ListItem selected={selected === CUSTOM + entry.id} onSelect={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}
-            name={entry.name ?? entry.id} state={entry.models.length ? `${entry.models.length} ${entry.models.length === 1 ? "model" : "models"}` : entry.otherKeys.join(", ")} /></div>)}</ItemGroup>
+        <ItemGroup>{(custom?.providers ?? []).map(entry => {
+          const known = providers.find(provider => provider.id === entry.id);
+          const state = entry.models.length ? `${entry.models.length} ${entry.models.length === 1 ? "model" : "models"}` : known?.builtIn ? `changes ${known.name}` : entry.otherKeys.join(", ");
+          const ready = !!known?.auth.configured && !known.builtIn;
+          return <div key={entry.id} role="listitem" className="list-row">
+            <ListItem selected={selected === CUSTOM + entry.id} onSelect={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}
+              name={entry.name ?? entry.id} tone={ready ? "ready" : undefined} state={ready ? <><CircleCheck aria-hidden="true" />{state}</> : state} /></div>;
+        })}</ItemGroup>
       </section>
       {groups.map(([title, members]) => members.length > 0 && <div key={title} className="item-group">
         <div className="list-header"><h2>{title}</h2><span>{members.length}</span></div>
@@ -122,7 +131,8 @@ export function ModelsTab({ project }: { project?: string }) {
         </div>)}</ItemGroup>
       </div>)}
       {!visible.length && <Empty><EmptyHeader><EmptyDescription>No providers match “{query.trim()}”.</EmptyDescription></EmptyHeader></Empty>}
-    </section>} detail={selected === NEW_CUSTOM || customEntry ? <CustomProviderForm key={selected + (customEntry ? custom!.revision : "")} provider={customEntry} busy={busy} error={formError}
+    </section>} detail={selected === NEW_CUSTOM || customEntry || changing ? <CustomProviderForm key={selected + (customEntry ? custom!.revision : "")} provider={customEntry}
+          changes={changing && { id: changing.id, name: changing.name }} busy={busy} error={formError}
           onCancel={() => setSelected(undefined)}
           onSave={(id, input) => void runCustom(revision => customEntry ? editCustomProvider(customEntry.id, revision, input) : addCustomProvider(revision, id, input),
             `${customEntry?.id ?? id} saved.`, () => setSelected(CUSTOM + (customEntry?.id ?? id)))}
@@ -131,7 +141,8 @@ export function ModelsTab({ project }: { project?: string }) {
         : current ? <ProviderDetail key={current.id} provider={current} busy={busy}
         onRemove={() => void run(revision => removeProviderKey(current.id, revision),
           current.stored === "oauth" ? `Signed out of ${current.name}.` : `Removed the stored credential for ${current.name}.`, true)}
-        onChanged={() => void refresh()}>
+        onChanged={() => void refresh()}
+        onEndpoint={() => { setSelected(current.custom ? CUSTOM + current.id : CHANGE + current.id); setFormError(""); }}>
           <ProviderModels provider={current} onUse={model => {
             setPreset({ provider: current.id, model: model.id }); setSelected(DEFAULTS); setUndo(undefined);
             setMessage(`${model.name} is filled in as the default model. Save defaults to keep it.`);

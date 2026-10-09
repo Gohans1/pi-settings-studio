@@ -310,6 +310,31 @@ test("the custom provider form says what each API is for, lists models only wher
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("a custom provider is listed once, and a provider Pi ships has its endpoint changed in models.json", async ({ page }) => {
+  await writeFile(join(agent, "models.json"), JSON.stringify({ providers: { ollama: { baseUrl: "http://localhost:1/v1", api: "openai-completions", apiKey: "ollama", models: [{ id: "llama-3" }] } } }));
+  await page.goto(server.url + "#models");
+  const list = page.getByRole("region", { name: "Providers" });
+  await expect(list.getByRole("button", { name: /^ollama/ })).toHaveCount(1);
+  await list.getByRole("button", { name: /^Anthropic\b/ }).click();
+  const detail = page.getByRole("region", { name: "Anthropic" });
+  await expect(detail).toContainText("https://api.anthropic.com");
+  await detail.getByRole("button", { name: "Change in models.json" }).click();
+  const form = page.getByRole("form", { name: "Change Anthropic" });
+  await expect(form.getByLabel("Provider ID")).toHaveValue("anthropic");
+  await form.getByLabel("Base URL").fill("http://localhost:9/proxy");
+  await form.getByRole("button", { name: "Save provider" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("anthropic saved");
+  expect(JSON.parse(await readFile(join(agent, "models.json"), "utf8")).providers.anthropic).toEqual({ baseUrl: "http://localhost:9/proxy" });
+  // The change sits in models.json; Anthropic stays Pi's provider, now saying where it sends requests.
+  await expect(page.getByRole("region", { name: "Custom providers" }).getByRole("button", { name: /^anthropic/ })).toHaveAccessibleName("anthropic changes Anthropic");
+  await list.getByRole("button", { name: /^Anthropic\b/ }).click();
+  await expect(detail).toContainText("changed in models.json");
+  await expect(detail).toContainText("http://localhost:9/proxy");
+  await detail.getByRole("button", { name: "Edit in models.json" }).click();
+  await expect(page.getByRole("form", { name: "Edit anthropic" })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
 test("a custom provider the browser would refuse says why under its field and writes nothing", async ({ page }) => {
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: "Add custom provider" }).click();

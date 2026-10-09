@@ -22,11 +22,13 @@ type ModelRow = { id: string; name: string; reasoning: boolean; image: boolean; 
 const toRow = (model?: CustomModel): ModelRow => ({ id: model?.id ?? "", name: model?.name ?? "", reasoning: !!model?.reasoning, image: !!model?.image,
   contextWindow: model?.contextWindow ? String(model.contextWindow) : "", maxTokens: model?.maxTokens ? String(model.maxTokens) : "" });
 
-export function CustomProviderForm({ provider, busy, error, onSave, onRemove, onCancel }: {
+export function CustomProviderForm({ provider, changes, busy, error, onSave, onRemove, onCancel }: {
   provider?: CustomProviderView; busy: boolean; error: string;
+  /** A provider Pi ships, to change with a new models.json entry under its ID. */
+  changes?: { id: string; name: string };
   onSave: (id: string, input: CustomProviderInput) => void; onRemove?: () => void; onCancel: () => void;
 }) {
-  const [providerId, setProviderId] = useState(provider?.id ?? "");
+  const [providerId, setProviderId] = useState(provider?.id ?? changes?.id ?? "");
   const [name, setName] = useState(provider?.name ?? "");
   const [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? "");
   const [api, setApi] = useState(provider?.api ?? "");
@@ -39,7 +41,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [listing, setListing] = useState(false);
   const [listError, setListError] = useState("");
-  const title = provider ? `Edit ${provider.id}` : "Add custom provider";
+  const title = provider ? `Edit ${provider.id}` : changes ? `Change ${changes.name}` : "Add custom provider";
   const chosen = APIS.find(entry => entry.id === api);
   const apiHelp = chosen ? `Writes api: ${chosen.id}. ${chosen.hint}` : api ? `Writes api: ${api}, which an extension provides.` : "The API the endpoint speaks.";
   const id = useId();
@@ -71,11 +73,12 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
   }
   return <form className="detail server-form" aria-label={title} onSubmit={submit} onInput={clear} noValidate>
     <h2>{title}</h2>
-    <p className="muted">An endpoint that speaks an API Pi supports (Ollama, LM Studio, vLLM, a proxy). Pi checks the entry before it is saved.</p>
+    <p className="muted">{changes ? `Fields left empty keep Pi's values for ${changes.name}. Models listed here are added, or replace Pi's model of the same ID.`
+      : "An endpoint that speaks an API Pi supports (Ollama, LM Studio, vLLM, a proxy)."} Pi checks the entry before it is saved.</p>
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     <FieldGroup>
     {!provider && <Field data-invalid={!!errors[id + "id"] || undefined}><FieldLabel htmlFor={id + "id"}>Provider ID</FieldLabel>
-      <Input id={id + "id"} value={providerId} required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" autoComplete="off" spellCheck={false} {...describe(id + "id", id + "id-help")} onChange={e => setProviderId(e.target.value)} />
+      <Input id={id + "id"} value={providerId} readOnly={!!changes} required pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" autoComplete="off" spellCheck={false} {...describe(id + "id", id + "id-help")} onChange={e => setProviderId(e.target.value)} />
       <FieldError id={id + "id-error"}>{errors[id + "id"]}</FieldError>
       <FieldDescription id={id + "id-help"}>Used in model names such as {providerId || "ollama"}/model-id. An existing ID changes that built-in provider.</FieldDescription></Field>}
     <Field><FieldLabel htmlFor={id + "name"}>Display name</FieldLabel><Input id={id + "name"} value={name} placeholder={providerId || "Optional"} onChange={e => setName(e.target.value)} /></Field>

@@ -35,8 +35,10 @@ function verdict(check: NonNullable<JobView["check"]>): string {
  * run Pi's login (the same questions as /login), so a provider that needs an account ID or a region asks
  * for it, and Pi writes auth.json itself.
  */
-export function ProviderDetail({ provider, busy, onRemove, onChanged, children }: {
-  provider: ProviderView; busy: boolean; onRemove: () => void; onChanged: () => void; children?: React.ReactNode;
+export function ProviderDetail({ provider, busy, onRemove, onChanged, onEndpoint, children }: {
+  provider: ProviderView; busy: boolean; onRemove: () => void; onChanged: () => void;
+  /** Change where a provider Pi ships sends requests, in models.json. */
+  onEndpoint: () => void; children?: React.ReactNode;
 }) {
   const login = useJob({ actions: ["provider-login"], provider: provider.id }, job => { if (job.status === "done") onChanged(); });
   // pi auth check: Pi resolves the credential as a session would, environment included.
@@ -55,6 +57,8 @@ export function ProviderDetail({ provider, busy, onRemove, onChanged, children }
       </div></header>
     <dl className="detail-list">
       <div><dt>ID</dt><dd><code>{provider.id}</code>{provider.custom && <span className="muted"> · {provider.builtIn ? "changed" : "defined"} in models.json</span>}</dd></div>
+      {provider.builtIn && <div><dt>Endpoint</dt><dd>{provider.baseUrl ? <code translate="no">{provider.baseUrl}</code> : <span className="muted">Set by the provider</span>}{" "}
+        <Button variant="link" size="xs" disabled={busy} onClick={onEndpoint}>{provider.custom ? "Edit in models.json" : "Change in models.json"}</Button></dd></div>}
       <div><dt>Authentication</dt><dd>{provider.auth.configured
         ? <>{sources[provider.auth.source ?? ""] ?? provider.auth.source ?? "Configured"}{signedIn && " (signed in)"}</>
         : <span className="muted">Not in auth.json or models.json. Check credential also looks at the environment of this app.</span>}</dd></div>
