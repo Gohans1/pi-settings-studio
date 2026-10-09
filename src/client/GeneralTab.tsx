@@ -3,8 +3,9 @@ import { flushSync } from "react-dom";
 import { BellRing, Brain, ChevronDown, CircleAlert, FileJson, History, Image, Info, Keyboard, Lock, MessagesSquare, Monitor, Network, RotateCcw,
   SearchX, SquareTerminal, Wrench, type LucideIcon } from "lucide-react";
 import { defaultText, fields, fileChange, isPiDefault, sections, type Field, type SettingsChange, type SettingsView } from "../shared/settings";
-import { loadModelIds, loadPi, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
+import { loadAvailableModels, loadPi, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { SettingField } from "./SettingField";
+import { modelSuggestions, type Suggestion } from "./SuggestInput";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
@@ -46,14 +47,14 @@ export function GeneralTab({ project }: { project?: string }) {
   const [loading, setLoading] = useState(true);
   const [restore, setRestore] = useState(false);
   const [raw, setRaw] = useState(false);
-  const [modelIds, setModelIds] = useState<string[]>([]);
+  const [models, setModels] = useState<Suggestion[]>([]);
   const [pi, setPi] = useState<string>();
   // The chosen entry of the list; on a narrow screen, open shows it in place of the list.
   // A link to #general/<group> opens on that group.
   const linked = sections.find(section => section.id === location.hash.split("/")[1])?.id;
   const [pane, setPane] = useState<string>(linked ?? sections[0].id);
   const [open, setOpen] = useState(!!linked);
-  useEffect(() => { loadModelIds().then(setModelIds).catch(() => setModelIds([])); }, []);
+  useEffect(() => { loadAvailableModels().then(found => setModels(modelSuggestions(found))).catch(() => setModels([])); }, []);
   useEffect(() => { loadPi().then(found => setPi(found.installed)).catch(() => setPi(undefined)); }, []);
   const title = useRef<HTMLHeadingElement>(null);
   const inFile = (key: string) => !!view && (Object.hasOwn(view.values, key) || view.invalid.includes(key));
@@ -108,7 +109,7 @@ export function GeneralTab({ project }: { project?: string }) {
       // It may sit in another group, or outside the search: show its group first.
       const field = fieldOf(invalidKeys[0]!);
       flushSync(() => { setQuery(""); setPane(field.section); setOpen(true); });
-      document.getElementById("row-" + field.key)?.querySelector<HTMLElement>("[data-slot=input], [data-slot=textarea], [data-slot=select-trigger], [data-slot=switch]")?.focus();
+      document.getElementById("row-" + field.key)?.querySelector<HTMLElement>("[data-slot=input], [data-slot=input-group-control], [data-slot=textarea], [data-slot=select-trigger], [data-slot=switch]")?.focus();
       return;
     }
     setBusy(true); setError(""); setMessage("");
@@ -163,7 +164,7 @@ export function GeneralTab({ project }: { project?: string }) {
     const edit = draft[field.key];
     const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
     const value = edit ? "value" in edit ? edit.value : view.inherited[field.key] : view.values[field.key] ?? view.inherited[field.key];
-    return <SettingField key={field.key} field={field} value={value} inherited={view.inherited[field.key]} overridden={overridden} scope={scope} project={project}
+    return <SettingField key={field.key} field={field} value={value} inherited={view.inherited[field.key]} overridden={overridden} scope={scope} project={project} models={models}
       disabled={scope === "project" && !!field.globalOnly}
       invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
       piDefault={defaultText(field, view.defaults, key => valueOf(key) ?? view.inherited[key])}
@@ -262,6 +263,5 @@ export function GeneralTab({ project }: { project?: string }) {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-    <datalist id="model-ids">{modelIds.map(id => <option key={id} value={id} />)}</datalist>
   </>;
 }

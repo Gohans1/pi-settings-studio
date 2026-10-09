@@ -4,6 +4,7 @@ import { Button } from "./components/ui/button";
 import { FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { OptionSelect } from "./OptionSelect";
+import { SuggestInput, type Suggestion } from "./SuggestInput";
 import { THINKING_LEVELS } from "../shared/thinking";
 
 type Row = { model: string; level: string; reserve: string; recent: string; extra: Record<string, unknown> };
@@ -30,11 +31,11 @@ function toValue(rows: Row[], kind: "thinkingMap" | "compactionMap"): Record<str
 }
 
 /**
- * Per-model settings keyed by provider/modelId, edited as rows. Model ids come from Pi's catalog as suggestions
- * (the datalist `list`); `levels` gives the thinking levels a model offers, where the catalog knows it.
+ * Per-model settings keyed by provider/modelId, edited as rows, with Pi's catalog as `suggestions`; `levels` gives
+ * the thinking levels a model offers, where the catalog knows it.
  */
-export function ModelMapField({ kind, label, value, disabled, list = "model-ids", levels, onChange }: {
-  kind: "thinkingMap" | "compactionMap"; label: string; value: unknown; disabled?: boolean; list?: string;
+export function ModelMapField({ kind, label, value, disabled, suggestions, levels, onChange }: {
+  kind: "thinkingMap" | "compactionMap"; label: string; value: unknown; disabled?: boolean; suggestions: readonly Suggestion[];
   levels?: (model: string) => readonly string[] | undefined; onChange: (value: unknown) => void;
 }) {
   const [rows, setRows] = useState(() => toRows(value, kind));
@@ -46,8 +47,7 @@ export function ModelMapField({ kind, label, value, disabled, list = "model-ids"
   const set = (index: number, patch: Partial<Row>) => update(rows.map((row, i) => i === index ? { ...row, ...patch } : row));
   return <FieldSet aria-label={label} disabled={disabled}>
     {rows.map((row, index) => <div className="model-map-row" key={index}>
-      <Input aria-label={`Model ${index + 1}`} list={list} value={row.model} placeholder="provider/modelId" spellCheck={false} autoComplete="off"
-        onChange={e => set(index, { model: e.target.value })} />
+      <SuggestInput aria-label={`Model ${index + 1}`} value={row.model} placeholder="provider/modelId" suggestions={suggestions} onChange={model => set(index, { model })} />
       {kind === "thinkingMap"
         ? <OptionSelect aria-label={`Thinking level for model ${index + 1}`} options={levelOptions(levels?.(row.model.trim()), row.level)} value={row.level} disabled={disabled} onChange={level => set(index, { level })} />
         : <>

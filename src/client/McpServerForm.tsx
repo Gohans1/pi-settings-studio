@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { CircleAlert, X } from "lucide-react";
 import type { McpExposure, McpServerInput, McpServerView } from "../shared/mcp";
+import type { ProviderView } from "../shared/models";
 import { loadProviders } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
@@ -11,6 +12,7 @@ import { Textarea } from "./components/ui/textarea";
 import { Spinner } from "./components/ui/spinner";
 import { Disclosure } from "./Disclosure";
 import { OptionSelect } from "./OptionSelect";
+import { providerSuggestions, SuggestInput } from "./SuggestInput";
 import { useFieldErrors } from "./useFieldErrors";
 
 export const exposureLabels: Record<string, [string, string]> = {
@@ -139,9 +141,9 @@ export function McpServerForm({ server, busy, error, title: heading, scope = "gl
   onSave: (name: string, input: McpServerInput) => void; onCancel: () => void;
 }) {
   const [draft, setDraft] = useState(() => draftFrom(server));
-  const [providers, setProviders] = useState<string[]>([]);
+  const [providers, setProviders] = useState<ProviderView[]>([]);
   useEffect(() => {
-    if (scope === "global") loadProviders().then(view => setProviders(view.providers.map(provider => provider.id))).catch(() => setProviders([]));
+    if (scope === "global") loadProviders().then(view => setProviders(view.providers)).catch(() => setProviders([]));
   }, [scope]);
   const set = (patch: Partial<Draft>) => setDraft(current => ({ ...current, ...patch }));
   const title = heading ?? (server ? `Edit ${server.name}` : "Add MCP server");
@@ -174,11 +176,10 @@ export function McpServerForm({ server, busy, error, title: heading, scope = "gl
       <FieldSet><FieldLegend variant="label">Headers</FieldLegend><NamedRows kind="header" rows={draft.headers} onChange={headers => set({ headers })} /></FieldSet>
       <FieldSet><FieldLegend variant="label">Sign-in</FieldLegend>
         {scope === "global" ? <Field><FieldLabel htmlFor={id + "provider"}>Pi provider</FieldLabel>
-          <Input id={id + "provider"} value={draft.authProvider} placeholder="Empty: OAuth, or the Authorization header" list="mcp-providers" autoComplete="off" spellCheck={false}
-            aria-describedby={id + "provider-hint"} onChange={event => set({ authProvider: event.target.value })} />
+          <SuggestInput id={id + "provider"} value={draft.authProvider} placeholder="Empty: OAuth, or the Authorization header" suggestions={providerSuggestions(providers)}
+            aria-describedby={id + "provider-hint"} onChange={authProvider => set({ authProvider })} />
           <FieldDescription id={id + "provider-hint"}>Sends the token of a Pi provider you signed in to with /login instead of OAuth. Needs https except on loopback hosts.</FieldDescription></Field>
           : <FieldDescription>A Pi provider token can only be set in the global mcp.json.</FieldDescription>}
-        <datalist id="mcp-providers">{providers.map(provider => <option key={provider} value={provider} />)}</datalist>
         <OAuthFields oauth={draft.oauth} unused={draft.authProvider.trim() ? "a Pi provider" : draft.headers.some(row => row.name.trim().toLowerCase() === "authorization") ? "an Authorization header" : undefined} onChange={patch => set({ oauth: { ...draft.oauth, ...patch } })} />
       </FieldSet>
     </>}

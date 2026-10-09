@@ -120,8 +120,6 @@ export const cancelJob = (id: string) => request<JobView>(`/api/jobs/${id}/cance
 export const loadModelsRaw = () => request<RawSettings>("/api/models/custom/raw");
 export const saveModelsRaw = (revision: string, text: string) => request<RawSettings>("/api/models/custom/raw", "PUT", { revision, text });
 export const loadAvailableModels = () => request<AvailableModel[]>("/api/models/available");
-/** provider/modelId of every model whose provider is set up here. */
-export const loadModelIds = () => loadAvailableModels().then(models => models.map(model => `${model.provider}/${model.id}`));
 export const checkModelScope = (patterns: string[], model?: string) =>
   request<ModelScopeView>("/api/models/scope", "POST", { patterns, ...(model ? { default: model } : {}) });
 export const savePackageFilters = (scope: Scope, revision: string, source: string, filters: Record<string, unknown>, project?: string) =>

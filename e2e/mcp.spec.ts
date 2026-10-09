@@ -232,7 +232,8 @@ test("tool exposure rules, OAuth settings and provider sign-in are edited in the
   await page.getByRole("option", { name: /^cimd:/ }).click();
   await form.getByLabel("Client ID").fill("");
   await form.getByRole("checkbox", { name: "Remove the stored client secret" }).check();
-  await form.getByLabel("Pi provider").fill("anthropic");
+  await form.getByRole("combobox", { name: "Pi provider" }).click();
+  await page.getByRole("option", { name: /^Anthropic\s*anthropic$/ }).click();
   await form.getByRole("button", { name: "Remove rule search_*" }).click();
   await form.getByRole("button", { name: "Save server" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("docs saved");

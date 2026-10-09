@@ -152,6 +152,7 @@ test("while the defaults save, Save defaults shows a spinner", async ({ page }) 
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: /^Defaults/ }).click();
   await page.getByRole("region", { name: "Defaults" }).getByLabel("Default provider").fill("anthropic");
+  await page.getByRole("region", { name: "Defaults" }).getByLabel("Default provider").press("Tab");
   let release!: () => void;
   const held = new Promise<void>(resolve => { release = resolve; });
   await page.route("**/api/**", route => route.request().method() === "GET" ? route.continue() : held.then(() => route.continue()));
@@ -184,18 +185,20 @@ test("defaults are chosen from Pi's catalog and saved to settings.json", async (
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: /^Defaults/ }).click();
   const panel = page.getByRole("region", { name: "Defaults" });
-  await panel.getByLabel("Default provider").fill("anthropic");
+  await panel.getByRole("combobox", { name: "Default provider" }).click();
+  await page.getByRole("option", { name: /^Anthropic\b/ }).click();
   // Suggestions come from Pi's catalog for the chosen provider.
-  const suggestions = panel.locator("datalist#default-model-options option");
-  await expect(suggestions).not.toHaveCount(0);
-  const chosen = await suggestions.first().getAttribute("value");
-  await panel.getByLabel("Default model").fill(chosen!);
+  const model = panel.getByRole("combobox", { name: "Default model" });
+  await model.click();
+  await page.getByRole("option").first().click();
+  const chosen = await model.inputValue();
+  expect(chosen).not.toBe("");
   await expect(panel).not.toContainText("not in the catalog");
   await panel.getByRole("combobox", { name: "Thinking level" }).click();
   await page.getByRole("option", { name: "high", exact: true }).click();
   const enabled = panel.getByRole("group", { name: "Enabled models" });
   await enabled.getByLabel("Model or pattern").fill("anthropic/*");
-  await enabled.getByRole("button", { name: "Add" }).click();
+  await enabled.getByLabel("Model or pattern").press("Enter");
   await expect(enabled.getByRole("listitem").filter({ hasText: "anthropic/*" })).toContainText(/\d+ models/);
   // The count names a few of the models it matched.
   await enabled.getByText(/^\d+ models$/).hover();
@@ -227,7 +230,9 @@ test("thinking levels per model sit beside the default, each offering its own mo
   const panel = page.getByRole("region", { name: "Defaults" });
   const perModel = panel.getByRole("group", { name: "Thinking level per model" });
   await perModel.getByRole("button", { name: "Add model" }).click();
-  await perModel.getByLabel("Model 1", { exact: true }).fill("anthropic/claude-haiku-4-5");
+  await perModel.getByLabel("Model 1", { exact: true }).fill("haiku-4-5");
+  await page.getByRole("option", { name: /anthropic\/claude-haiku-4-5$/ }).click();
+  await expect(perModel.getByLabel("Model 1", { exact: true })).toHaveValue("anthropic/claude-haiku-4-5");
   await perModel.getByRole("combobox", { name: "Thinking level for model 1" }).click();
   await expect(page.getByRole("option", { name: "xhigh" })).toHaveCount(0);
   await page.getByRole("option", { name: "low", exact: true }).click();
@@ -466,15 +471,63 @@ test("a provider Pi's catalog does not list, such as one from an extension, is t
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("the default provider is picked from a list like a select, set-up providers first, and any name can still be typed", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const provider = panel.getByRole("combobox", { name: "Default provider" });
+  await provider.click();
+  const list = page.getByRole("listbox");
+  // Below the field, never over it.
+  await expect.poll(async () => (await list.boundingBox())!.y >= (await provider.boundingBox())!.y + (await provider.boundingBox())!.height).toBe(true);
+  // Set-up providers first, each by its name and ID.
+  await expect(list.getByRole("group").first()).toHaveAccessibleName("Set up");
+  await expect(list.getByRole("group", { name: "Set up" }).getByRole("option", { name: /^Anthropic\s*anthropic$/ })).toBeVisible();
+  await list.getByRole("group", { name: "Not set up" }).getByRole("option", { name: /^OpenAI\s*openai$/ }).click();
+  await expect(provider).toHaveValue("openai");
+  await expect(list).toBeHidden();
+  // Opened again on the chosen one, it lists every provider rather than that one alone.
+  await provider.click();
+  await expect(list.getByRole("option", { name: /^Anthropic\b/ })).toBeVisible();
+  // Typing narrows the list; a name it does not have is kept as typed.
+  await provider.fill("bedrock");
+  await expect(list.getByRole("option", { name: /^Amazon Bedrock\b/ })).toBeVisible();
+  await expect(list.getByRole("option", { name: /^Anthropic\b/ })).toHaveCount(0);
+  await provider.fill("claude-bridge");
+  await expect(page.getByText("Not in the catalog this app reads; kept as typed.")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(list).toBeHidden();
+  await expect(provider).toHaveValue("claude-bridge");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("an enabled model pattern can be picked from the models that have a credential", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const enabled = page.getByRole("region", { name: "Defaults" }).getByRole("group", { name: "Enabled models" });
+  const pattern = enabled.getByRole("combobox", { name: "Model or pattern" });
+  await pattern.fill("haiku-4-5");
+  await pattern.press("ArrowDown");
+  // Enter on a suggestion fills it in; Enter again adds it.
+  await pattern.press("Enter");
+  await expect(pattern).toHaveValue(/^anthropic\/claude-haiku-4-5/);
+  const ref = await pattern.inputValue();
+  await pattern.press("Enter");
+  await expect(enabled.getByRole("listitem").filter({ hasText: ref })).toContainText("1 model");
+  await expect(pattern).toHaveValue("");
+});
+
 test("a default model outside the enabled models is added to them on save, as Pi does", async ({ page }) => {
   await writeFile(join(agent, "settings.json"), JSON.stringify({ enabledModels: ["anthropic/claude-sonnet-4-5"] }));
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: /^Defaults/ }).click();
   const panel = page.getByRole("region", { name: "Defaults" });
   await panel.getByLabel("Default provider").fill("anthropic");
-  const other = await panel.locator("datalist#default-model-options option").evaluateAll(options =>
-    options.map(option => option.getAttribute("value")).find(id => id !== "claude-sonnet-4-5"));
-  await panel.getByLabel("Default model").fill(other!);
+  await panel.getByLabel("Default provider").press("Tab");
+  const model = panel.getByRole("combobox", { name: "Default model" });
+  await model.click();
+  await page.getByRole("option").filter({ hasNotText: "claude-sonnet-4-5" }).first().click();
+  const other = await model.inputValue();
   await expect(panel).toContainText("Not in Enabled models");
   await panel.getByRole("button", { name: "Save defaults" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("added to Enabled models");
