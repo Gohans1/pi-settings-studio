@@ -20,6 +20,7 @@ import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Switch } from "./components/ui/switch";
 import { Spinner } from "./components/ui/spinner";
 import { Item, ItemActions, ItemContent, ItemGroup, ItemSeparator, ItemTitle } from "./components/ui/item";
+import { Separator } from "./components/ui/separator";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, IconButton, ListItem, MoreMenu, Workbench } from "./Workbench";
@@ -220,18 +221,18 @@ export function McpTab({ project }: { project?: string }) {
   }
 
   function serverList(scope: "global" | "project", list: McpServerView[]) {
-    return <ul className="item-list">{list.map(server => {
+    return <ItemGroup>{list.map(server => {
       const local = scope === "global" ? inProject(server.name) : undefined;
       const state = scope === "project" && server.override ? `override, ${server.enabled ? "on" : "off"}`
         : local ? (local.override ? `${shortState(server)}, ${local.enabled ? "on" : "off"} here` : `${shortState(server)}, replaced here`) : shortState(server);
-      return <li key={server.name}>
+      return <div key={server.name} role="listitem" className="list-row">
         <ListItem selected={isSelected(scope, server.name)} onSelect={() => choose({ scope, name: server.name })} name={server.name} state={state}
           tone={server.error ? "refused" : undefined} />
         <Switch aria-label={scope === "global" ? `Enable ${server.name}` : `Enable ${server.name} in this project`} checked={server.enabled} disabled={busy}
           onCheckedChange={enabled => void run(scope, revision => saveMcpServer(target(scope), server.name, revision, { enabled }),
             `${server.name} turned ${enabled ? "on" : "off"}${scope === "project" ? " in this project" : ""}.`)} />
-      </li>;
-    })}</ul>;
+      </div>;
+    })}</ItemGroup>;
   }
 
   let detail: ReactNode = <EmptyDetail icon={Server} title="No server selected">Choose a server to see how Pi starts it and which tools it exposes, or add one.</EmptyDetail>;
@@ -314,7 +315,8 @@ export function McpTab({ project }: { project?: string }) {
       note={SECRET_NOTE}
       onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
     : !global ? !error && <div className="loading" aria-busy="true"><Spinner />Reading MCP settings…</div> : <Workbench open={open} onBack={back} backLabel="All servers" detail={detail} list={<>
-      <ul className="item-list pinned"><li><ListItem selected={selected === "codemode"} onSelect={() => choose("codemode")} icon={Braces} name="Code mode" state={codemodeState} /></li></ul>
+      <ItemGroup><div role="listitem" className="list-row"><ListItem selected={selected === "codemode"} onSelect={() => choose("codemode")} icon={Braces} name="Code mode" state={codemodeState} /></div></ItemGroup>
+      <Separator className="mt-2" />
       <section aria-labelledby="global-servers" className="item-group">
         <div className="list-header"><h2 id="global-servers">Global</h2><span>{on} of {globalServers.length} servers on</span>
           <IconButton label="Add server" disabled={busy || !!global.error} onClick={() => add("global")}><Plus aria-hidden="true" /></IconButton>

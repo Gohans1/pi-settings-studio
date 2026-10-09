@@ -10,6 +10,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "./c
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Spinner } from "./components/ui/spinner";
+import { ItemGroup } from "./components/ui/item";
 import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -109,10 +110,10 @@ export function SubagentsTab({ project }: { project?: string }) {
   const agents = view?.agents ?? [];
   const current = agents.find(agent => agent.scope === selected?.scope && agent.file === selected.file);
   const add = (scope: AgentScope) => { setAddScope(scope); setMode("add"); setFormError(""); };
-  const list = (scope: AgentScope) => <ul className="item-list">{agents.filter(agent => agent.scope === scope).map(agent => <li key={agent.file}>
+  const list = (scope: AgentScope) => <ItemGroup>{agents.filter(agent => agent.scope === scope).map(agent => <div key={agent.file} role="listitem" className="list-row">
     <ListItem selected={selected?.scope === scope && agent.file === selected.file} onSelect={() => { setSelected({ scope, file: agent.file }); setMode("view"); }}
       name={agent.name ?? agent.file} tone={agent.error ? "refused" : undefined} state={agent.error ? "skipped" : agent.shadowed ? "replaced here" : agent.model ?? ""} />
-  </li>)}</ul>;
+  </div>)}</ItemGroup>;
   const open = mode !== "view" || !!current;
   return <>
     <PageHeader title="Sub-agents" description="Profiles in the format of Pi's example subagent extension." files={[view?.dir]}

@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Textarea } from "./components/ui/textarea";
 import { Spinner } from "./components/ui/spinner";
+import { ItemGroup } from "./components/ui/item";
 import { Feedback } from "./Feedback";
 import { FilePath, home, PageHeader } from "./PageHeader";
 import { ListItem, Workbench } from "./Workbench";
@@ -79,10 +80,10 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
   const files = view?.files ?? [];
   const current = files.find(file => file.id === selected) ?? files[0];
   const extra = (view?.loaded ?? []).filter(path => !files.some(file => file.path === path));
-  const list = (scope: "global" | "project") => <ul className="item-list">{files.filter(file => file.scope === scope).map(file => <li key={file.id}>
+  const list = (scope: "global" | "project") => <ItemGroup>{files.filter(file => file.scope === scope).map(file => <div key={file.id} role="listitem" className="list-row">
     <ListItem selected={file.id === current?.id} onSelect={() => { setSelected(file.id); setPicked(true); }}
       name={title(file)} state={file.error ? "unreadable" : file.exists ? "" : "not created"} />
-  </li>)}</ul>;
+  </div>)}</ItemGroup>;
   return <>
     <PageHeader title="Instructions" description="Text Pi puts in every system prompt: context files (AGENTS.md), SYSTEM.md and APPEND_SYSTEM.md." />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
