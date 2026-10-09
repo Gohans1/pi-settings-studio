@@ -228,8 +228,14 @@
   .provider-models h3 { margin: 0; }
   .provider-models > header span { color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
   .provider-models > p { margin: 0; }
-  .model-rows { display: grid; gap: --spacing(2); }
-  .model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); align-items: center; }
+  .model-lines { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+  .model-lines > li { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2) --spacing(4); padding: --spacing(2) --spacing(1); border-bottom: 1px solid var(--border); }
+  .model-line-text { flex: 1 1 18rem; display: grid; gap: --spacing(0.5); min-width: 0; }
+  .model-line-name { font-weight: var(--font-weight-medium); overflow-wrap: anywhere; }
+  .model-line-facts { color: var(--muted-foreground); font-size: var(--text-small); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  /* Rows share the list's columns (subgrid), so the column names line up with every row. */
+  .model-rows { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); }
+  .model-row { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; }
   .model-row-head { color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-medium); }
   .model-row-head > span:last-child { grid-column: span 4; }
   .found-models { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); }
@@ -393,7 +399,7 @@
   .brand span { display: none; }
   .page-actions { width: 100%; flex-wrap: nowrap; }
   .detail-list > div { grid-template-columns: minmax(0, 1fr); gap: --spacing(1); }
-  .model-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .model-rows { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .model-row-head { display: none; }
   .save-bar .actions { width: 100%; }
   .save-bar .actions > * { flex-grow: 1; }

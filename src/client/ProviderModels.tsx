@@ -1,10 +1,9 @@
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { CircleAlert } from "lucide-react";
 import type { ModelSummary, ProviderView } from "../shared/models";
 import { loadModels } from "./api";
 import { Alert, AlertDescription } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator, ItemTitle } from "./components/ui/item";
 import { Spinner } from "./components/ui/spinner";
 import { SearchField } from "./SearchField";
 
@@ -47,13 +46,14 @@ export function ProviderModels({ provider, onUse }: { provider: ProviderView; on
       : !models.length ? <p className="muted">{others ? "No chat models." : "None in the catalog this app reads. Refresh the model catalogs to look again."}</p>
       : <>
         {models.length > 8 && <SearchField label={`Search ${provider.name} models`} placeholder="Search models…" shortcut={false} value={query} onChange={setQuery} />}
-        <ItemGroup>{shown.map((model, index) => <Fragment key={model.id}>{index > 0 && <ItemSeparator aria-hidden="true" />}<Item size="sm" role="listitem">
-          <ItemContent>
-            <ItemTitle>{model.name}</ItemTitle>
-            <ItemDescription><code translate="no">{model.id}</code>{modelFacts(model) && <> · {modelFacts(model)}</>}</ItemDescription>
-          </ItemContent>
-          <ItemActions><Button variant="outline" size="xs" aria-label={`Use as default model: ${model.name}`} onClick={() => onUse(model)}>Use as default</Button></ItemActions>
-        </Item></Fragment>)}</ItemGroup>
+        {/* One line per model, as dense as the Tools rows: a catalog can hold hundreds, and every fact stays readable. */}
+        <ul className="model-lines">{shown.map(model => <li key={model.id}>
+          <div className="model-line-text">
+            <span className="model-line-name">{model.name}</span>
+            <span className="model-line-facts"><code translate="no">{model.id}</code>{modelFacts(model) && <> · {modelFacts(model)}</>}</span>
+          </div>
+          <Button variant="outline" size="xs" aria-label={`Use as default model: ${model.name}`} onClick={() => onUse(model)}>Use as default</Button>
+        </li>)}</ul>
         {!shown.length && <p className="muted">No models match “{query.trim()}”.</p>}
       </>}
   </section>;
