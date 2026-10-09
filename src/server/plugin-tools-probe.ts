@@ -4,14 +4,16 @@ import {
   createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager,
   type InlineExtension,
 } from "@earendil-works/pi-coding-agent";
-import type { PluginToolsView } from "../shared/plugin-tools.ts";
+import type { PluginToolsView, SessionTools } from "../shared/plugin-tools.ts";
 
 export type ToolProbeInput = {
-  agentDir: string; cwd: string; project: boolean; path: string; enabled: boolean;
+  agentDir: string; cwd: string; project: boolean;
   paths: string[]; globalSettings: Record<string, unknown>; projectSettings?: Record<string, unknown>;
+  /** The extension to report and whether settings enable it. Without one, every registered tool is reported. */
+  path?: string; enabled?: boolean;
 };
 
-async function inspect(input: ToolProbeInput): Promise<PluginToolsView> {
+async function inspect(input: ToolProbeInput): Promise<PluginToolsView | SessionTools> {
   const { agentDir, cwd, path, enabled } = input;
   function settings(discovery = false) {
     return SettingsManager.fromStorage({ withLock(scope, read) {
@@ -50,24 +52,33 @@ async function inspect(input: ToolProbeInput): Promise<PluginToolsView> {
     // not call a model or a tool. Do not invoke a third-party command that happens to be named mcp.
     const mcp = session.extensionRunner.getCommand("mcp");
     if (mcp?.sourceInfo.path === "builtin:mcp") await mcp.handler("", session.extensionRunner.createCommandContext());
-    const extension = loader.getExtensions().extensions.find(item => item.path === path || item.resolvedPath === path);
-    if (!extension && !issues.length) issues.push("Pi did not load this extension; another extension may replace it.");
     const registered = session.getAllTools();
     const active = new Set(session.getActiveToolNames());
     const callable = new Set(session.getCallableToolNames());
     const hidden = new Set(session.extensionRunner.createCommandContext().getSystemPromptOptions().hiddenTools ?? []);
+    const reach = (name: string, exposure: string) => exposure === "hidden" ? "hidden" as const
+      : active.has(name) && !hidden.has(name) ? "model" as const : callable.has(name) ? "callable" as const : "inactive" as const;
+    // The active declaration may have a description rewritten by prepareLoadout (e.g. codemode).
+    const described = (name: string, visibility: string, description: string) => visibility !== "model" ? description
+      : session.agent.state.tools.find(candidate => candidate.name === name)?.description ?? description;
+    if (path === undefined) {
+      const tools: SessionTools["tools"] = registered.map(tool => {
+        const visibility = reach(tool.name, tool.exposure);
+        return { name: tool.name, description: described(tool.name, visibility, tool.description), exposure: tool.exposure, visibility,
+          path: tool.sourceInfo.path, ...(tool.namespace ? { namespace: tool.namespace.name } : {}) };
+      });
+      return { checkedAt: new Date().toISOString(), complete: issues.length === 0, issues, tools };
+    }
+    const extension = loader.getExtensions().extensions.find(item => item.path === path || item.resolvedPath === path);
+    if (!extension && !issues.length) issues.push("Pi did not load this extension; another extension may replace it.");
     const tools: PluginToolsView["tools"] = [...(extension?.tools.values() ?? [])].map(({ definition }) => {
       const tool = registered.find(candidate => candidate.name === definition.name);
       const exposure = tool?.sourceInfo.path === path ? tool.exposure : definition.exposure ?? "direct";
       const visibility = !enabled ? "disabled" : issues.length ? "unknown"
-        : tool?.sourceInfo.path !== path ? "shadowed" : exposure === "hidden" ? "hidden"
-        : active.has(definition.name) && !hidden.has(definition.name) ? "model"
-        : callable.has(definition.name) ? "callable" : "inactive";
-      // The active declaration may have a description rewritten by prepareLoadout (e.g. codemode).
-      const declaration = session.agent.state.tools.find(candidate => candidate.name === definition.name);
-      return { name: definition.name, description: visibility === "model" ? declaration?.description ?? definition.description : definition.description, exposure, visibility };
+        : tool?.sourceInfo.path !== path ? "shadowed" : reach(definition.name, exposure);
+      return { name: definition.name, description: described(definition.name, visibility, definition.description), exposure, visibility };
     });
-    return { path, enabled, checkedAt: new Date().toISOString(), complete: issues.length === 0, issues, tools };
+    return { path, enabled: !!enabled, checkedAt: new Date().toISOString(), complete: issues.length === 0, issues, tools };
   } finally {
     await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
     session.dispose();
@@ -79,7 +90,7 @@ if (import.meta.main) {
     const input: ToolProbeInput = await Bun.stdin.json();
     process.send?.({ result: await inspect(input) });
   } catch (error) {
-    process.send?.({ error: error instanceof Error ? error.message : "Pi could not inspect this extension." });
+    process.send?.({ error: error instanceof Error ? error.message : "Pi could not inspect the tools." });
   } finally {
     // Extensions may leave timers behind even after session_shutdown.
     process.exit();

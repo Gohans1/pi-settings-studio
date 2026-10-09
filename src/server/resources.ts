@@ -10,10 +10,11 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { DefaultPackageManager, loadSkills, parseFrontmatter, ProjectTrustStore, SettingsManager, type ResolvedResource } from "@earendil-works/pi-coding-agent";
 import type { PackageUpdateCheck, PackageView, PluginsView, ResourceType, ResourceView, SkillsView } from "../shared/resources.ts";
-import { isRecord } from "./mcp-config.ts";
+import type { ToolSource, ToolsView } from "../shared/plugin-tools.ts";
+import { isRecord, mcpNamespace } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 import type { ProjectRegistry } from "./projects.ts";
-import { runToolProbe } from "./plugin-tools.ts";
+import { runToolProbe, runToolsProbe } from "./plugin-tools.ts";
 import { knownSecrets, redact } from "./jobs.ts";
 
 /** Pi's built-in extensions, as named in docs/settings.md (a test keeps the two in step). */
@@ -193,6 +194,45 @@ export function skillRoutes(store: ConfigStore, registry: ProjectRegistry, agent
     });
 }
 
+/** A tool inspection's result, or its error, with known credentials hidden. */
+async function redacted<T>(secrets: string[], run: () => Promise<T>): Promise<T> {
+  try { return redact(await run(), secrets); } catch (error) {
+    if (error instanceof ConfigError) throw new ConfigError(redact(error.message, secrets), error.status);
+    throw error;
+  }
+}
+
+/** Every tool a new session registers, with the Pi feature, extension or MCP server it comes from. */
+export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
+  const context = resourceContext(store, registry, agentDir);
+  return new Hono().post("/", async c => {
+    z.object({}).strict().parse(await c.req.json());
+    const project = c.req.query("project");
+    const { resolved, settings } = await context.resolve(project);
+    const projectStore = project ? registry.storeFor(project) : undefined;
+    const extensions = new Map(await Promise.all(resolved.extensions.map(async item => [item.path, await describe("extensions", item, agentDir)] as const)));
+    // Server names as configured: tool names only carry the sanitized namespace.
+    const servers = (await Promise.all([store.read("global", "mcp.json"), projectStore?.read("project", "mcp.json")].map(read => read?.catch(() => undefined))))
+      .flatMap(file => isRecord(file?.value.mcpServers) ? Object.keys(file.value.mcpServers) : []);
+    function sourceOf(path: string, namespace?: string): ToolSource {
+      if (path === BUILTIN_PREFIX + "mcp" && namespace?.startsWith("mcp__")) {
+        return { kind: "mcp", server: servers.find(name => mcpNamespace(name) === namespace) ?? namespace.slice("mcp__".length) };
+      }
+      const extension = extensions.get(path);
+      if (extension) return { kind: "extension", name: extension.name, group: extension.group };
+      return path.startsWith(BUILTIN_PREFIX) ? { kind: "pi" } : { kind: "extension", name: basename(path) };
+    }
+    return c.json(await redacted(await knownSecrets(store, projectStore), async (): Promise<ToolsView> => {
+      const view = await runToolsProbe({
+        agentDir, cwd: project ?? agentDir, project: !!project,
+        paths: resolved.extensions.filter(item => item.enabled).map(item => item.path),
+        globalSettings: settings.global, projectSettings: settings.project,
+      }, c.req.raw.signal);
+      return { ...view, tools: view.tools.map(({ path, namespace, ...tool }) => ({ ...tool, source: sourceOf(path, namespace) })) };
+    }));
+  });
+}
+
 const PLUGIN_TYPES = ["extensions", "prompts", "themes"] as const;
 const FILTER_KEYS = ["autoload", "extensions", "skills", "prompts", "themes"];
 
@@ -229,16 +269,11 @@ export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agen
       const selected = resolved.extensions.find(item => item.path === path);
       if (!selected) throw new ConfigError("Choose an extension from the current project's plugin list.", 400);
       const secrets = await knownSecrets(store, project ? registry.storeFor(project) : undefined);
-      try {
-        return c.json(redact(await runToolProbe({
-          agentDir, cwd: project ?? agentDir, project: !!project, path, enabled: selected.enabled,
-          paths: resolved.extensions.filter(item => item.enabled || item.path === path).map(item => item.path),
-          globalSettings: settings.global, projectSettings: settings.project,
-        }, c.req.raw.signal), secrets));
-      } catch (error) {
-        if (error instanceof ConfigError) throw new ConfigError(redact(error.message, secrets), error.status);
-        throw error;
-      }
+      return c.json(await redacted(secrets, () => runToolProbe({
+        agentDir, cwd: project ?? agentDir, project: !!project, path, enabled: selected.enabled,
+        paths: resolved.extensions.filter(item => item.enabled || item.path === path).map(item => item.path),
+        globalSettings: settings.global, projectSettings: settings.project,
+      }, c.req.raw.signal)));
     })
     .post("/updates", async c => {
       z.object({}).strict().parse(await c.req.json());

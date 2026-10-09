@@ -1,10 +1,21 @@
 import { fileURLToPath } from "node:url";
-import { pluginToolsSchema, type PluginToolsView } from "../shared/plugin-tools.ts";
+import type { z } from "zod";
+import { pluginToolsSchema, sessionToolsSchema, type PluginToolsView, type SessionTools } from "../shared/plugin-tools.ts";
 import { ConfigError } from "./store.ts";
 import type { ToolProbeInput } from "./plugin-tools-probe.ts";
 
+/** One extension's tools in a session started with the given settings. */
+export function runToolProbe(input: ToolProbeInput & { path: string; enabled: boolean }, signal?: AbortSignal, timeoutMs?: number): Promise<PluginToolsView> {
+  return probe(input, pluginToolsSchema, signal, timeoutMs);
+}
+
+/** Every tool such a session registers. */
+export function runToolsProbe(input: Omit<ToolProbeInput, "path" | "enabled">, signal?: AbortSignal, timeoutMs?: number): Promise<SessionTools> {
+  return probe(input, sessionToolsSchema, signal, timeoutMs);
+}
+
 /** Separate process for extension globals, crashes and cleanup; this is not a security sandbox. */
-export async function runToolProbe(input: ToolProbeInput, signal?: AbortSignal, timeoutMs = 30_000): Promise<PluginToolsView> {
+async function probe<T>(input: ToolProbeInput, schema: z.ZodType<T>, signal?: AbortSignal, timeoutMs = 30_000): Promise<T> {
   if (signal?.aborted) throw new ConfigError("Tool inspection cancelled.", 408);
   const timeout = AbortSignal.timeout(timeoutMs);
   let message: { result?: unknown; error?: string } | undefined;
@@ -21,7 +32,7 @@ export async function runToolProbe(input: ToolProbeInput, signal?: AbortSignal, 
     if (signal?.aborted) throw new ConfigError("Tool inspection cancelled.", 408);
     if (exit !== 0 || !message) throw new ConfigError("An extension stopped the inspection process. Try Refresh tools after checking the extension.", 502);
     if (message.error) throw new ConfigError(message.error, 502);
-    const parsed = pluginToolsSchema.safeParse(message.result);
+    const parsed = schema.safeParse(message.result);
     if (!parsed.success) throw new ConfigError("Pi returned an unreadable tool inspection result.", 502);
     return parsed.data;
   } finally {
