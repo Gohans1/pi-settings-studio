@@ -50,7 +50,7 @@ async function trustOf(store: ConfigStore, trust: ProjectTrustStore, project: st
   return {
     defaultTrust,
     ...(entry ? { decision: entry.decision, savedFor: entry.path } : {}),
-    loadsInT3Code: entry ? entry.decision : defaultTrust === "always",
+    loadsWithoutPrompt: entry ? entry.decision : defaultTrust === "always",
   };
 }
 

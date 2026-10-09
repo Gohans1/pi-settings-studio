@@ -38,7 +38,7 @@ export function ResourceEditor({ type, path, name, editable: hint, project, onMe
     try {
       const { revision } = await saveResourceFile({ type, path, file: view.file, revision: view.revision, text }, project);
       setView({ ...view, text, revision });
-      onMessage(`Saved ${view.file}. Applies to new T3Code threads, or after /reload.`);
+      onMessage(`Saved ${view.file}. Applies to new Pi sessions, or after /reload.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save the file."); }
     finally { setBusy(false); }
   }

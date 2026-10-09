@@ -42,7 +42,7 @@ type Project = { dir: string; settings: Settings };
 
 /**
  * Pi's own resolver over the given settings, read-only. With a project, its .pi settings and
- * resources are included as if the project were trusted (the trust panel says whether T3Code
+ * resources are included as if the project were trusted (the trust panel says whether Pi
  * loads them). Missing packages are skipped, never installed: nothing runs to display configuration.
  */
 function packageManager(agentDir: string, global: Settings, project?: Project) {

@@ -88,7 +88,7 @@ export function App() {
     </header>
     <main id="main" tabIndex={-1}>
       {current && <TrustPanel project={current.path} trust={current.trust} onChange={trust => updateTrust(current.path, trust)} />}
-      {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id} className="flex flex-col"><Panel project={project} loadsInProject={current?.trust.loadsInT3Code} /></TabsContent>)}
+      {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id} className="flex flex-col"><Panel project={project} loadsInProject={current?.trust.loadsWithoutPrompt} /></TabsContent>)}
     </main>
     <Toaster />
   </div></Tabs></TooltipProvider>;

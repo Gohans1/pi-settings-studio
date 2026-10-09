@@ -133,7 +133,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
     setBusy(true); setError("");
     try {
       fill(await saveSettings(scope, view.revision, changes, target));
-      onSaved(`Defaults saved${patterns !== enabled ? `; ${ref} added to Enabled models, as Pi does` : ""}. Applies to new T3Code threads, or after /reload.`);
+      onSaved(`Defaults saved${patterns !== enabled ? `; ${ref} added to Enabled models, as Pi does` : ""}. Applies to new Pi sessions, or after /reload.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Not saved."); }
     finally { setBusy(false); }
   }

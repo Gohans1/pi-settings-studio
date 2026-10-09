@@ -153,7 +153,7 @@ export function McpTab({ project }: { project?: string }) {
     try {
       const next = await change(view.revision);
       setViews(current => ({ ...current, [scope]: next }));
-      setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
+      setMessage(`${done} Applies to new Pi sessions, or after /reload.`);
       if (options.undoable) setUndo(target(scope));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not change the server.");
@@ -168,7 +168,7 @@ export function McpTab({ project }: { project?: string }) {
     setBusy(true); setError(""); setMessage(""); setUndo(undefined);
     try {
       setCodemode(await saveCodemode(codemode.revision, patch, codemodeProject));
-      setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
+      setMessage(`${done} Applies to new Pi sessions, or after /reload.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not save Code mode.");
       await refreshCodemode();
@@ -184,7 +184,7 @@ export function McpTab({ project }: { project?: string }) {
         : await editMcpServer(target(form.scope), selected!.name, view.revision, input);
       setViews(current => ({ ...current, [form.scope]: next }));
       const shown = form.mode === "add" ? name : selected!.name;
-      setMessage(`${shown} ${form.mode === "add" ? "added" : "saved"}. Applies to new T3Code threads, or after /reload.`);
+      setMessage(`${shown} ${form.mode === "add" ? "added" : "saved"}. Applies to new Pi sessions, or after /reload.`);
       setSelected({ scope: form.scope, name: shown });
       setForm(undefined);
     } catch (cause) {
@@ -250,7 +250,7 @@ export function McpTab({ project }: { project?: string }) {
       onImported={(next, names) => {
         setViews(current => ({ ...current, [scope]: next }));
         setForm(undefined); setError(""); setUndo(target(scope));
-        setMessage(`Imported ${names.join(", ")}. Applies to new T3Code threads, or after /reload.`);
+        setMessage(`Imported ${names.join(", ")}. Applies to new Pi sessions, or after /reload.`);
       }} />;
   } else if (form) {
     detail = <McpServerForm key={form.mode + form.scope + (current?.name ?? "")} server={form.mode === "edit" ? current : undefined} busy={busy} error={formError} scope={form.scope}
@@ -298,7 +298,7 @@ export function McpTab({ project }: { project?: string }) {
   </MoreMenu>;
   const codemodeState = codemode ? codemode.disabledByExtensions ? "off" : (codemode.effective?.preference ?? codemode.preference) === "always" ? "always on" : "automatic" : "";
   return <>
-    <PageHeader title="MCP" description="Servers Pi connects to. Changes apply to new T3Code threads, or after /reload." files={[global?.path, local?.path]}
+    <PageHeader title="MCP" description="Servers Pi connects to. Changes apply to new Pi sessions, or after /reload." files={[global?.path, local?.path]}
       actions={<>
         <Button variant="outline" disabled={check.running} onClick={test}><PlugZap aria-hidden="true" data-icon="inline-start" />Test connections</Button>
         <Button variant="ghost" onClick={showLog}><ScrollText aria-hidden="true" data-icon="inline-start" />View mcp.log</Button>
@@ -314,7 +314,7 @@ export function McpTab({ project }: { project?: string }) {
     </JobPanel>
     {rawScope ? <RawJsonEditor file="mcp.json" load={loadRaw} save={saveRaw}
       note={SECRET_NOTE}
-      onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
+      onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new Pi sessions, or after /reload."); void refresh(); } }} />
     : !global ? !error && <div className="loading" aria-busy="true"><Spinner />Reading MCP settings…</div> : <Workbench open={open} onBack={back} backLabel="All servers" detail={detail} list={<>
       <ItemGroup><div role="listitem" className="list-row"><ListItem selected={selected === "codemode"} onSelect={() => choose("codemode")} icon={Braces} name="Code mode" state={codemodeState} /></div></ItemGroup>
       <Separator className="mt-2" />

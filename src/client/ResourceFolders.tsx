@@ -46,7 +46,7 @@ export function ResourceFolders({ type, project, level = 3, onChanged }: {
         // Name what the new folder changes: skills that now replace ones of the same name.
         const added = next.paths.find(item => item.scope === target && item.entry === entry.trim());
         const replaces = added?.replaces ? ` ${added.replaces} of its ${plural} ${added.replaces === 1 ? "replaces one" : "replace ones"} of the same name.` : "";
-        setPath(""); onChanged({ message: `Added ${entry}.${replaces} Applies to new T3Code threads, or after /reload.` });
+        setPath(""); onChanged({ message: `Added ${entry}.${replaces} Applies to new Pi sessions, or after /reload.` });
       }
       else onChanged({ message: `Removed ${entry} from ${target === "project" ? "the project's settings.json" : "settings.json"}.`, undo: { scope: target, revision: revisionOf(target, next)! } });
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Not saved."); }

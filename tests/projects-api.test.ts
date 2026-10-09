@@ -39,21 +39,21 @@ test("projects come from session folders that still exist, plus the --project fo
 test("trust follows defaultProjectTrust until a decision is saved with Pi's trust store", async (t) => {
   const { agent, alpha, gone, request } = await fixture(t);
   const trustOf = async () => (await (await request("/api/projects")).json()).find((project: { path: string }) => project.path === alpha).trust;
-  assert.deepEqual(await trustOf(), { defaultTrust: "ask", loadsInT3Code: false });
+  assert.deepEqual(await trustOf(), { defaultTrust: "ask", loadsWithoutPrompt: false });
   const save = (project: string, decision: boolean | null) =>
     request("/api/projects/trust", { method: "POST", headers: json, body: JSON.stringify({ project, decision }) });
   assert.equal((await save(alpha, true)).status, 200);
-  assert.deepEqual(await trustOf(), { defaultTrust: "ask", decision: true, savedFor: alpha, loadsInT3Code: true });
+  assert.deepEqual(await trustOf(), { defaultTrust: "ask", decision: true, savedFor: alpha, loadsWithoutPrompt: true });
   assert.equal(JSON.parse(await readFile(join(agent, "trust.json"), "utf8"))[alpha], true);
   assert.equal((await save(alpha, null)).status, 200);
-  assert.deepEqual(await trustOf(), { defaultTrust: "ask", loadsInT3Code: false });
+  assert.deepEqual(await trustOf(), { defaultTrust: "ask", loadsWithoutPrompt: false });
   assert.equal((await save(gone, true)).status, 400);
 });
 
-test("defaultProjectTrust always lets project configuration load in T3Code", async (t) => {
+test("defaultProjectTrust always lets project configuration load without a trust prompt", async (t) => {
   const { alpha, request } = await fixture(t, { defaultProjectTrust: "always" });
   const project = (await (await request("/api/projects")).json()).find((entry: { path: string }) => entry.path === alpha);
-  assert.deepEqual(project.trust, { defaultTrust: "always", loadsInT3Code: true });
+  assert.deepEqual(project.trust, { defaultTrust: "always", loadsWithoutPrompt: true });
 });
 
 test("project settings are read and written only for known projects, with global-only keys refused", async (t) => {

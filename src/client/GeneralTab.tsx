@@ -155,7 +155,7 @@ export function GeneralTab({ project }: { project?: string }) {
     setDraft({});
     setError("");
     setLoading(true);
-    try { setView(await loadSettings(scope, target)); setMessage("Saved settings.json. Applies to new T3Code threads, or after /reload."); }
+    try { setView(await loadSettings(scope, target)); setMessage("Saved settings.json. Applies to new Pi sessions, or after /reload."); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Reload failed."); }
     finally { setLoading(false); }
   }
@@ -240,7 +240,7 @@ export function GeneralTab({ project }: { project?: string }) {
           </div>
           {scope === "global" && !needle && <KeybindingsPanel onMessage={setMessage} />}
           {scope === "global" && !needle && <NotHere />}
-          <p className="scope-footnote">Saved values apply to new T3Code threads, or after /reload. Unknown keys in the file are kept as they are.</p>
+          <p className="scope-footnote">Saved values apply to new Pi sessions, or after /reload. Unknown keys in the file are kept as they are.</p>
         </div>
       </div>}
     <AlertDialog open={restore} onOpenChange={setRestore}>

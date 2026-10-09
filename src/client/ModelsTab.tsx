@@ -124,7 +124,7 @@ export function ModelsTab({ project }: { project?: string }) {
     setBusy(true); setError(""); setMessage(""); setUndo(undefined);
     try {
       setView(await change(view.revision));
-      setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
+      setMessage(`${done} Applies to new Pi sessions, or after /reload.`);
       if (undoable) setUndo("auth");
       return true;
     } catch (cause) {
@@ -141,7 +141,7 @@ export function ModelsTab({ project }: { project?: string }) {
     try {
       setCustom(await change(custom.revision));
       setView(await loadProviders());
-      setMessage(`${done} Applies to new T3Code threads, or after /reload.`);
+      setMessage(`${done} Applies to new Pi sessions, or after /reload.`);
       if (undoable) setUndo("models");
       after?.();
     } catch (cause) {
@@ -171,7 +171,7 @@ export function ModelsTab({ project }: { project?: string }) {
     {view?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>models.json has a problem</AlertTitle><AlertDescription>{view.error}</AlertDescription></Alert>}
     {raw ? <RawJsonEditor file="models.json" load={loadModelsRaw} save={saveModelsRaw}
       note={`${SECRET_NOTE} modelOverrides, compat, cost, thinkingLevelMap and samplingParams are edited here. Pi checks the file before it is saved.`}
-      onClose={saved => { setRaw(false); if (saved) { setMessage("Saved models.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
+      onClose={saved => { setRaw(false); if (saved) { setMessage("Saved models.json. Applies to new Pi sessions, or after /reload."); void refresh(); } }} />
     : !view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading providers…</div> : <Workbench open={open} onBack={() => setSelected(undefined)} backLabel="All providers" list={<section aria-label="Providers">
       <div className="list-search"><SearchField label="Search providers" placeholder="Search providers…" value={query} onChange={setQuery} /></div>
       <ItemGroup><div role="listitem" className="list-row"><ListItem selected={selected === DEFAULTS} onSelect={() => setSelected(DEFAULTS)} icon={SlidersHorizontal} name="Defaults" state="provider, model, thinking" /></div></ItemGroup>

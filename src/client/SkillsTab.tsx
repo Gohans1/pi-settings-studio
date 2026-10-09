@@ -76,7 +76,7 @@ export function SkillsTab({ project }: { project?: string }) {
       // Project skills switch in the project's .pi/settings.json, the others in the global file.
       const scope = skills[0]!.scope === "project" ? "project" : "global";
       setView(await saveSkills(scope, scope === "project" ? view.projectRevision! : view.revision, skills.map(skill => skill.path), enabled, project));
-      setMessage(`${label} turned ${enabled ? "on" : "off"}. Applies to new T3Code threads, or after /reload.`);
+      setMessage(`${label} turned ${enabled ? "on" : "off"}. Applies to new Pi sessions, or after /reload.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not change the skills.");
       await refresh();
@@ -99,9 +99,9 @@ export function SkillsTab({ project }: { project?: string }) {
       const { changed } = await setModelInvocation(targets.map(skill => skill.path), allowed, project);
       await refresh();
       const name = targets[0]!.name, count = changed.length;
-      if (!group) setMessage(`${allowed ? `The model may load ${name} again when a task matches` : `Only /skill:${name} loads ${name} now`}. Applies to new T3Code threads, or after /reload.`);
+      if (!group) setMessage(`${allowed ? `The model may load ${name} again when a task matches` : `Only /skill:${name} loads ${name} now`}. Applies to new Pi sessions, or after /reload.`);
       else {
-        setMessage(`${allowed ? `The model may now load ${skillCount(count)} in ${group} when a task matches` : `${skillCount(count)} in ${group} ${count === 1 ? "is" : "are"} command only now`}. Applies to new T3Code threads, or after /reload.`);
+        setMessage(`${allowed ? `The model may now load ${skillCount(count)} in ${group} when a task matches` : `${skillCount(count)} in ${group} ${count === 1 ? "is" : "are"} command only now`}. Applies to new Pi sessions, or after /reload.`);
         if (count) setUndo({ paths: changed, allowed: !allowed });
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not change SKILL.md."); }
@@ -113,7 +113,7 @@ export function SkillsTab({ project }: { project?: string }) {
       await removeSkill(skill.path, project);
       setSelected(undefined);
       await refresh();
-      setMessage(`Removed ${skill.name}${/[\\/]SKILL\.md$/.test(skill.path) ? " and its folder" : ""}. Applies to new T3Code threads, or after /reload.`);
+      setMessage(`Removed ${skill.name}${/[\\/]SKILL\.md$/.test(skill.path) ? " and its folder" : ""}. Applies to new Pi sessions, or after /reload.`);
       setUndo({ removed: skill });
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not remove the skill."); }
     finally { setBusy(false); }
@@ -137,7 +137,7 @@ export function SkillsTab({ project }: { project?: string }) {
     finally { setBusy(false); }
   }
   return <>
-    <PageHeader title="Skills" description="Skills Pi advertises to the model. Changes apply to new T3Code threads, or after /reload."
+    <PageHeader title="Skills" description="Skills Pi advertises to the model. Changes apply to new Pi sessions, or after /reload."
       actions={<Button variant="outline" onClick={() => { setMode("new"); setSelected(undefined); }}><Plus aria-hidden="true" data-icon="inline-start" />New skill</Button>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => void revert(undo) }} />
@@ -174,7 +174,7 @@ export function SkillsTab({ project }: { project?: string }) {
       })}
     </section>} detail={mode === "folders" ? <div className="detail"><ResourceFolders key={folders} type="skills" project={project} level={2} onChanged={folderChanged} /></div>
         : mode === "new" ? <NewResourceForm type="skills" project={project} onCancel={() => setMode(undefined)}
-          onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
+          onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new Pi sessions, or after /reload.`); }} />
         : current && mode === "edit" ? <ResourceEditor key={current.path} type="skills" path={current.path} name={current.name} editable={current.origin === "top-level"}
           project={project} onMessage={setMessage} onClose={() => { setMode(undefined); void refresh(); }} />
         : current ? <SkillDetail skill={current} busy={busy} onEdit={() => setMode("edit")} onInvocation={allowed => void invocation([current], allowed)} onRemove={() => void remove(current)} />

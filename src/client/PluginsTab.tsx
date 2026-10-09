@@ -108,7 +108,7 @@ export function PluginsTab({ project }: { project?: string }) {
     try {
       const scope = items[0]!.scope === "project" ? "project" : "global";
       setView(await savePlugins(scope, scope === "project" ? view.projectRevision! : view.revision, items.map(item => ({ type: item.type, path: item.path })), enabled, project));
-      setMessage(`${label} turned ${enabled ? "on" : "off"}. Applies to new T3Code threads, or after /reload.`);
+      setMessage(`${label} turned ${enabled ? "on" : "off"}. Applies to new Pi sessions, or after /reload.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not change the plugins.");
       await refresh();
@@ -121,7 +121,7 @@ export function PluginsTab({ project }: { project?: string }) {
     try {
       setView(await savePackageFilters(scope, scope === "project" ? view.projectRevision! : view.revision, pkgSource, filters, project));
       setFiltering(undefined);
-      setMessage(`Filters saved for ${pkgSource}. Applies to new T3Code threads, or after /reload.`);
+      setMessage(`Filters saved for ${pkgSource}. Applies to new Pi sessions, or after /reload.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save the filters."); }
     finally { setBusy(false); }
   }
@@ -224,7 +224,7 @@ export function PluginsTab({ project }: { project?: string }) {
         {(["extensions", "prompts", "themes"] as const).map(type => <ResourceFolders key={type} type={type} project={project} onChanged={folderChanged} />)}
       </section>
       : mode && mode !== "edit" ? <NewResourceForm key={mode} type={mode} project={project} onCancel={() => setMode(undefined)}
-          onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new T3Code threads, or after /reload.`); }} />
+          onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new Pi sessions, or after /reload.`); }} />
       : current && mode === "edit" ? <ResourceEditor key={current.path} type={current.type} path={current.path} name={current.name} editable={current.origin === "top-level"}
           project={project} onMessage={setMessage} onClose={() => { setMode(undefined); void refresh(); }} />
       : current ? <PluginDetail key={JSON.stringify([project, current.path, view.revision, view.projectRevision])} item={current} project={project} onOpen={() => setMode("edit")} />
