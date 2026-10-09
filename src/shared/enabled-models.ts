@@ -9,12 +9,22 @@ function split(pattern: string): [string, string] {
   return colon > 0 && LEVELS.includes(pattern.slice(colon + 1)) ? [pattern.slice(0, colon), pattern.slice(colon)] : [pattern, ""];
 }
 
+const exactIn = (all: string[]) => (pattern: string) => all.find(ref => ref.toLowerCase() === split(pattern)[0].toLowerCase());
+
+/** The models enabledModels selects among `all`, in `all`'s order: every one when the list is empty. */
+export function selected(patterns: string[], selects: (pattern: string) => string[], all: string[]): Set<string> {
+  if (!patterns.length) return new Set(all);
+  const exact = exactIn(all);
+  const chosen = new Set(patterns.flatMap(pattern => { const ref = exact(pattern); return ref ? [ref] : selects(pattern); }));
+  return new Set(all.filter(ref => chosen.has(ref)));
+}
+
 /**
  * enabledModels after turning models on or off. `all` lists provider/modelId of every available model and
  * `selects` what a pattern matches among them; a pattern that names one model exactly needs no lookup.
  */
 export function setEnabled(patterns: string[], selects: (pattern: string) => string[], all: string[], refs: string[], on: boolean): string[] {
-  const exact = (pattern: string) => all.find(ref => ref.toLowerCase() === split(pattern)[0].toLowerCase());
+  const exact = exactIn(all);
   const picks = (pattern: string) => { const ref = exact(pattern); return ref ? [ref] : selects(pattern); };
   if (on) {
     if (!patterns.length) return patterns;

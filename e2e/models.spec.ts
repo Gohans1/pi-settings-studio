@@ -247,6 +247,49 @@ test("Models and General point to each other where thinking is set", async ({ pa
   await expect(page.getByRole("region", { name: "Defaults" }).getByRole("group", { name: "Thinking level per model" })).toBeVisible();
 });
 
+test("enabled models are ticked in a checklist by provider, and patterns it does not touch stay", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ enabledModels: ["anthropic/*", "claude-bridge/*"] }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const enabled = panel.getByRole("group", { name: "Enabled models" });
+  const anthropic: string[] = await page.evaluate(() => fetch("/api/models/available").then(response => response.json())
+    .then((models: { provider: string; id: string }[]) => models.filter(model => model.provider === "anthropic").map(model => `anthropic/${model.id}`)));
+  const all = enabled.getByRole("checkbox", { name: "All Anthropic models" });
+  await expect(all).toBeChecked();
+  await expect(enabled).toContainText(`${anthropic.length} of ${anthropic.length}`);
+  await enabled.getByRole("searchbox", { name: "Search enabled models" }).fill("claude-haiku-4-5");
+  await enabled.getByRole("checkbox", { name: /claude-haiku-4-5$/ }).uncheck();
+  await expect(all).not.toBeChecked();
+  await expect(enabled).toContainText(`${anthropic.length - 1} of ${anthropic.length}`);
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  // anthropic/* is spelled out without the model turned off; the extension's pattern is kept as written.
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).enabledModels)
+    .toEqual([...anthropic.filter(ref => ref !== "anthropic/claude-haiku-4-5"), "claude-bridge/*"]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a whole provider is turned off and back on with its checkbox", async ({ page }) => {
+  await writeFile(join(agent, "auth.json"), JSON.stringify({ anthropic: { type: "api_key", key: "fixture-a" }, openai: { type: "api_key", key: "fixture-o" } }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const enabled = panel.getByRole("group", { name: "Enabled models" });
+  const openai: string[] = await page.evaluate(() => fetch("/api/models/available").then(response => response.json())
+    .then((models: { provider: string; id: string }[]) => models.filter(model => model.provider === "openai").map(model => `openai/${model.id}`)));
+  const settings = async () => JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  await enabled.getByRole("checkbox", { name: "All Anthropic models" }).uncheck();
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  expect((await settings()).enabledModels).toEqual(openai);
+  await enabled.getByRole("checkbox", { name: "All Anthropic models" }).check();
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  // Every model again: Pi's empty list.
+  expect((await settings()).enabledModels).toBeUndefined();
+});
+
 test("a custom provider the browser would refuse says why under its field and writes nothing", async ({ page }) => {
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: "Add custom provider" }).click();

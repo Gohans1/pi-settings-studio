@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { setEnabled } from "../src/shared/enabled-models.ts";
+import { selected, setEnabled } from "../src/shared/enabled-models.ts";
 
 // Models of providers that are set up, and what each pattern selects among them (the server's /scope answer).
 const all = ["anthropic/claude-haiku", "anthropic/claude-sonnet", "openrouter/claude-sonnet", "opencode/big", "opencode/small"];
@@ -48,6 +48,17 @@ describe("turning models on and off in enabledModels", () => {
 
   test("a whole provider is turned on with its models' exact names", () => {
     expect(setEnabled(["anthropic/claude-haiku"], selects({}), all, ["opencode/big", "opencode/small"], true))
+      .toEqual(["anthropic/claude-haiku", "opencode/big", "opencode/small"]);
+  });
+});
+
+describe("which models enabledModels selects", () => {
+  test("an empty list selects every model", () => {
+    expect([...selected([], selects({}), all)]).toEqual(all);
+  });
+
+  test("a pattern selects the model it names exactly, ignoring case and thinking level, or what Pi matched for it", () => {
+    expect([...selected(["Anthropic/Claude-Haiku:high", "opencode/*"], selects({ "opencode/*": ["opencode/big", "opencode/small"] }), all)])
       .toEqual(["anthropic/claude-haiku", "opencode/big", "opencode/small"]);
   });
 });

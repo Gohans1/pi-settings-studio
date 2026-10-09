@@ -232,6 +232,13 @@
   .model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); align-items: center; }
   .found-models { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); }
   .pattern-add { display: flex; gap: --spacing(2); }
+  /* Enabled models: providers as rows that open to their models, each with its own checkbox. */
+  .model-checklist { display: grid; gap: --spacing(2); }
+  .model-checklist ul { list-style: none; margin: 0; padding: 0; }
+  .model-group { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; column-gap: --spacing(3); padding-block: --spacing(0.5); }
+  .model-group > [data-slot=checkbox] { margin-top: --spacing(2); }
+  .model-group [data-slot=collapsible-trigger] .muted { margin-inline-start: --spacing(2); font-variant-numeric: tabular-nums; }
+  .model-group [data-slot=collapsible-content] ul { display: grid; gap: --spacing(2); padding: --spacing(1) 0 --spacing(2); }
   .model-map-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: --spacing(1.5); width: 100%; }
 
   /* MCP import. */
