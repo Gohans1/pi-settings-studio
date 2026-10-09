@@ -1,3 +1,26 @@
+# Verification — interaction sounds with cuelume, 2026-10-09
+
+Scope: cuelume 0.2.4 (latest on npm; MIT; no dependencies, no install scripts; the published JavaScript makes no request, reads no storage and runs no eval) plays the app's sounds. `Sound.tsx` maps each clicked control to a cue by its ARIA role and state, plays outcomes from the toast, error Alerts, refused forms and jobs, and holds the Sounds Toggle in the top bar (on by default, stored in `localStorage`).
+
+| Check | Result |
+|---|---|
+| `bun test` (`HOME` an empty folder) | 283 passed |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings; `@shadcn/lint` 0 findings |
+| `bun run test:e2e` (same `HOME`) | 118 passed, 5 new: controls sound from pointer and keyboard and hovering stays silent; one action plays one cue, from a control or its label; the Sounds toggle silences the app, is remembered and says so when turned on; a save sounds when its answer arrives, landed or refused; a job sounds when it finishes |
+
+Sounds are measured where they leave the app: each Web Audio source started. RED/GREEN: all five failed first (no sound, no toggle), then passed.
+
+Found while building:
+- `AudioBufferSourceNode` has its own `start()`; a spy on `AudioScheduledSourceNode.prototype.start` missed every noise-only cue, such as navigate.
+- Base UI forwards a checkbox's or switch's click to its hidden input, which holds the id a label points to: one click played twice. The input now stands for the control beside it, and a control plays once per action; the one-cue test failed without that guard (6 sources instead of 3).
+- Select, menu and disclosure triggers still read `aria-expanded="false"` in the click's capture phase, and a tab `aria-selected="false"`, so the click alone tells opening from closing.
+
+Manual (`agent-browser`, own session): the Sounds Toggle at 1280×800 light (tooltip "Sounds") and 390 px dark (off, remembered after reload); no horizontal overflow, no page errors.
+
+Not verified by ear in this environment: the cues are checked as started Web Audio sources, not listened to.
+
+---
+
 # Verification — ScrollArea scrollbars under the app's CSP, 2026-10-09
 
 Found while adding sounds: Base UI hides a ScrollArea viewport's native scrollbar with a `<style>` element it injects, and the app's Content-Security-Policy (`style-src 'self'`) blocks it. Where scrollbars are classic, as in Chrome and Edge on Windows, every pane showed a 15 px native scrollbar, horizontal too, beside shadcn's thumb. Headless browsers draw overlay scrollbars, which hid it from the earlier checks.

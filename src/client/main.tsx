@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { CSPProvider } from "@base-ui/react/csp-provider";
 import { App } from "./App";
+import { bindSounds } from "./Sound";
 import "./styles.css";
 
 // Capture before React handles an action; portals share the same document-level motion policy.
@@ -17,6 +18,8 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   void root.offsetHeight;
   requestAnimationFrame(() => requestAnimationFrame(() => delete root.dataset.themeSwitch));
 });
+
+bindSounds();
 
 // The server's CSP allows no inline <style>: Base UI's scrollbar rule lives in styles.css instead.
 createRoot(document.getElementById("root")!).render(<StrictMode><CSPProvider disableStyleElements><App /></CSPProvider></StrictMode>);

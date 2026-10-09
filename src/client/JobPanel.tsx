@@ -10,6 +10,7 @@ import { Input } from "./components/ui/input";
 import { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Disclosure } from "./Disclosure";
+import { play } from "./Sound";
 
 /** Start a job on click and follow it until it ends. */
 export function useJob(onFinish?: (job: JobView) => void) {
@@ -17,6 +18,17 @@ export function useJob(onFinish?: (job: JobView) => void) {
   const [error, setError] = useState("");
   const finished = useRef(onFinish);
   finished.current = onFinish;
+  // Slow work starts quietly, ends with its outcome, and asks for attention when Pi has a question.
+  const heard = useRef<JobView>(undefined);
+  useEffect(() => {
+    const before = heard.current;
+    heard.current = job;
+    if (!job) return;
+    const fresh = job.id !== before?.id;
+    if (job.status === "running") { if (fresh) play("loading", { emphasis: "subtle" }); }
+    else if (fresh || before?.status === "running") { if (job.status === "done") play("success"); else if (job.status === "failed") play("error"); }
+    if (job.prompt && job.prompt.id !== before?.prompt?.id) play("attention");
+  }, [job]);
   useEffect(() => {
     if (!job || job.status !== "running") return;
     const timer = setTimeout(() => {
