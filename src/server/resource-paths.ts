@@ -3,13 +3,12 @@
 // are filters (Pi's isPattern in dist/core/package-manager.js); the switches own those. The server
 // stats only paths already in a settings file, to say whether they exist; it never reads them.
 import { statSync } from "node:fs";
-import { homedir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { ResourcePathsView, ResourcePathView, ResourceType } from "../shared/resources.ts";
 import type { ProjectRegistry } from "./projects.ts";
-import { resourceContext, skillCollisions } from "./resources.ts";
+import { piHome, resourceContext, skillCollisions } from "./resources.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 
 const TYPES = ["skills", "extensions", "prompts", "themes"] as const;
@@ -17,7 +16,7 @@ const isPattern = (entry: string) => /^[!+-]/.test(entry) || /[*?]/.test(entry);
 const pathsOf = (value: unknown) => (Array.isArray(value) ? value : []).filter((entry): entry is string => typeof entry === "string");
 
 /** As Pi resolves a settings path: ~ is the home folder, relative paths start at the settings file's base. */
-export function resolveEntry(entry: string, base: string, home = homedir()): string {
+export function resolveEntry(entry: string, base: string, home = piHome()): string {
   const path = entry.trim();
   if (path === "~") return home;
   if (path.startsWith("~/")) return join(home, path.slice(2));
@@ -56,7 +55,7 @@ export function resourcePathRoutes(store: ConfigStore, registry: ProjectRegistry
     // Pi's own locations (docs/configuration.md; docs/skills.md adds the Agent Skills folders).
     const standard = [
       { scope: "global" as const, path: join(agentDir, type) },
-      ...(type === "skills" ? [{ scope: "global" as const, path: join(homedir(), ".agents", "skills") }] : []),
+      ...(type === "skills" ? [{ scope: "global" as const, path: join(piHome(), ".agents", "skills") }] : []),
       ...(dir ? [{ scope: "project" as const, path: join(dir, ".pi", type) }, ...(type === "skills" ? [{ scope: "project" as const, path: join(dir, ".agents", "skills") }] : [])] : []),
     ].map(place => ({ ...place, exists: stat(place.path).exists }));
     return { type, revision, ...(projectRevision ? { projectRevision } : {}), paths, standard };

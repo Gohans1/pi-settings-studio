@@ -22,8 +22,14 @@ import { knownSecrets, redact } from "./jobs.ts";
 export const BUILTIN_EXTENSIONS = ["mcp", "llama.cpp", "codemode", "tool-search"];
 const BUILTIN_PREFIX = "builtin:";
 
+/**
+ * The home folder as Pi takes it when it runs: HOME, else the system's (Pi 1.1.0 dist/core/package-manager.js
+ * getHomeDir, MIT, Copyright Mario Zechner). Bun's homedir() keeps the HOME the process started with.
+ */
+export const piHome = () => process.env.HOME || homedir();
+
 function formatBaseDir(baseDir: string): string {
-  const home = homedir();
+  const home = piHome();
   const display = baseDir === home ? "~" : baseDir.startsWith(home) ? `~${baseDir.slice(home.length).replace(/\\/g, "/")}` : baseDir.replace(/\\/g, "/");
   return display.endsWith("/") ? display : `${display}/`;
 }
