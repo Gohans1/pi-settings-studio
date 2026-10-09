@@ -67,7 +67,11 @@ function EnabledModels({ patterns, scope, ids, inherited, onChange }: {
 }
 
 /** Startup provider, model, thinking level and model cycling. Pi's catalog suggests; any name can be typed. */
-export function ModelDefaults({ providers, project, onSaved }: { providers: ProviderView[]; project?: string; onSaved: (message: string) => void }) {
+export function ModelDefaults({ providers, project, preset, onPresetUsed, onSaved }: {
+  providers: ProviderView[]; project?: string; onSaved: (message: string) => void;
+  /** A provider and model to fill in over the file's values, once, as an unsaved edit. */
+  preset?: { provider: string; model: string }; onPresetUsed?: () => void;
+}) {
   const [scopeChoice, setScopeChoice] = useState<"global" | "project">("global");
   const scope = project ? scopeChoice : "global";
   const target = scope === "project" ? project : undefined;
@@ -88,6 +92,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
     setModel(String(next.values.defaultModel ?? ""));
     setThinking(String(next.values.defaultThinkingLevel ?? ""));
     setEnabled(Array.isArray(next.values.enabledModels) ? next.values.enabledModels.map(String) : []);
+    if (preset) { setProvider(preset.provider); setModel(preset.model); onPresetUsed?.(); }
   }
   useEffect(() => { setView(undefined); loadSettings(scope, target).then(fill).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read settings.json.")); }, [scope, target]);
   useEffect(() => { loadModelIds().then(setIds).catch(() => setIds([])); }, []);

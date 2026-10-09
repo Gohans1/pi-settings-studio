@@ -98,6 +98,42 @@ test("a signed-in provider offers to sign in again or sign out, in Pi's words", 
   expect(JSON.parse(await readFile(join(agent, "auth.json"), "utf8"))["github-copilot"]).toBeUndefined();
 });
 
+test("a provider lists its models with what Pi knows of each, and one becomes the default in a click", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Anthropic\b/ }).first().click();
+  const models = page.getByRole("region", { name: "Anthropic" }).getByRole("region", { name: "Models" });
+  const catalog = await page.evaluate(() => fetch("/api/models/providers/anthropic/models").then(response => response.json()));
+  await expect(models.getByRole("listitem")).toHaveCount(catalog.length);
+  await models.getByRole("searchbox", { name: "Search Anthropic models" }).fill("haiku-4-5");
+  const haiku = models.getByRole("listitem").filter({ hasText: "claude-haiku-4-5" }).first();
+  // Its limits, image input, the thinking levels Pi offers for it and its price, in words.
+  await expect(haiku).toContainText(/\d+K context · \d+K output · images · thinking off–high · \$\d+(\.\d+)? in, \$\d+(\.\d+)? out per 1M tokens/);
+  const id = (await haiku.locator("code").textContent())!;
+  await haiku.getByRole("button", { name: /^Use as default model/ }).click();
+  const defaults = page.getByRole("region", { name: "Defaults" });
+  await expect(defaults.getByLabel("Default provider")).toHaveValue("anthropic");
+  await expect(defaults.getByLabel("Default model")).toHaveValue(id);
+  await defaults.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  expect([settings.defaultProvider, settings.defaultModel]).toEqual(["anthropic", id]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a provider names its models that do not chat, which scripts reach through codemode", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("searchbox", { name: "Search providers" }).fill("openrouter");
+  await page.getByRole("button", { name: /^OpenRouter/ }).click();
+  await expect(page.getByRole("region", { name: "OpenRouter" }).getByRole("region", { name: "Models" }))
+    .toContainText(/Also \d+ image and \d+ classifier models, which scripts reach through codemode/);
+  // TypeSafe has only a classifier: no chat model to start a session with, and the list says so rather than "0".
+  await page.getByRole("searchbox", { name: "Search providers" }).fill("typesafe");
+  await page.getByRole("button", { name: /^TypeSafe/ }).click();
+  const typesafe = page.getByRole("region", { name: "TypeSafe" }).getByRole("region", { name: "Models" });
+  await expect(typesafe).toContainText("1 classifier model, which scripts reach through codemode");
+  await expect(typesafe).toContainText("No chat models");
+});
+
 test("the list names its groups and says which providers are ready, and the chosen one says it too", async ({ page }) => {
   await writeFile(join(agent, "models.json"), JSON.stringify({ providers: { ollama: { baseUrl: "http://localhost:1/v1", api: "openai-completions", apiKey: "ollama", models: [{ id: "llama-3" }] } } }));
   await page.goto(server.url + "#models");

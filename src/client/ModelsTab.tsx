@@ -11,6 +11,7 @@ import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Spinner } from "./components/ui/spinner";
 import { ProviderDetail, providerState } from "./ProviderDetail";
+import { ProviderModels } from "./ProviderModels";
 import { ItemGroup } from "./components/ui/item";
 import { Separator } from "./components/ui/separator";
 import { ModelDefaults } from "./ModelDefaults";
@@ -34,6 +35,8 @@ export function ModelsTab({ project }: { project?: string }) {
   const [formError, setFormError] = useState("");
   const [raw, setRaw] = useState(false);
   const [busy, setBusy] = useState(false);
+  // A model chosen in a provider's list, filled into Defaults until the reader saves or leaves it.
+  const [preset, setPreset] = useState<{ provider: string; model: string }>();
 
   async function refresh() {
     setError("");
@@ -123,11 +126,16 @@ export function ModelsTab({ project }: { project?: string }) {
           onSave={(id, input) => void runCustom(revision => customEntry ? editCustomProvider(customEntry.id, revision, input) : addCustomProvider(revision, id, input),
             `${customEntry?.id ?? id} saved.`, () => setSelected(CUSTOM + (customEntry?.id ?? id)))}
           onRemove={customEntry ? () => void runCustom(revision => removeCustomProvider(customEntry.id, revision), `Removed ${customEntry.id} from models.json.`, () => setSelected(undefined), true) : undefined} />
-      : selected === DEFAULTS ? <ModelDefaults providers={providers} project={project} onSaved={text => { setMessage(text); setUndo(undefined); }} />
+      : selected === DEFAULTS ? <ModelDefaults providers={providers} project={project} preset={preset} onPresetUsed={() => setPreset(undefined)} onSaved={text => { setMessage(text); setUndo(undefined); }} />
         : current ? <ProviderDetail key={current.id} provider={current} busy={busy}
         onRemove={() => void run(revision => removeProviderKey(current.id, revision),
           current.stored === "oauth" ? `Signed out of ${current.name}.` : `Removed the stored credential for ${current.name}.`, true)}
-        onChanged={() => void refresh()} />
+        onChanged={() => void refresh()}>
+          <ProviderModels provider={current} onUse={model => {
+            setPreset({ provider: current.id, model: model.id }); setSelected(DEFAULTS); setUndo(undefined);
+            setMessage(`${model.name} is filled in as the default model. Save defaults to keep it.`);
+          }} />
+        </ProviderDetail>
         : <EmptyDetail icon={Boxes} title="No provider selected">Choose a provider to sign in, store a key or check its credential. Defaults sets what new sessions start with.</EmptyDetail>} />}
   </>;
 }
