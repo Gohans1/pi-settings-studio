@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { bindSounds } from "./Sound";
 import "./styles.css";
 
 // Capture before React handles an action; portals share the same document-level motion policy.
@@ -16,5 +17,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   void root.offsetHeight;
   requestAnimationFrame(() => requestAnimationFrame(() => delete root.dataset.themeSwitch));
 });
+
+bindSounds();
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);

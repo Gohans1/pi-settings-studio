@@ -10,6 +10,7 @@ import { Input } from "./components/ui/input";
 import { Spinner } from "./components/ui/spinner";
 import { FilePath } from "./PageHeader";
 import { SearchField } from "./SearchField";
+import { play } from "./Sound";
 
 type Draft = Record<string, string[] | null>;
 const parse = (text: string) => text.split(",").map(key => key.trim()).filter(Boolean);
@@ -32,7 +33,7 @@ export function KeybindingsPanel({ onMessage }: { onMessage: (text: string) => v
   async function save() {
     if (!view) return;
     // A key Pi does not understand: take the reader to it and write nothing.
-    if (invalid.length) { document.getElementById("keys-" + invalid[0])?.focus(); return; }
+    if (invalid.length) { document.getElementById("keys-" + invalid[0])?.focus(); play("error", { emphasis: "subtle" }); return; }
     setBusy(true); setError(""); onMessage("");
     try {
       setView(await saveKeybindings(view.revision, changes));

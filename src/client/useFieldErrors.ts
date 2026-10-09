@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { play } from "./Sound";
 
 type Control = HTMLInputElement | HTMLTextAreaElement;
 const keyOf = (control: Element) => control.id || control.getAttribute("aria-label") || "";
@@ -23,6 +24,7 @@ export function useFieldErrors(patterns: Record<string, string> = {}) {
       (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) && !element.validity.valid);
     setErrors(Object.fromEntries(invalid.map(control => [keyOf(control), message(control)])));
     invalid[0]?.focus();
+    if (invalid.length) play("error", { emphasis: "subtle" });
     return !invalid.length;
   }
   function clear(event: FormEvent) {

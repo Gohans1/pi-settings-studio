@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Toaster } from "./components/ui/toast";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { ProjectPicker, TrustPanel, useProject } from "./ProjectBar";
+import { SoundToggle } from "./Sound";
 import { GeneralTab } from "./GeneralTab";
 import { InstructionsTab } from "./InstructionsTab";
 import { McpTab } from "./McpTab";
@@ -79,6 +80,7 @@ export function App() {
       <div className="topbar">
         <span className="brand"><PiMark /><span>Pi Settings</span></span>
         <ProjectPicker projects={projects} project={project} onChoose={choose} />
+        <SoundToggle />
       </div>
       <div className="tabbar">
         <TabsList variant="line" aria-label="Settings sections">

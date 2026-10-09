@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { toast } from "./components/ui/toast";
+import { play } from "./Sound";
 
 export type FeedbackAction = { label: string; onClick: () => void; disabled?: boolean };
 
@@ -14,6 +15,8 @@ export function Feedback({ message, action, onDismiss }: { message: string; acti
   latest.current = { action, onDismiss };
   useEffect(() => {
     if (!message) return;
+    // A confirmation: cuelume's cue for what a toast reports, quietly.
+    play("success", { emphasis: "subtle" });
     const id = toast.add({ title: message, timeout: 0, onClose: () => { if (shown.current === id) latest.current.onDismiss(); } });
     shown.current = id;
     return () => { shown.current = undefined; toast.close(id); };
