@@ -257,7 +257,7 @@ test("the installed Pi version is shown with an Update Pi action that asks first
   const update = pi.getByRole("button", { name: "Update Pi" });
   await update.click();
   const ask = page.getByRole("alertdialog", { name: "Update Pi now?" });
-  await expect(ask).toContainText("Open T3Code threads keep the running version until they restart.");
+  await expect(ask).toContainText("Open Pi sessions keep the running version until they restart.");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   // Only ever cancelled: confirming would update the real Pi on this machine.
   await ask.getByRole("button", { name: "Cancel" }).click();

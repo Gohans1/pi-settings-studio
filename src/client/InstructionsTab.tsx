@@ -72,7 +72,7 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
 
   async function run(change: () => Promise<InstructionsView>, done: string, undoable?: string) {
     setBusy(true); setError(""); setMessage(""); setUndo(undefined);
-    try { setView(await change()); setMessage(`${done} Applies to new T3Code threads, or after /reload.`); setUndo(undoable); }
+    try { setView(await change()); setMessage(`${done} Applies to new Pi sessions, or after /reload.`); setUndo(undoable); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save."); await refresh(); }
     finally { setBusy(false); }
   }

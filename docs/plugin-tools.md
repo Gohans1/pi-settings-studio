@@ -21,7 +21,7 @@ The response also lists `idleSources`: extensions and MCP servers a session take
 
 The owner explicitly trusts installed extensions. Inspection loads enabled extensions plus the selected extension in a disposable Bun subprocess, with the app's environment and OS permissions. It is **not a sandbox**: extension code can access files and the network, and its own side effects are not rolled back. Configured MCP servers connect as they do at Pi startup. The app itself does not prompt a model or execute a model tool to inspect the catalogue.
 
-The selected project is trusted **for the preview**, without modifying Pi's saved trust decision. T3Code may still ignore an untrusted project's configuration; the existing trust banner continues to explain that. Thread-specific flags, environment variables and later lifecycle changes are not represented.
+The selected project is trusted **for the preview**, without modifying Pi's saved trust decision. Pi may still ignore an untrusted project's configuration; the existing trust banner continues to explain that. Thread-specific flags, environment variables and later lifecycle changes are not represented.
 
 The inspector uses in-memory settings/session storage and skips missing packages rather than installing them. It shuts down the inspection runtime and its process group. Resource-list GETs remain non-executing; the browser uses a same-origin POST to inspect a discovered extension. Known credentials are redacted from returned descriptions and diagnostics, and subprocess console output is not sent to the browser.
 

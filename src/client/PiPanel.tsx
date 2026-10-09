@@ -22,7 +22,7 @@ export function PiPanel() {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Update Pi now?</AlertDialogTitle>
-          <AlertDialogDescription>Open T3Code threads keep the running version until they restart.</AlertDialogDescription>
+          <AlertDialogDescription>Open Pi sessions keep the running version until they restart.</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>

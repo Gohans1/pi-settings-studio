@@ -13,7 +13,7 @@ export const sections = [
   { id: "images", title: "Images" },
   { id: "updates", title: "Updates, telemetry & warnings" },
   { id: "network", title: "Network & retries" },
-  { id: "terminal", title: "Terminal UI", note: "Only affects Pi in a terminal. No effect in T3Code." },
+  { id: "terminal", title: "Terminal UI", note: "Only affects Pi in a terminal." },
 ] as const;
 // "modelDefaults" fields are edited in the Models tab; General does not list that section.
 export type SectionId = typeof sections[number]["id"] | "modelDefaults";

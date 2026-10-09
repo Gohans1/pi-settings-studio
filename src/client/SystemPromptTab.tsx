@@ -46,7 +46,7 @@ export function SystemPromptTab({ project }: { project?: string }) {
     {checking && <p className="loading" role="status"><Spinner aria-hidden="true" />Checking for changes…</p>}
     {!sessions ? !error && <div className="loading" aria-busy="true"><Spinner />Reading sessions…</div>
       : !project ? <Alert role="note"><AlertDescription>Choose a project at the top to see its sessions.</AlertDescription></Alert>
-      : !projectSessions.length ? <Empty><EmptyHeader><EmptyDescription>This project has no Pi sessions yet. Start a thread in T3Code, then come back.</EmptyDescription></EmptyHeader></Empty>
+      : !projectSessions.length ? <Empty><EmptyHeader><EmptyDescription>This project has no Pi sessions yet. Start a Pi session, then come back.</EmptyDescription></EmptyHeader></Empty>
       : <>
         <Field className="mb-5 max-w-180"><FieldLabel htmlFor="prompt-session">Session</FieldLabel>
           <OptionSelect id="prompt-session" className="w-full" value={sessionId} onChange={choose}

@@ -94,7 +94,7 @@ Scope: every Select (21, all through `OptionSelect`) opened over its field, with
 
 RED/GREEN: the new test failed on the first open (the list covered the Thinking level field), then passed with `alignItemWithTrigger={false}`.
 
-Manual (T3 preview, then `agent-browser` in its own session when the preview host disconnected), 1280×800 dark: API near the bottom of the pane opens above, Thinking level below, the project picker below; a menu's tooltip closes when the menu opens; the popup is opaque once its 100 ms fade-in ends.
+Manual (preview, then `agent-browser` in its own session when the preview host disconnected), 1280×800 dark: API near the bottom of the pane opens above, Thinking level below, the project picker below; a menu's tooltip closes when the menu opens; the popup is opaque once its 100 ms fade-in ends.
 
 Kept: the five free-text fields with suggestions use the browser's own datalist list. shadcn's registry has no autocomplete and its Combobox accepts only listed values.
 
@@ -143,7 +143,7 @@ Decisions:
 - When an extension or server fails, the tools found keep their computed reach and the issues say what may be missing, unlike one extension's view, where every tool becomes Unverified.
 - The whole result, source names included, goes through credential redaction.
 
-Manual: before, T3 preview (System prompt, no Tools tab); after, `agent-browser` in its own session when the preview host disconnected. 1280×900 and 390 px light on a temporary agent folder with an extension and two echo MCP servers (codemode and direct exposure): six groups, no horizontal overflow, API 200, no page errors. Not checked: dark mode. The real `~/.pi` was not written; one exploratory script, run before the tests without `PI_CODING_AGENT_DIR`, connected the real enabled MCP servers read-only and changed no file there.
+Manual: before, preview (System prompt, no Tools tab); after, `agent-browser` in its own session when the preview host disconnected. 1280×900 and 390 px light on a temporary agent folder with an extension and two echo MCP servers (codemode and direct exposure): six groups, no horizontal overflow, API 200, no page errors. Not checked: dark mode. The real `~/.pi` was not written; one exploratory script, run before the tests without `PI_CODING_AGENT_DIR`, connected the real enabled MCP servers read-only and changed no file there.
 
 ---
 
@@ -167,7 +167,7 @@ Decisions:
 - The definition lists keep their CSS row rules: a Separator may not sit inside a `dl`, and shadcn's own Table draws row borders the same way.
 - Kept: icons in the app's own spans sized by styles.css (list states, file paths, the brand, the project picker), where no shadcn component offers an icon slot.
 
-Manual: main and this branch side by side on temporary agent folders (T3 preview, then `agent-browser` in its own session when the preview host disconnected), 1280×800 light and 390 px dark: Models list and Defaults with a provider warning, Skills folders with warning Badges, an MCP server's project override, Plugins. No horizontal overflow at 390 px, no page errors. The real `~/.pi` was not written.
+Manual: main and this branch side by side on temporary agent folders (preview, then `agent-browser` in its own session when the preview host disconnected), 1280×800 light and 390 px dark: Models list and Defaults with a provider warning, Skills folders with warning Badges, an MCP server's project override, Plugins. No horizontal overflow at 390 px, no page errors. The real `~/.pi` was not written.
 
 ---
 
@@ -195,7 +195,7 @@ Decisions:
 - The toast stays Base UI's own: shadcn's skill uses Sonner only for Radix and React Aria.
 - Kept outside shadcn: Input with `datalist` for suggested free text (Base UI's Combobox refuses free text and the registry has no Autocomplete), definition lists, `pre` for code, links in sentences, General's section index.
 
-Manual: T3 preview, main and this branch side by side on temporary agent folders, 1280×800 light and 390 px dark: General, both AlertDialogs (Update Pi only cancelled), MCP with a finished job Card and a tooltip, Plugins packages with a filter Card, Skills folders, Models defaults. No horizontal overflow at 390 px; the real `~/.pi` was not written.
+Manual: preview, main and this branch side by side on temporary agent folders, 1280×800 light and 390 px dark: General, both AlertDialogs (Update Pi only cancelled), MCP with a finished job Card and a tooltip, Plugins packages with a filter Card, Skills folders, Models defaults. No horizontal overflow at 390 px; the real `~/.pi` was not written.
 
 Not verified: a real screen reader, forced-colors mode, Windows.
 
@@ -217,7 +217,7 @@ RED/GREEN: each server slice failed first on the missing contract (422 for `path
 
 Found in the browser and fixed with a test first: turning the model back on was refused for a SKILL.md with CRLF line endings (2 of the 5 copied real skills). A JavaScript regex `.` stops at `\r`, so the line was never matched. The single switch had the same bug before this change.
 
-Manual: T3 preview, then `agent-browser` in its own session when the preview host disconnected. A temporary agent folder held copies of five real skills (two with CRLF) and a package skill; 1280×800 light, 390 px dark, the group menu opened from the keyboard. "Make all command only" added exactly one line to each SKILL.md and left the package skill alone; "Let the model load all" returned all five byte for byte. Remove moved `impeccable` with its `scripts/` and `reference/` into `.pi-settings-backup/skills/<hash>` (mode 700); Undo brought the tree back identical and selected it again. No page errors. The real `~/.pi` was not written.
+Manual: preview, then `agent-browser` in its own session when the preview host disconnected. A temporary agent folder held copies of five real skills (two with CRLF) and a package skill; 1280×800 light, 390 px dark, the group menu opened from the keyboard. "Make all command only" added exactly one line to each SKILL.md and left the package skill alone; "Let the model load all" returned all five byte for byte. Remove moved `impeccable` with its `scripts/` and `reference/` into `.pi-settings-backup/skills/<hash>` (mode 700); Undo brought the tree back identical and selected it again. No page errors. The real `~/.pi` was not written.
 
 Decisions: no confirmation dialog. Removal moves the skill aside and the toast carries Undo, like the other destructive actions here. The kept copy lives in the agent folder, not beside the skill: a hidden folder holding a SKILL.md next to the others could still be loaded by another agent that reads the same folder (`~/.agents/skills`).
 
@@ -236,10 +236,10 @@ Scope: the order of General's groups and rows, and one "N advanced settings" Dis
 | `bun run build` | Passed; existing >500 kB client-chunk warning remains |
 | `bun run test:e2e` | Full run: 82 passed, 3 failed in motion.spec: its `[data-slot=collapsible-content]` locator now also matched General's folded panels. Scoped to `.not-here`, motion.spec passed 6 of 6 |
 | RED/GREEN | settings.spec: 7 of 23 failed before the change, 23 of 23 after. Five new flows: group order; advanced rows behind the toggle; the toggle starts open when the file sets one of its keys; search reaches advanced rows; Save opens a folded group to focus a value Pi would refuse. The last one first passed without the `flushSync` that opens the group, because the panel was still animating shut; it now waits for the row to hide and fails without that line ("inactive") |
-| Manual T3 preview | Running service, navigation only, nothing saved: light at 1440 CSS px, dark at 390; no horizontal overflow. Found and fixed: the panel's overflow clip cut the right side of an input's focus ring (input and panel both ended at 1360 px). Disclosure insets its panel by 4 px; rows stay aligned |
+| Manual preview | Running service, navigation only, nothing saved: light at 1440 CSS px, dark at 390; no horizontal overflow. Found and fixed: the panel's overflow clip cut the right side of an input's focus ring (input and panel both ended at 1360 px). Disclosure insets its panel by 4 px; rows stay aligned |
 | Impeccable detector | No findings on GeneralTab.tsx, Disclosure.tsx and styles.css |
 
-Limits: the order reflects what each setting does and how Pi is used through T3Code, not usage data. Find-in-page revealing a folded row comes from Base UI's `hiddenUntilFound` and has no test here.
+Limits: the order reflects what each setting does and how Pi is used, not usage data. Find-in-page revealing a folded row comes from Base UI's `hiddenUntilFound` and has no test here.
 
 ---
 
@@ -261,7 +261,7 @@ Scope: explicit package update checks, per-package badges and a Packages count, 
 | `bun run typecheck` / `bun run lint` | Passed |
 | `bun run build` | Passed; existing >500 kB client-chunk warning remains |
 | `bun run test:e2e` | 66 passed. Three new flows: keyboard check/reload/recheck with axe, recoverable failure, and a delayed global response after selecting a project |
-| Manual T3 preview | Before/after on a temporary agent and loopback registry, desktop light (1280×800), dark at 390 and 320 CSS px; no horizontal document overflow at 320px |
+| Manual preview | Before/after on a temporary agent and loopback registry, desktop light (1280×800), dark at 390 and 320 CSS px; no horizontal document overflow at 320px |
 
 No real package was installed/updated, no real agent settings or running service were changed. Update commands were tested with a recorder executable, never a real installation. UI checks used the accessibility/layout/writing/typography/colors/UI owner skills in that order and the existing shadcn components.
 
@@ -284,7 +284,7 @@ Found and fixed with a test first: shadcn's Button hovers at 80% of the primary 
 
 Found while building: the shadcn Alert is `role="alert"`, so notes that are part of a page pass `role="note"`; Base UI names a checkbox by its label element, which wins over `aria-label`; Base UI's Select icon carries a "▼" text node that tests must not compare whole; shadcn has no autocomplete and its Combobox refuses free text, so suggested free text stays an Input with a `datalist`.
 
-Manual browser checks against a temporary agent folder (T3 preview, then `agent-browser` in its own session when the preview host disconnected): General rows, startup tools and the File menu; the project Select and the trust Alert; Models defaults and lists; an MCP server's detail, its form with OAuth open, a toast with Undo in dark mode; Skills folders; Plugins packages in dark mode. Nothing was written to the real `~/.pi`.
+Manual browser checks against a temporary agent folder (preview, then `agent-browser` in its own session when the preview host disconnected): General rows, startup tools and the File menu; the project Select and the trust Alert; Models defaults and lists; an MCP server's detail, its form with OAuth open, a toast with Undo in dark mode; Skills folders; Plugins packages in dark mode. Nothing was written to the real `~/.pi`.
 
 Not verified: a real screen reader, forced-colors mode, Windows, phones (Selects now open Base UI's popup rather than the native picker).
 
@@ -307,7 +307,7 @@ Found while building, from Pi's source and the real configuration (copied to a t
 
 Manual browser checks at 1280×800 against the temporary copy: each new view, the `~/.claude/skills` folder (25 skills found, 24 marked), Defaults with `claude-bridge`, Bedrock's key setup up to its first question (cancelled), and an MCP tool's exposure against the echo fixture. The real `~/.pi` was not written and no installed MCP server was started.
 
-Not verified: Pi's key setup with real Bedrock or Vertex accounts; providers whose keys come only from environment variables (the app does not see T3Code's environment).
+Not verified: Pi's key setup with real Bedrock or Vertex accounts; providers whose keys come only from environment variables (the app does not see the environment Pi starts in).
 
 ---
 
@@ -392,7 +392,7 @@ One e2e run failed a dark-mode contrast check and could not be reproduced in 65 
 ## Scope
 
 Model defaults, thinking, model patterns, startup tools and codemode settings only.
-**This is NOT a parity, full-Pi compatibility, T3 integration, security-certification or release sign-off.**
+**This is NOT a parity, full-Pi compatibility, security-certification or release sign-off.**
 No independent/subagent review was requested or performed.
 
 ## Source verification
@@ -433,7 +433,7 @@ The npm archive at this checkpoint was about 125 kB and included prebuilt assets
 
 ## Manual real-browser verification
 
-T3 preview used an isolated temporary agent/project fixture, never the user's Pi settings.
+The preview used an isolated temporary agent/project fixture, never the user's Pi settings.
 Verified a codemode inline budget of 0 through Review → Save, then read the fixture file to confirm actual persistence.
 Inspected desktop and dark mobile rendering. Measured mobile scrollWidth = viewport width = 390 CSS px.
 Screenshots contain synthetic configuration, not authenticated provider state.
@@ -447,7 +447,7 @@ Impeccable's mechanical detector returned no findings. This is not a substitute 
 
 - All pending product capabilities remain in ../tasks/todo.md and parity.md; no scope silently removed.
 - Node 22.22.1 on Linux/WSL is the tested runtime; no macOS, native Windows, Firefox or WebKit claims.
-- Pi 1.0.4 is an observed registry version, not an integration test. No Pi/T3 runtime launcher yet.
+- Pi 1.0.4 is an observed registry version, not an integration test. No Pi runtime launcher yet.
 - No provider credentials, OAuth flow, external MCP process or real package install was exercised.
 - Single-generation backup only; invalid current JSON must be repaired before normal save/restore.
 - Same-user malicious processes and non-cooperating filesystem writers are outside transactional guarantees.

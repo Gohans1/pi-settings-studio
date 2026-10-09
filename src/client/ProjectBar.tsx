@@ -44,14 +44,14 @@ export function TrustPanel({ project, trust, onChange }: { project: string; trus
     finally { setBusy(false); }
   }
   // Trust needs attention only when it prevents the project's configuration from loading.
-  if (trust.loadsInT3Code) return null;
+  if (trust.loadsWithoutPrompt) return null;
   const why = trust.decision !== undefined
     ? `Not trusted in Pi's trust.json${trust.savedFor && trust.savedFor !== project ? ` through ${home(trust.savedFor)}` : ""}`
     : `No saved decision; defaultProjectTrust is "${trust.defaultTrust}"`;
   return <Alert role="region" aria-label="Project trust" className="mb-5">
     <TriangleAlert aria-hidden="true" />
-    <AlertTitle>T3Code ignores this project's .pi folder.</AlertTitle>
-    <AlertDescription>{why}. T3Code cannot ask for trust, so project settings, MCP servers and resources stay unused until the project is trusted.</AlertDescription>
+    <AlertTitle>Pi may ignore this project's .pi folder.</AlertTitle>
+    <AlertDescription>{why}. If Pi cannot ask for trust, project settings, MCP servers and resources stay unused until the project is trusted.</AlertDescription>
     <div className="actions col-start-2 mt-2">
       <Button size="sm" disabled={busy} onClick={() => void decide(true)}>Trust this project</Button>
       {trust.decision !== undefined && trust.savedFor === project && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void decide(null)}>Forget the decision</Button>}

@@ -27,7 +27,7 @@ test("a project is picked, trusted, and its own settings.json edited", async ({ 
   await page.getByRole("combobox", { name: "Project", exact: true }).click();
   await page.getByRole("option", { name: project, exact: true }).click();
   const trust = page.getByRole("region", { name: "Project trust" });
-  await expect(trust).toContainText("T3Code ignores this project's .pi folder");
+  await expect(trust).toContainText("Pi may ignore this project's .pi folder");
   await expect(trust.getByRole("button", { name: "Do not trust" })).toHaveCount(0);
   await trust.getByRole("button", { name: "Trust this project" }).click();
   await expect(trust).toHaveCount(0);
@@ -70,7 +70,7 @@ test("an explicit block still warns even when projects are trusted by default", 
   await page.getByRole("combobox", { name: "Project", exact: true }).click();
   await page.getByRole("option", { name: project, exact: true }).click();
   const trust = page.getByRole("region", { name: "Project trust" });
-  await expect(trust).toContainText("T3Code ignores this project's .pi folder");
+  await expect(trust).toContainText("Pi may ignore this project's .pi folder");
   await expect(trust).toContainText("Not trusted in Pi's trust.json");
   await trust.getByRole("button", { name: "Trust this project" }).click();
   await expect(trust).toHaveCount(0);
