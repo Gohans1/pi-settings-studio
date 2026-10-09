@@ -53,6 +53,15 @@ test("a folder Pi does not look in is added to settings.json, and Pi finds its s
   assert.deepEqual(await names(), ["alpha", "delta", "epsilon"]);
 });
 
+test("~ and the Agent Skills folder are those of the home Pi reads", async (t) => {
+  const { paths, send } = await fixture(t);
+  const home = process.env.HOME!;
+  assert.ok((await paths()).standard.some(place => place.path === join(home, ".agents", "skills")));
+  const { revision } = await paths();
+  assert.equal((await send("POST", { scope: "global", revision, path: "~/shared-skills" })).status, 200);
+  assert.equal((await paths()).paths.find(entry => entry.entry === "~/shared-skills")?.resolved, join(home, "shared-skills"));
+});
+
 test("a relative path resolves from the agent directory, as Pi resolves it", async (t) => {
   const { agent, paths, send } = await fixture(t);
   const response = await send("POST", { scope: "global", revision: (await paths()).revision, path: "extra" });

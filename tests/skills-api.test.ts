@@ -37,6 +37,17 @@ async function fixture(t: import("node:test").TestContext) {
   return { agent, request, settings, skills, toggle };
 }
 
+test("skills in the Agent Skills folder of the home Pi reads are listed under ~/.agents, as pi config labels them", async (t) => {
+  // Pi takes the home folder from HOME when it runs; the app labels it from the same one.
+  const home = await mkdtemp(join(tmpdir(), "pi-settings-skills-home-")), before = process.env.HOME;
+  process.env.HOME = home;
+  t.after(async () => { process.env.HOME = before; await rm(home, { recursive: true, force: true }); });
+  await mkdir(join(home, ".agents/skills/delta"), { recursive: true });
+  await writeFile(join(home, ".agents/skills/delta/SKILL.md"), skill("delta", "Delta from the Agent Skills folder."));
+  const { skills } = await fixture(t);
+  assert.equal((await skills()).skills.find(entry => entry.name === "delta")?.group, "User (~/.agents/)");
+});
+
 test("user and package skills are listed as Pi resolves them, without installing or writing anything", async (t) => {
   const { agent, skills } = await fixture(t);
   const before = (await readdir(agent, { recursive: true })).sort();

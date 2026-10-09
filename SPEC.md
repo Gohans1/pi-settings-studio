@@ -52,7 +52,7 @@ When asked to update: bump the Pi SDK to the installed Pi version, run the tests
 ES modules, TypeScript strict mode, named functions, two-space indentation. Boundary validation returns actionable errors, never filesystem stacks.
 
 ## Verification
-RED → GREEN → refactor for every behavioral slice. Temporary agent/project directories only; never the real `~/.pi`. Each tab is checked in a real browser with screenshots before it counts as done.
+RED → GREEN → refactor for every behavioral slice. Temporary agent/project directories and an empty home folder only (`tests/setup.ts`, `playwright.config.ts`); never the real `~/.pi` or `~/.agents`. Each tab is checked in a real browser with screenshots before it counts as done.
 
 ## Boundaries
 Always: preserve unknown values, use public Pi APIs or attributed ports, record unsupported features.
