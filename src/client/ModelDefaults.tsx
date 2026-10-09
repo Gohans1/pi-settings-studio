@@ -49,8 +49,8 @@ function EnabledModels({ patterns, scope, ids, inherited, onChange }: {
       return <Fragment key={pattern}>{index > 0 && <ItemSeparator aria-hidden="true" />}<Item size="xs" role="listitem">
         <ItemContent>
           <ItemTitle><code translate="no">{pattern}</code></ItemTitle>
-          <ItemDescription>{match?.examples.length
-            ? <Tooltip><TooltipTrigger render={<span />}>{count}</TooltipTrigger><TooltipContent>{match.examples.join(", ")}</TooltipContent></Tooltip>
+          <ItemDescription>{match?.models.length
+            ? <Tooltip><TooltipTrigger render={<span />}>{count}</TooltipTrigger><TooltipContent>{match.models.slice(0, 3).join(", ")}</TooltipContent></Tooltip>
             : count}</ItemDescription>
         </ItemContent>
         <ItemActions><IconButton type="button" label={`Remove ${pattern}`} onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></IconButton></ItemActions>

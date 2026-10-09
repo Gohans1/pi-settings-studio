@@ -2,8 +2,8 @@ import { join } from "node:path";
 import { Hono } from "hono";
 import { z } from "zod";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
-import type { Credential, CredentialInfo, CredentialStore } from "@earendil-works/pi-ai";
-import type { ModelScopeView, ProvidersView, ProviderView } from "../shared/models.ts";
+import { getSupportedThinkingLevels, InMemoryCredentialStore, type Api, type Credential, type CredentialInfo, type CredentialStore, type Model } from "@earendil-works/pi-ai";
+import type { AvailableModel, ModelScopeView, ModelSummary, ProvidersView, ProviderView } from "../shared/models.ts";
 import { resolveModelScope } from "./model-scope.ts";
 import { isRecord } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
@@ -34,7 +34,25 @@ async function runtimeFor(agentDir: string, credentials: Record<string, Credenti
   });
 }
 
+function summary(model: Model<Api>): ModelSummary {
+  return {
+    id: model.id, name: model.name, reasoning: !!model.reasoning,
+    ...(model.contextWindow > 0 ? { contextWindow: model.contextWindow } : {}),
+    ...(model.maxTokens > 0 ? { maxTokens: model.maxTokens } : {}),
+    ...(model.input.includes("image") ? { image: true } : {}),
+    thinkingLevels: getSupportedThinkingLevels(model),
+    ...(model.cost.input || model.cost.output ? { cost: { input: model.cost.input, output: model.cost.output } } : {}),
+  };
+}
+
 export function modelRoutes(store: ConfigStore, agentDir: string) {
+  // The providers Pi ships do not change while it runs: a runtime without models.json lists them once.
+  let shipped: Promise<Set<string>> | undefined;
+  const builtIns = () => shipped ??= ModelRuntime.create({
+    credentials: new InMemoryCredentialStore(), modelsPath: null, modelsStorePath: join(agentDir, "models-store.json"),
+    allowModelNetwork: false, refreshOnCreate: false,
+  }).then(runtime => new Set(runtime.getProviders().map(provider => provider.id)));
+
   async function view(): Promise<ProvidersView> {
     const { value, revision } = await store.read("global", "auth.json");
     const credentials = credentialsOf(value);
@@ -43,8 +61,10 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
       const models = (await store.read("global", "models.json")).value;
       if (isRecord(models.providers)) custom = Object.keys(models.providers);
     } catch (error) { if (!(error instanceof ConfigError)) throw error; }
-    const runtime = await runtimeFor(agentDir, credentials);
+    const [runtime, shippedIds] = await Promise.all([runtimeFor(agentDir, credentials), builtIns()]);
     const providers = runtime.getProviders().map((provider): ProviderView => {
+      const others = runtime.getAllModels(provider.id).filter(model => model.type === "image" || model.type === "classifier");
+      const count = (type: string) => others.filter(model => model.type === type).length;
       // Pi's order: a stored credential first, then models.json. Pi fills "stored" during an
       // availability refresh, which may run credential commands, so it is read from auth.json here.
       // ponytail: environment variables are not checked (Pi checks them in its own environment).
@@ -60,6 +80,10 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
         auth: { configured: status.configured, ...(status.source ? { source: status.source } : {}), ...(status.label ? { label: status.label } : {}) },
         ...(credentials[provider.id] ? { stored: credentials[provider.id]!.type } : {}),
         custom: custom.includes(provider.id),
+        builtIn: shippedIds.has(provider.id),
+        ...(provider.auth.apiKey?.name ? { keyName: provider.auth.apiKey.name } : {}),
+        ...(provider.baseUrl ? { baseUrl: provider.baseUrl } : {}),
+        ...(others.length ? { otherModels: { ...(count("image") ? { image: count("image") } : {}), ...(count("classifier") ? { classifier: count("classifier") } : {}) } } : {}),
       };
     });
     const error = runtime.getError();
@@ -97,7 +121,7 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
       }, "auth.json");
       return c.json(await view());
     })
-    .get("/ids", async c => c.json((await readyModels()).models.map(model => `${model.provider}/${model.id}`)))
+    .get("/available", async c => c.json((await readyModels()).models.map((model): AvailableModel => ({ provider: model.provider, ...summary(model) }))))
     .post("/scope", async c => {
       const { patterns, default: chosen } = z.object({ patterns: z.array(z.string().max(300)).max(200), default: z.string().max(400).optional() }).strict().parse(await c.req.json());
       const { models, providers } = await readyModels();
@@ -108,7 +132,7 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
         const named = /^([^/*?[]+)\//.exec(pattern)?.[1];
         const reason = matched.length ? undefined : !named ? "no-match" as const
           : !providers.all.includes(named) ? "unknown-provider" as const : !providers.ready.includes(named) ? "no-credential" as const : "no-match" as const;
-        return { pattern, matches: matched.length, examples: matched.slice(0, 3), ...(reason ? { reason } : {}) };
+        return { pattern, matches: matched.length, models: matched, ...(reason ? { reason } : {}) };
       });
       const scoped = resolveModelScope(patterns, models).scopedModels.map(scoped => ref(scoped.model));
       const known = chosen !== undefined && models.some(model => ref(model) === chosen);
@@ -119,7 +143,7 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
       const runtime = await runtimeFor(agentDir, credentialsOf((await store.read("global", "auth.json")).value));
       const id = c.req.param("id");
       if (!runtime.getProvider(id)) return c.json({ error: `Pi has no provider named "${id}".` }, 404);
-      return c.json(runtime.getModels(id).map(model => ({ id: model.id, name: model.name, reasoning: !!model.reasoning })));
+      return c.json(runtime.getModels(id).map(summary));
     })
     .post("/auth/restore", async c => {
       const { revision } = z.object({ revision: z.string().min(1).max(100) }).strict().parse(await c.req.json());
