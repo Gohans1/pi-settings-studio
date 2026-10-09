@@ -27,6 +27,8 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+/** Chooses a group of General's list, so its settings show. */
+const group = (page: Page, name: string) => page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: new RegExp(`^${name}`) }).click();
 const sounds = (page: Page) => page.evaluate(() => (window as unknown as { sounds: number }).sounds);
 /** The count once nothing has played for a moment. */
 async function settled(page: Page) {
@@ -37,6 +39,7 @@ async function settled(page: Page) {
 
 test("controls sound when used, from the pointer and the keyboard, and hovering stays silent", async ({ page }) => {
   await page.goto(server.url);
+  await group(page, "Models & thinking");
   await page.getByRole("heading", { name: "General", level: 1 }).click();
   const hovered = await settled(page);
   await page.getByRole("button", { name: "File", exact: true }).hover();
@@ -48,6 +51,7 @@ test("controls sound when used, from the pointer and the keyboard, and hovering 
   await page.keyboard.press("Enter");
   await expect.poll(() => sounds(page)).toBeGreaterThan(switched);
   await page.keyboard.press("Escape");
+  await group(page, "Messages & interaction");
   const keyed = await settled(page);
   const delivery = page.getByRole("combobox", { name: "Follow-up delivery" });
   await delivery.click();
@@ -70,8 +74,10 @@ test("one action plays one cue, from the control or from its label", async ({ pa
   const one = (await settled(page)) - quiet;
   expect(one).toBeGreaterThan(0);
   const delta = async (act: () => Promise<void>) => { const before = await settled(page); await act(); return (await settled(page)) - before; };
+  await group(page, "Models & thinking");
   expect(await delta(() => page.getByRole("switch", { name: "Cache notices" }).click())).toBe(one);
   expect(await delta(() => page.getByRole("switch", { name: "Cache notices" }).press("Space"))).toBe(one);
+  await group(page, "Tools");
   expect(await delta(() => page.getByRole("checkbox", { name: "grep" }).click())).toBe(one);
   expect(await delta(() => page.locator("label[for='tool-grep']").click())).toBe(one);
 });
@@ -82,11 +88,13 @@ test("the Sounds toggle silences the app, is remembered, and says so when turned
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await group(page, "Models & thinking");
   const off = await settled(page);
   await page.getByRole("switch", { name: "Cache notices" }).click();
   expect(await settled(page)).toBe(off);
   await page.reload();
   await expect(page.getByRole("button", { name: "Sounds" })).toHaveAttribute("aria-pressed", "false");
+  await group(page, "Models & thinking");
   await page.getByRole("switch", { name: "Cache notices" }).click();
   expect(await settled(page)).toBe(0);
   await page.getByRole("button", { name: "Sounds" }).click();
@@ -103,6 +111,7 @@ test("a save sounds when its answer arrives, whether it lands or fails", async (
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify({ error: "The file changed in another session." }) });
   });
   await page.goto(server.url);
+  await group(page, "Shell & packages");
   await page.getByLabel("Shell command prefix", { exact: true }).fill("saved");
   await page.getByRole("region", { name: "Unsaved changes" }).getByRole("button", { name: "Save", exact: true }).click();
   const tapped = await settled(page);

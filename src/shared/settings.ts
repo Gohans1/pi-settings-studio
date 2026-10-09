@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_TOOLS, effectiveTools } from "./tools";
 
 // Field catalogue for the General tab, from Pi 1.1.0 docs/settings.md. tests/settings-drift.test.ts
 // fails when Pi's Settings interface gains or loses a key that has no home here.
@@ -19,6 +20,8 @@ export const sections = [
 export type SectionId = typeof sections[number]["id"] | "modelDefaults";
 
 export type Option = { label: string; value: string | number | boolean };
+/** Pi's default in words, and what it depends on. */
+export type DefaultText = { value: string; note?: string };
 export type Field = {
   key: string;
   label: string;
@@ -28,6 +31,10 @@ export type Field = {
   options?: readonly Option[];
   /** Pi's default, shown when the file has no value. */
   defaultValue?: unknown;
+  /** Pi's default in words where it is no single value; machine-dependent ones come from the server. */
+  defaultText?: DefaultText;
+  /** The setting whose value is this one's default. */
+  defaultFrom?: string;
   /** Pi reads it only from the global settings.json. */
   globalOnly?: boolean;
   /** Tuning most people never change: behind the group's advanced toggle. */
@@ -56,13 +63,14 @@ export const fields: Field[] = [
   { key: "defaultThinkingLevel", label: "Thinking level", section: "modelDefaults", help: "Startup reasoning effort. Support depends on the model.", defaultValue: "medium", ...select(thinking) },
   { key: "enabledModels", label: "Enabled models", section: "modelDefaults", kind: "lines", help: "One model pattern per line, in Pi's --models format. Used for startup selection and model cycling. Empty means all available models.", schema: lines },
   { key: "modelThinkingLevels", label: "Thinking level per model", section: "models", kind: "thinkingMap", help: "Startup thinking level for specific models, keyed by exact provider/modelId. Overrides the default thinking level.",
-    schema: z.record(modelKey, z.enum(THINKING)) },
+    defaultText: { value: "none", note: "every model starts at the default thinking level" }, schema: z.record(modelKey, z.enum(THINKING)) },
   { key: "showCacheMissNotices", label: "Cache notices", section: "models", help: "Show notices for significant cache misses, cache warming, compaction usage and provider recovery.", defaultValue: false, ...bool },
   { key: "cacheWarming", globalOnly: true, label: "Prompt cache warming", section: "models", advanced: true, help: "Keep provider prompt caches warm during runs (streaming) or also between runs (idle). Only when it saves at least $0.05.", defaultValue: "streaming", ...select(choices("off", "streaming", "idle")) },
-  { key: "thinkingBudgets.minimal", label: "Thinking budget: minimal", section: "models", advanced: true, help: "Token budget for the minimal thinking level. Empty means Pi's built-in budget.", ...number() },
-  { key: "thinkingBudgets.low", label: "Thinking budget: low", section: "models", advanced: true, help: "Token budget for the low thinking level.", ...number() },
-  { key: "thinkingBudgets.medium", label: "Thinking budget: medium", section: "models", advanced: true, help: "Token budget for the medium thinking level.", ...number() },
-  { key: "thinkingBudgets.high", label: "Thinking budget: high", section: "models", advanced: true, help: "Token budget for the high thinking level.", ...number() },
+    // Pi's built-in budgets: pi-ai dist/api/simple-options.js DEFAULT_THINKING_BUDGETS.
+  { key: "thinkingBudgets.minimal", label: "Thinking budget: minimal", section: "models", advanced: true, help: "Token budget for the minimal thinking level, for models that think within a token budget. Gemini 2.5 models have their own defaults.", defaultValue: 1024, ...number() },
+  { key: "thinkingBudgets.low", label: "Thinking budget: low", section: "models", advanced: true, help: "Token budget for the low thinking level.", defaultValue: 2048, ...number() },
+  { key: "thinkingBudgets.medium", label: "Thinking budget: medium", section: "models", advanced: true, help: "Token budget for the medium thinking level.", defaultValue: 8192, ...number() },
+  { key: "thinkingBudgets.high", label: "Thinking budget: high", section: "models", advanced: true, help: "Token budget for the high thinking level.", defaultValue: 16384, ...number() },
   // Messages & interaction
   { key: "enableSkillCommands", label: "Skill commands", section: "interaction", help: "Register skills as /skill:name commands. Typed /skill:name commands work either way.", defaultValue: true, ...bool },
   { key: "steeringMode", label: "Steering delivery", section: "interaction", help: "How queued steering messages are delivered.", defaultValue: "one-at-a-time", ...select(choices("one-at-a-time", "all")) },
@@ -70,7 +78,7 @@ export const fields: Field[] = [
   { key: "defaultProjectTrust", globalOnly: true, label: "Default project trust", section: "interaction", help: "Fallback when a project has no saved trust decision. Global setting only.", defaultValue: "ask", ...select(choices("ask", "always", "never")) },
   // Tools
   // No defaultValue: in a project, "inherited" must be the global list itself, or nothing (shared/tools.ts).
-  { key: "defaultTools", label: "Startup tools", section: "tools", kind: "tools", help: "Tools a session starts with. Pi's defaults are read, bash, edit and write. The file records only what differs from what this scope inherits (+grep, -write); extension and MCP tools are not affected.", schema: lines },
+  { key: "defaultTools", label: "Startup tools", section: "tools", kind: "tools", help: "Tools a session starts with. Pi's defaults are read, bash, edit and write. The file records only what differs from what this scope inherits (+grep, -write); extension and MCP tools are not affected.", defaultText: { value: DEFAULT_TOOLS.join(", ") }, schema: lines },
   // Sessions & context
   { key: "compaction.enabled", label: "Automatic compaction", section: "context", help: "Summarize older context automatically when it fills up.", defaultValue: true, ...bool },
   { key: "branchSummary.skipPrompt", label: "Skip branch summary prompt", section: "context", help: "Skip the branch-summary prompt and default to no summary.", defaultValue: false, ...bool },
@@ -78,24 +86,25 @@ export const fields: Field[] = [
   { key: "compaction.reserveTokens", label: "Compaction: reserved tokens", section: "context", advanced: true, help: "Tokens reserved for the model response.", defaultValue: 16384, ...number() },
   { key: "compaction.keepRecentTokens", label: "Compaction: recent tokens kept", section: "context", advanced: true, help: "Recent tokens kept without summarizing.", defaultValue: 20000, ...number() },
   { key: "compaction.modelOverrides", label: "Compaction per model", section: "context", advanced: true, kind: "compactionMap", help: "Reserved and recent tokens for specific models, keyed by exact provider/modelId. Empty values use the compaction settings above.",
-    schema: z.record(modelKey, z.object({ reserveTokens: tokens, keepRecentTokens: tokens }).passthrough()) },
+    defaultText: { value: "none", note: "every model uses the compaction settings above" }, schema: z.record(modelKey, z.object({ reserveTokens: tokens, keepRecentTokens: tokens }).passthrough()) },
   { key: "branchSummary.reserveTokens", label: "Branch summary: reserved tokens", section: "context", advanced: true, help: "Tokens reserved when summarizing branch history.", defaultValue: 16384, ...number() },
   // Network & retries
   { key: "retry.enabled", label: "Automatic retry", section: "network", help: "Retry transient failures at the agent level.", defaultValue: true, ...bool },
   { key: "retry.maxRetries", label: "Retry attempts", section: "network", help: "Maximum agent-level retry attempts.", defaultValue: 3, ...number() },
-  { key: "httpProxy", globalOnly: true, label: "HTTP proxy", section: "network", kind: "text", help: "Proxy URL applied as HTTP_PROXY and HTTPS_PROXY for Pi's HTTP clients. Global setting only.", schema: text },
+  { key: "httpProxy", globalOnly: true, label: "HTTP proxy", section: "network", kind: "text", help: "Proxy URL applied as HTTP_PROXY and HTTPS_PROXY for Pi's HTTP clients. Global setting only.", defaultText: { value: "none" }, schema: text },
   { key: "transport", label: "Transport", section: "network", advanced: true, help: "Preferred transport for providers that support several.", defaultValue: "auto", ...select(choices("auto", "sse", "websocket", "websocket-cached")) },
   { key: "httpIdleTimeoutMs", label: "HTTP idle timeout (ms)", section: "network", advanced: true, help: "Header and body idle timeout. 0 disables it.", defaultValue: 300000, ...number() },
   { key: "websocketConnectTimeoutMs", label: "WebSocket connect timeout (ms)", section: "network", advanced: true, help: "0 disables it.", defaultValue: 15000, ...number() },
   { key: "retry.baseDelayMs", label: "Retry base delay (ms)", section: "network", advanced: true, help: "Initial exponential-backoff delay.", defaultValue: 2000, ...number() },
   { key: "retry.maxAgentDelayMs", label: "Retry maximum delay (ms)", section: "network", advanced: true, help: "Maximum agent-level retry delay.", defaultValue: 60000, ...number() },
-  { key: "retry.provider.timeoutMs", label: "Provider request timeout (ms)", section: "network", advanced: true, help: "Provider request timeout. Empty uses the HTTP idle timeout.", ...number() },
+  { key: "retry.provider.timeoutMs", label: "Provider request timeout (ms)", section: "network", advanced: true, help: "Provider request timeout. Empty uses the HTTP idle timeout.",
+    defaultFrom: "httpIdleTimeoutMs", defaultText: { value: "the HTTP idle timeout", note: "same as the HTTP idle timeout" }, ...number() },
   { key: "retry.provider.maxRetries", label: "Provider retry attempts", section: "network", advanced: true, help: "Provider-level retries. Keep 0 unless needed: they can delay Pi's own handling of quota errors.", defaultValue: 0, ...number() },
   { key: "retry.provider.maxRetryDelayMs", label: "Provider maximum retry delay (ms)", section: "network", advanced: true, help: "Maximum server-requested delay. 0 removes the limit.", defaultValue: 60000, ...number() },
   // Shell & packages
   { key: "shellPath", label: "Shell", section: "shell", kind: "text", help: "Custom shell executable. A leading ~ is supported. Empty means the platform default.", schema: text },
   { key: "npmCommand", label: "npm command", section: "shell", kind: "lines", help: "Command and arguments for package lookup and installation, one per line.", defaultValue: ["npm"], schema: lines },
-  { key: "shellCommandPrefix", label: "Shell command prefix", section: "shell", advanced: true, kind: "text", help: "Prefix prepended to every shell command.", schema: text },
+  { key: "shellCommandPrefix", label: "Shell command prefix", section: "shell", advanced: true, kind: "text", help: "Prefix prepended to every shell command.", defaultText: { value: "none" }, schema: text },
   // Images
   { key: "images.autoResize", label: "Resize images", section: "images", help: "Resize images to at most 2000×2000 pixels before sending them to a model.", defaultValue: true, ...bool },
   { key: "images.blockImages", label: "Block images", section: "images", help: "Never send images to models.", defaultValue: false, ...bool },
@@ -164,6 +173,8 @@ export type SettingsView = {
   invalid: string[];
   exists: boolean;
   hasBackup: boolean;
+  /** Pi's defaults that depend on this machine: the shell, the external editor, the session folder. */
+  defaults: Record<string, DefaultText>;
 };
 
 export function readSetting(data: Record<string, unknown>, key: string): unknown {
@@ -174,3 +185,45 @@ export function readSetting(data: Record<string, unknown>, key: string): unknown
   }
   return value;
 }
+
+/** A value as Pi's docs write it: switches on or off, numbers grouped, lists by commas. */
+export function words(value: unknown): string {
+  if (typeof value === "boolean") return value ? "on" : "off";
+  if (typeof value === "number") return value.toLocaleString("en-US");
+  if (typeof value === "string") return value.trim() === "" ? `${value.length} ${value.length === 1 ? "space" : "spaces"}` : value;
+  if (Array.isArray(value)) return value.join(", ");
+  return JSON.stringify(value);
+}
+
+/** Pi's default for a field in words; valueOf reads another setting where the default follows it. */
+export function defaultText(field: Field, machine: Record<string, DefaultText>, valueOf: (key: string) => unknown): DefaultText {
+  const known = machine[field.key];
+  if (known) return known;
+  const from = fields.find(entry => entry.key === field.defaultFrom);
+  if (from) return { value: words(valueOf(from.key) ?? from.defaultValue), ...(field.defaultText?.note ? { note: field.defaultText.note } : {}) };
+  if (field.defaultValue !== undefined) return { value: words(field.defaultValue) };
+  return field.defaultText ?? { value: "none" };
+}
+
+/** Pi ends up with its default: the key is left out, empty where empty means the default, or equal to it as Pi reads it. */
+export function isPiDefault(field: Field, value: unknown): boolean {
+  if (value === undefined) return true;
+  const parsed = field.schema.safeParse(value);
+  if (!parsed.success) return false;
+  const data: unknown = parsed.data;
+  if (field.kind === "tools") return JSON.stringify(effectiveTools(data as string[]).sort()) === JSON.stringify([...DEFAULT_TOOLS].sort());
+  if (field.defaultValue !== undefined) return JSON.stringify(data) === JSON.stringify(field.defaultValue);
+  return data === "" || (typeof data === "object" && data !== null && !Array.isArray(data) && Object.keys(data).length === 0);
+}
+
+/**
+ * What a draft edit writes, VS Code's way: in the global file a value equal to Pi's default removes the key,
+ * so the file holds only what differs. A project file keeps it, since there it overrides the global value.
+ * Undefined: nothing to write.
+ */
+export function fileChange(field: Field, change: SettingsChange, scope: "global" | "project", inFile: boolean): SettingsChange | undefined {
+  if (!("value" in change)) return inFile ? change : undefined;
+  if (scope === "global" && isPiDefault(field, change.value)) return inFile ? { key: change.key, remove: true } : undefined;
+  return change;
+}
+

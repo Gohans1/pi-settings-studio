@@ -1,3 +1,21 @@
+# Verification — General as a workbench, with each setting's real default, 2026-10-09
+
+Scope: General's layout and what its rows say, chosen from a variant round (Rows, Panels, Sheet in a throwaway Vite harness on the real data, read-only; Rows chosen, harness deleted). The list holds Pi, the nine groups, Keyboard shortcuts and Not editable here; the detail shows one group, its advanced rows under their own heading. Every row says Default or Custom; Use default only where the value differs. Defaults the control cannot show are named: Pi's own `getShellConfig` and `SettingsManager` resolve the shell and external editor on the server, the session folder follows the agent folder, the provider timeout follows the HTTP idle timeout, thinking budgets carry pi-ai's `DEFAULT_THINKING_BUDGETS`. Saving follows VS Code (`settingsEditor2.ts` `updateChangedSetting`): in the global file a value equal to Pi's default removes the key; a project file keeps it; untouched keys stay, even when they repeat a default.
+
+| Check | Result |
+|---|---|
+| `bun test` (`HOME` an empty folder) | 321 passed (46 files), up from 298: `isPiDefault` (absent, equal, empty text, lists and maps as Pi reads them, startup tools, refused values), `fileChange` (global default removes or writes nothing, project keeps it, refused values kept for Save to point at), `defaultText` (switches, grouped numbers, spaces, machine defaults, the provider timeout following the idle timeout, no field left without one); the settings view's machine defaults and the editor's variable |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` (same `HOME`) | 129 passed, 1 failed: projects.spec's General step looked for HTTP proxy without choosing its group. Adapted, projects.spec passed 6 of 6. New: choosing a group, narrow list-then-group with a way back, per-group counts of custom settings, advanced rows under their heading, a default row naming /bin/bash with nothing to reset, choosing a default removes the key while a default already in the file stays, Save reaching a refused value in another group |
+| RED/GREEN | Unit: the new tests failed on missing exports and a missing `defaults`, then passed; an unescaped `${}` in `words` was caught by a test that failed with it and passed without. Browser: 29 of 43 failed on the old client (no group list), then all passed. Two motion tests failed in RED for the wrong reason (the OAuth Disclosure needs the URL transport) and were fixed before GREEN; three sound tests and the theme test needed their group, and the theme test now waits for the first list to close |
+| Manual preview | Running service on the real `~/.pi`, navigation only, nothing saved: 1280×800 dark and 390 px: Messages (Skill commands at its default though the file sets it), Shell (Default: /bin/bash · found on this machine), Network, Not editable here; no horizontal overflow, no console errors or warnings |
+| Impeccable detector | No findings on GeneralTab.tsx, SettingField.tsx, NotHere.tsx and styles.css |
+
+Limits: the external editor's default is resolved in this app's environment (a systemd service); a terminal where `$VISUAL` or `$EDITOR` is set gives Pi another one, and the row says so. The budgets apply to models that think within a token budget; Gemini 2.5 models have their own. Not verified: a real screen reader, forced colors, Windows.
+
+---
+
 # Verification — leaving a tab mid-work, 2026-10-09
 
 Scope: what happens when the reader leaves a tab, reloads, or changes selection while something slow runs. Measured first on a temporary folder with an MCP server that answers in 3 s: a Tools inspection cancelled after 1 s was killed on the server, and returning took the full 3.4 s again; Plugins' extension tools the same. A job (here Test connections) ran on, but its panel was gone on return. Session listings already finished on the server. Fixed: inspections (A), job panels (B), the package check's state (C).

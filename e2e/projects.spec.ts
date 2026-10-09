@@ -34,6 +34,7 @@ test("a project is picked, trusted, and its own settings.json edited", async ({ 
   expect(JSON.parse(await readFile(join(agent, "trust.json"), "utf8"))[project]).toBe(true);
 
   await page.getByRole("radio", { name: "This project" }).check();
+  await page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: /^Network & retries/ }).click();
   await expect(page.getByLabel("HTTP proxy", { exact: true })).toBeDisabled();
   const retries = page.getByLabel("Retry attempts", { exact: true });
   await expect(retries).toHaveValue("3");

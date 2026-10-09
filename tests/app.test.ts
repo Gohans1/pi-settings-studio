@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ConfigStore } from "../src/server/store.ts";
 import { createApp } from "../src/server/app.ts";
+import { getShellConfig, SettingsManager } from "@earendil-works/pi-coding-agent";
 
 const origin = "http://127.0.0.1:43123";
 const localhostOrigin = "http://localhost:43123";
@@ -171,3 +172,23 @@ test("per-model thinking levels and compaction overrides are validated and saved
   const view = await (await request("/api/settings/global")).json();
   assert.deepEqual(view.values["compaction.modelOverrides"], { "a/b": { reserveTokens: 1000, futureKey: true } });
 });
+
+test("settings name Pi's defaults that depend on this machine, as Pi resolves them here", async (t) => {
+  const { request, roots } = await fixture(t);
+  const data = await (await request("/api/settings/global")).json();
+  assert.deepEqual(data.defaults.shellPath, { value: getShellConfig().shell, note: "found on this machine" });
+  assert.equal(data.defaults.externalEditor.value, SettingsManager.inMemory().getExternalEditorCommand());
+  assert.deepEqual(data.defaults.sessionDir, { value: join(roots.global, "sessions") + "/", note: "one folder per working directory" });
+});
+
+test("the external editor's default says which variable it came from", async (t) => {
+  const { request } = await fixture(t);
+  const saved = { VISUAL: process.env.VISUAL, EDITOR: process.env.EDITOR };
+  t.after(() => { for (const [key, value] of Object.entries(saved)) if (value === undefined) delete process.env[key]; else process.env[key] = value; });
+  delete process.env.VISUAL; delete process.env.EDITOR;
+  assert.deepEqual((await (await request("/api/settings/global")).json()).defaults.externalEditor,
+    { value: process.platform === "win32" ? "notepad" : "nano", note: "unless $VISUAL or $EDITOR is set where Pi starts" });
+  process.env.EDITOR = "vim";
+  assert.deepEqual((await (await request("/api/settings/global")).json()).defaults.externalEditor, { value: "vim", note: "from $EDITOR where this app runs" });
+});
+

@@ -322,20 +322,25 @@
     .tool-row-trigger > [data-slot=badge] { grid-column: 1; grid-row: 2; }
   }
 
-  /* General: a section index beside the settings; the save bar follows the edits. */
-  .settings-layout { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: --spacing(10); align-items: start; }
-  .section-nav { position: sticky; top: 0; display: grid; gap: --spacing(0.25); padding-top: --spacing(1); }
-  .nav-count { color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
+  /* General: a workbench of groups, one group's settings at a time; the save bar follows the edits. */
   .nav-dot { flex: none; width: --spacing(1.5); height: --spacing(1.5); border-radius: calc(infinity * 1px); background: var(--primary); }
-  .settings-content { min-width: 0; }
-  .settings-group { scroll-margin-top: --spacing(4); }
-  .settings-group + .settings-group { margin-top: --spacing(10); }
+  .item-state:has(.nav-dot) { display: inline-flex; align-items: center; gap: --spacing(1.5); }
   .settings-group > h2 { margin: 0 0 --spacing(2); }
+  .detail-header p { margin: --spacing(1) 0 0; }
+  /* A group's advanced part sits under a hairline and its own heading, well apart from the everyday rows. */
+  .settings-part { margin-top: --spacing(10); padding-top: --spacing(6); border-top: 1px solid var(--border); }
+  .settings-part[data-first] { margin-top: 0; padding-top: 0; border-top: 0; }
+  .settings-part > header { margin-bottom: --spacing(4); }
+  .settings-part h3 { margin: 0; }
+  .settings-part > header p { margin: --spacing(1) 0 0; }
   .settings-group > [data-slot=alert] { margin-bottom: --spacing(3); }
   .setting-key { color: var(--muted-foreground); }
   .setting-control { min-width: 0; display: grid; gap: --spacing(1.5); align-content: start; }
   .field-meta { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(2); min-height: --spacing(7); color: var(--muted-foreground); font-size: var(--text-caption); }
-  .field-meta [data-set=true] { color: var(--foreground); }
+  .field-meta[data-custom] { color: var(--foreground); }
+  /* The value Pi uses, named where the control cannot show it. */
+  .state-value { color: var(--foreground); font-weight: var(--font-weight-medium); overflow-wrap: anywhere; }
+  .setting-unsaved { display: inline-flex; align-items: center; gap: --spacing(1.5); color: var(--primary); font-weight: var(--font-weight-medium); }
   .save-bar { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); margin-top: --spacing(4); padding: --spacing(3) 0; background: var(--background); border-top: 1px solid var(--border); }
   .save-bar p { margin: 0; font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; }
   @media (prefers-reduced-motion: no-preference) { .save-bar { transition: translate 200ms var(--ease-out), opacity 200ms var(--ease-out); @starting-style { translate: 0 --spacing(3); opacity: 0; } } }
@@ -343,8 +348,7 @@
   .pi-panel > p { margin: 0; }
   .pi-panel code { color: var(--muted-foreground); }
   .pi-panel > :is([data-slot=alert], [data-slot=card]) { flex-basis: 100%; }
-  .not-here { margin-top: --spacing(10); }
-  .not-here ul { margin: --spacing(2) 0 0; padding-inline-start: --spacing(5); display: grid; gap: --spacing(2); color: var(--muted-foreground); }
+  .not-here ul { margin: 0; padding-inline-start: --spacing(5); display: grid; gap: --spacing(2); color: var(--muted-foreground); }
   .scope-footnote { margin-top: --spacing(6); color: var(--muted-foreground); font-size: var(--text-small); }
   .keybinding-control { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(2); }
   /* Startup tools: a checklist that takes the whole row. */
@@ -369,11 +373,6 @@
   .workbench :is([data-slot=scroll-area], [data-slot=scroll-area-viewport]) { display: contents; }
   .workbench[data-open] .workbench-list, .workbench:not([data-open]) .workbench-detail { display: none; }
   .list-search { position: static; margin: 0 0 --spacing(2); padding: 0; }
-  .settings-layout { grid-template-columns: minmax(0, 1fr); gap: --spacing(4); }
-  /* One scrolling row of groups; the faded edge says there are more. */
-  /* Relative, so the links' visually hidden counts stay inside this scroller. */
-  .section-nav { position: relative; display: flex; gap: --spacing(1); padding: 0 var(--gutter); margin-inline: calc(var(--gutter) * -1); overflow-x: auto; scrollbar-width: none;
-    mask-image: linear-gradient(to right, transparent, black --spacing(4), black calc(100% - --spacing(4)), transparent); }
 }
 @media (width < 40rem) {
   :root { --gutter: --spacing(4); }
@@ -385,7 +384,7 @@
   .save-bar .actions > * { flex-grow: 1; }
 }
 @media (forced-colors: active) {
-  .list-row [aria-pressed=true], .section-nav a[aria-current=true] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .list-row [aria-pressed=true] { outline: 2px solid Highlight; outline-offset: -2px; }
 }
 @media (prefers-reduced-motion: reduce) {
   /* Unlayered policy wins over component/utility layers without specificity escalation. */

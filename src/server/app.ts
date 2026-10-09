@@ -2,8 +2,11 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { serveStatic } from "@hono/bun";
 import { z } from "zod";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { getShellConfig, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
-import { changeSchema, fields, readSetting, type SettingsView } from "../shared/settings.ts";
+import { changeSchema, fields, readSetting, type DefaultText, type SettingsView } from "../shared/settings.ts";
 import { mcpRoutes } from "./mcp-api.ts";
 import { codemodeRoutes } from "./codemode.ts";
 import { sessionRoutes } from "./sessions.ts";
@@ -24,6 +27,18 @@ import { Inspections } from "./inspections.ts";
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
 export type AppOptions = { store: ConfigStore; agentDir: string; origins: string[]; staticDir?: string; projects?: string[] };
 const SCOPE = z.enum(["global", "project"]);
+
+/** Pi's defaults that depend on this machine, resolved with Pi's own code. The editor follows the environment Pi starts in, which may not be this app's. */
+function machineDefaults(agentDir: string): Record<string, DefaultText> {
+  const variable = process.env.VISUAL ? "$VISUAL" : process.env.EDITOR ? "$EDITOR" : undefined;
+  const home = homedir(), sessions = join(agentDir, "sessions");
+  return {
+    shellPath: { value: getShellConfig().shell, note: "found on this machine" },
+    externalEditor: { value: SettingsManager.inMemory().getExternalEditorCommand(),
+      note: variable ? `from ${variable} where this app runs` : "unless $VISUAL or $EDITOR is set where Pi starts" },
+    sessionDir: { value: (sessions.startsWith(home + "/") ? "~" + sessions.slice(home.length) : sessions) + "/", note: "one folder per working directory" },
+  };
+}
 
 export function createApp({ store, agentDir, origins, staticDir, projects = [] }: AppOptions) {
   const app = new Hono();
@@ -78,7 +93,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
       const fallback = parsedParent.success ? parsedParent.data : field.defaultValue;
       if (fallback !== undefined) inherited[field.key] = fallback;
     }
-    return { scope, path: store.path(scope), revision: current.revision, values, inherited, invalid, exists: current.exists, hasBackup: await store.hasBackup(scope) };
+    return { scope, path: store.path(scope), revision: current.revision, values, inherited, invalid, exists: current.exists, hasBackup: await store.hasBackup(scope), defaults: machineDefaults(agentDir) };
   }
 
   app.get("/api/settings/:scope", async c => {
