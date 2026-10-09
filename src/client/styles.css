@@ -280,7 +280,6 @@
   .settings-group + .settings-group { margin-top: --spacing(10); }
   .settings-group > h2 { margin: 0 0 --spacing(2); }
   .settings-group > [data-slot=alert] { margin-bottom: --spacing(3); }
-  .settings-advanced { margin-top: --spacing(4); padding-top: --spacing(2); border-top: 1px solid var(--border); }
   .setting-key { color: var(--muted-foreground); }
   .setting-control { min-width: 0; display: grid; gap: --spacing(1.5); align-content: start; }
   .field-meta { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(2); min-height: --spacing(7); color: var(--muted-foreground); font-size: var(--text-caption); }

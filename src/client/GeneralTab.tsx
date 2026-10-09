@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { FieldGroup, FieldSeparator } from "./components/ui/field";
+import { Separator } from "./components/ui/separator";
 import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -218,11 +219,11 @@ export function GeneralTab({ project }: { project?: string }) {
                 <h2 id={"group-" + group.id + "-title"}>{group.title}</h2>
                 {"note" in group && <Alert role="note"><AlertDescription>{group.note}</AlertDescription></Alert>}
                 {rows(items.filter(field => !advanced.includes(field)))}
-                {advanced.length > 0 && <div className="settings-advanced"><Disclosure label={`${advanced.length} advanced ${advanced.length === 1 ? "setting" : "settings"}`} hiddenUntilFound
+                {advanced.length > 0 && <><Separator className="mt-4 mb-2" /><Disclosure label={`${advanced.length} advanced ${advanced.length === 1 ? "setting" : "settings"}`} hiddenUntilFound
                   open={advancedOpen[group.id] ?? advanced.some(field => Object.hasOwn(view.values, field.key))}
                   onOpenChange={open => setAdvancedOpen(current => ({ ...current, [group.id]: open }))}>
                   {rows(advanced)}
-                </Disclosure></div>}
+                </Disclosure></>}
               </section>;
             })}
             {!results.length && <Empty><EmptyHeader><EmptyDescription>No settings match “{query.trim()}”. Try a label such as “model” or “budget”, or a key.</EmptyDescription></EmptyHeader></Empty>}
