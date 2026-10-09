@@ -12,7 +12,7 @@ export function PiPanel() {
   const [pi, setPi] = useState<{ bin: string; installed?: string; builtFor: string }>();
   const refresh = () => void loadPi().then(setPi).catch(() => setPi(undefined));
   useEffect(refresh, []);
-  const update = useJob(refresh);
+  const update = useJob({ actions: ["pi-update"] }, refresh);
   const [asking, setAsking] = useState(false);
   if (!pi) return null;
   return <section className="pi-panel" aria-label="Pi">

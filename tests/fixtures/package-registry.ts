@@ -6,9 +6,11 @@ export async function packageRegistry(root: string) {
   const requests: string[] = [];
   let latest = "2.0.0";
   let unavailable = false;
-  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch(request) {
+  let gate: Promise<void> | undefined;
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
     const name = decodeURIComponent(new URL(request.url).pathname.slice(1));
     requests.push(name);
+    await gate;
     if (unavailable) return new Response("Unavailable", { status: 503 });
     return Response.json({ name, "dist-tags": { latest }, versions: Object.fromEntries(
       ["1.0.0", "1.5.0", "2.0.0"].map(version => [version, { name, version }])) });
@@ -22,6 +24,12 @@ export async function packageRegistry(root: string) {
     await mkdir(path, { recursive: true });
     await writeFile(join(path, "package.json"), JSON.stringify({ name, version }));
   }
-  return { configure, installed, requests, setLatest: (value: string) => { latest = value; },
+  /** Holds every answer until the returned function is called. */
+  function hold() {
+    let release!: () => void;
+    gate = new Promise(resolve => { release = resolve; });
+    return () => { gate = undefined; release(); };
+  }
+  return { configure, installed, requests, hold, setLatest: (value: string) => { latest = value; },
     fail: () => { unavailable = true; }, close: () => server.stop(true) };
 }

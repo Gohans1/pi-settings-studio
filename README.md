@@ -51,7 +51,7 @@ Buttons that run something use the `pi` command on `PATH` (or `~/.local/bin/pi`)
 
 Open **Plugins → Packages → Check for updates**. Pi's public checker reports which installed npm/Git packages have updates; matching rows say **Update available**, and the Packages entry shows the count. Checking does not install anything. **Update** and **Update all** still require a separate click.
 
-Checks are on demand, not a background timer. The last result and timestamp survive navigation/reloads while the server runs. Settings changes and package operations invalidate those notices; check again after updating. Select and trust a project to include its packages. Updates run from that project's directory when selected, following Pi's global/project rules.
+Checks are on demand, not a background timer. The last result and timestamp survive navigation/reloads while the server runs, and a check still running when you come back shows as checking. Settings changes and package operations invalidate those notices; check again after updating. Select and trust a project to include its packages. Updates run from that project's directory when selected, following Pi's global/project rules.
 
 The checker uses system `npm` and `git` (not `npmCommand` from settings), and Pi's existing version/range, pin and project-precedence rules. It skips local paths, exact npm pins, pinned Git refs, missing installations and failed lookups. `PI_OFFLINE` skips networking. **“No updates reported” does not mean all packages are current:** Pi's API does not distinguish network/authentication failures or expose target version numbers. No extensions are loaded to perform the check.
 

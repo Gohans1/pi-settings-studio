@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { startServer, type RunningServer } from "../src/server/server.ts";
@@ -25,6 +25,8 @@ test.beforeEach(async () => {
     "echo-server": { command: "bun", args: [ECHO] }, "off-server": { command: "bun", args: [ECHO], enabled: false },
   } }));
   await writeFile(join(project, ".pi", "settings.json"), JSON.stringify({ defaultTools: ["+grep"] }));
+  // Pi creates auth.json on its first run; agent folders in use have one.
+  await writeFile(join(agent, "auth.json"), "{}");
   server = await startServer({ agentDir: agent, projectDir: project, port: 0, staticDir: resolve("dist/client") });
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
@@ -128,6 +130,18 @@ test("returning to Tools shows the last result at once and checks again behind i
   const fresh = page.waitForRequest(request => request.url().includes("/api/tools") && request.postDataJSON()?.fresh === true);
   await page.getByRole("button", { name: "Refresh tools", exact: true }).click();
   await fresh;
+});
+
+test("leaving Tools before its first load ends lets the load finish; coming back does not start over", async ({ page }) => {
+  const log = join(root, "starts.log");
+  await writeFile(join(agent, "mcp.json"), JSON.stringify({ mcpServers: { "echo-server": { command: "bun", args: [ECHO], env: { ECHO_LOG: log, ECHO_DELAY_MS: "2000" } } } }));
+  const starts = async () => (await readFile(log, "utf8").catch(() => "")).split("\n").filter(Boolean).length;
+  await page.goto(server.url + "#tools");
+  await expect.poll(starts).toBe(1);
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("tab", { name: "Tools" }).click();
+  await expect(row(page, /^echo-server/)).toContainText("1 on demand");
+  expect(await starts()).toBe(1);
 });
 
 test("a failed inspection says the list may be incomplete, and Refresh tools retries", async ({ page }) => {

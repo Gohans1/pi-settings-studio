@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createApp } from "../src/server/app.ts";
@@ -29,8 +29,8 @@ async function fixture(t: import("node:test").TestContext, servers: Record<strin
   // Pi creates auth.json on its first run; agent folders in use have one.
   await writeFile(join(agent, "auth.json"), "{}");
   const app = createApp({ store: new ConfigStore({ global: agent }), agentDir: agent, projects: [project], origins: [origin] });
-  const request = (scope?: string, body: object = {}) => app.request(origin + "/api/tools" + (scope ? `?project=${encodeURIComponent(scope)}` : ""), {
-    method: "POST", headers: { host: new URL(origin).host, origin, "content-type": "application/json" }, body: JSON.stringify(body),
+  const request = (scope?: string, body: object = {}, signal?: AbortSignal) => app.request(origin + "/api/tools" + (scope ? `?project=${encodeURIComponent(scope)}` : ""), {
+    method: "POST", headers: { host: new URL(origin).host, origin, "content-type": "application/json" }, body: JSON.stringify(body), signal,
   });
   async function inspect(scope?: string, body?: object) {
     const response = await request(scope, body);
@@ -114,6 +114,23 @@ test("a change to what Pi reads, or asking for a fresh result, inspects again", 
   const settled = await f.inspect();
   assert.equal(named(settled, "mcp__echo_server__echo"), undefined);
   assert.notEqual((await f.inspect(undefined, { fresh: true })).checkedAt, settled.checkedAt);
+});
+
+test("an inspection outlives a request that leaves early, and the next request joins it", async t => {
+  const root = await mkdtemp(join(tmpdir(), "pi-settings-leave-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const log = join(root, "starts.log");
+  const f = await fixture(t, { "echo-server": { command: "bun", args: [ECHO], env: { ECHO_LOG: log, ECHO_DELAY_MS: "1500" } } });
+  const starts = async () => (await readFile(log, "utf8").catch(() => "")).split("\n").filter(Boolean).length;
+  const reader = new AbortController();
+  const left = Promise.resolve(f.request(undefined, {}, reader.signal)).catch(() => undefined);
+  // Leave once the inspection has started the server.
+  for (let i = 0; i < 100 && !(await starts()); i++) await Bun.sleep(50);
+  reader.abort();
+  await left;
+  const view = await f.inspect();
+  assert.ok(named(view, "mcp__echo_server__echo"));
+  assert.equal(await starts(), 1);
 });
 
 test("an incomplete inspection is not kept: the next request tries again", async t => {

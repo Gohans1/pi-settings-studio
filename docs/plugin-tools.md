@@ -4,12 +4,14 @@ Selecting an extension in Plugins automatically inspects it with the pinned Pi S
 
 ## Kept results
 
-An inspection starts Pi, every enabled extension and every MCP server, so the server keeps a complete one in memory and answers the same request with it while nothing it read has changed: the global and project `settings.json` and `mcp.json`, `auth.json`, `mcp-auth.json` (MCP sign-in) and the extensions' own files, for ten minutes at most. Refresh tools sends `fresh: true` for a new one. An incomplete result is not kept, so the next visit tries again. Not noticed until Refresh tools or the age limit: a file an extension imports, and an MCP server whose tools change without a configuration change. The browser also keeps the last result per tab, extension and project, so returning shows it at once with "Checking for changes…" while it asks again.
+An inspection starts Pi, every enabled extension and every MCP server, so the server keeps a complete one in memory and answers the same request with it while nothing it read has changed: the global and project `settings.json` and `mcp.json`, `auth.json`, `mcp-auth.json` (MCP sign-in) and the extensions' own files, for ten minutes at most. Refresh tools sends `fresh: true` for a new one. An incomplete result is not kept, so the next visit tries again. Not noticed until Refresh tools or the age limit: a file an extension imports, and an MCP server whose tools change without a configuration change.
+
+A run is shared, not tied to the request that started it. A request joins the run in progress for the same files; one that stops waiting (the reader left the tab, chose another extension or project, or reloaded) leaves it running, so its result is kept and returning does not start over. Up to three runs nobody waits for keep going, each bounded by the 30-second limit; a fourth stops the oldest. A fresh request or changed files start a new run, and an older one nobody waits for stops. The browser also keeps the last result per tab, extension and project, so returning shows it at once with "Checking for changes…" while it asks again.
 
 - **All tools** lists tools registered by that extension during loading and `session_start`, including dynamic registrations. It does not promise tools that may be created by later commands or turns.
 - **Model sees** counts direct model declarations at startup. Pi's `prepareLoadout` hidden declarations (including codemode-only mode) are excluded. Indirect tools may still appear inside codemode's description; they are labelled **Indirect only**, not unreachable.
 - Disabled extensions are loaded for their catalogue but every tool is labelled **Extension off**. No settings are changed to enable them.
-- Failures display an incomplete/unverified result, never a successful empty catalogue. The refresh action retries. Inspection times out after 30 seconds; changing selection cancels the client request.
+- Failures display an incomplete/unverified result, never a successful empty catalogue. The refresh action retries. Inspection times out after 30 seconds; changing selection stops waiting for the previous one, which finishes for later (see Kept results).
 
 ## Tools tab
 

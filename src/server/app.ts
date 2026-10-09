@@ -18,6 +18,7 @@ import { themeRoutes } from "./themes.ts";
 import { resourceFileRoutes } from "./resource-files.ts";
 import { resourcePathRoutes } from "./resource-paths.ts";
 import { piRoutes } from "./pi-version.ts";
+import { Inspections } from "./inspections.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
@@ -28,7 +29,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   const app = new Hono();
   const registry = projectRegistry(agentDir, projects);
   const packageChecks: import("./resources.ts").PackageUpdateCache = new Map();
-  const probes: import("./resources.ts").ProbeCache = new Map();
+  const inspections = new Inspections();
   const hosts = origins.map(origin => new URL(origin).host);
 
   app.use("*", async (c, next) => {
@@ -121,8 +122,8 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/codemode", codemodeRoutes(store, registry));
   app.route("/api/sessions", sessionRoutes(agentDir, projects));
   app.route("/api/skills", skillRoutes(store, registry, agentDir));
-  app.route("/api/plugins", pluginRoutes(store, registry, agentDir, packageChecks, probes));
-  app.route("/api/tools", toolRoutes(store, registry, agentDir, probes));
+  app.route("/api/plugins", pluginRoutes(store, registry, agentDir, packageChecks, inspections));
+  app.route("/api/tools", toolRoutes(store, registry, agentDir, inspections));
   app.route("/api/agents", agentRoutes(store, registry, agentDir));
   app.route("/api/models", modelRoutes(store, agentDir));
   app.route("/api/projects", projectRoutes(registry, store, agentDir));

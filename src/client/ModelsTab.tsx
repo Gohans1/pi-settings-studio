@@ -56,11 +56,11 @@ function ProviderDetail({ provider, busy, onSaveKey, onRemove, onSignedIn }: {
   const [key, setKey] = useState("");
   const keyId = useId();
   // Pi's own sign-in flow; its questions and links are shown here and Pi writes auth.json.
-  const login = useJob(job => { if (job.status === "done") onSignedIn(); });
+  const login = useJob({ actions: ["provider-login"], provider: provider.id }, job => { if (job.status === "done") onSignedIn(); });
   // pi auth check: Pi resolves the credential as a session would, environment included.
-  const check = useJob();
+  const check = useJob({ actions: ["provider-check"], provider: provider.id });
   // Pi's own key setup: its questions (a key, an account ID, a region…) are answered here.
-  const setup = useJob(job => { if (job.status === "done") onSignedIn(); });
+  const setup = useJob({ actions: ["provider-setup"], provider: provider.id }, job => { if (job.status === "done") onSignedIn(); });
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (await onSaveKey(key)) setKey("");
@@ -149,7 +149,7 @@ export function ModelsTab({ project }: { project?: string }) {
       try { setCustom(await loadCustomProviders()); } catch { /* the form error explains */ }
     } finally { setBusy(false); }
   }
-  const catalog = useJob(() => void refresh());
+  const catalog = useJob({ actions: ["models-refresh"] }, () => void refresh());
   const providers = view?.providers ?? [];
   const customId = selected?.startsWith(CUSTOM) ? selected.slice(CUSTOM.length) : undefined;
   const customEntry = custom?.providers.find(entry => entry.id === customId);

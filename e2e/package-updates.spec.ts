@@ -41,6 +41,22 @@ test("while a check runs, its button shows a spinner and keeps its name", async 
   await page.unrouteAll({ behavior: "wait" });
 });
 
+test("leaving Plugins while a check runs and coming back shows it still checking, then its result", async ({ page }) => {
+  const release = registry.hold();
+  await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: /^Packages/ }).click();
+  await page.getByRole("button", { name: "Check for updates" }).click();
+  const status = page.getByRole("region", { name: "Packages", exact: true }).getByRole("status");
+  await expect(status).toContainText("Checking for package updates");
+  await expect.poll(() => registry.requests.length).toBeGreaterThan(0);
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("tab", { name: "Plugins" }).click();
+  await page.getByRole("button", { name: /^Packages/ }).click();
+  await expect(status).toContainText("Checking for package updates");
+  release();
+  await expect(status).toContainText("1 package update found");
+});
+
 test("an explicit keyboard check shows package notices, retains them on reload and replaces them on recheck", async ({ page }) => {
   const settings = await readFile(join(agent, "settings.json"), "utf8");
   await page.goto(server.url + "#plugins");

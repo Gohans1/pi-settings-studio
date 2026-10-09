@@ -70,7 +70,7 @@ export function PluginsTab({ project }: { project?: string }) {
   const [checkError, setCheckError] = useState("");
   const generation = useRef(0);
   // pi install / remove / update run on click; the list reloads when they finish.
-  const job = useJob(() => void refresh());
+  const job = useJob({ actions: ["package-install", "package-remove", "package-update", "packages-update"], project }, () => void refresh());
   const id = useId();
 
   async function refresh() {
@@ -101,6 +101,9 @@ export function PluginsTab({ project }: { project?: string }) {
       if (generation.current === request) setChecking(false);
     }
   }
+
+  // A check started before the reader left still runs on the server: join it, so its progress and result show here.
+  useEffect(() => { if (view?.updateChecking && !checking) void checkUpdates(); }, [view?.updateChecking]);
 
   async function toggle(items: ResourceView[], enabled: boolean, label = items[0]?.name) {
     if (!view || !items.length) return;

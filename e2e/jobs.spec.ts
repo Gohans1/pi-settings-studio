@@ -31,6 +31,28 @@ test("Test connections shows each MCP server's state from pi mcp list", async ({
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("a job keeps its panel when the reader leaves the tab and comes back, or reloads while it runs, until dismissed", async ({ page }) => {
+  test.slow();
+  await writeFile(join(agent, "mcp.json"), JSON.stringify({ mcpServers: { echo: { command: "bun", args: [resolve("tests/fixtures/echo-mcp.ts")], env: { ECHO_DELAY_MS: "5000" } } } }));
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "Test connections" }).click();
+  const results = page.getByRole("region", { name: "Test MCP connections" });
+  await expect(results).toContainText("Running");
+  const away = async () => { await page.getByRole("tab", { name: "General" }).click(); await page.getByRole("tab", { name: "MCP" }).click(); };
+  await away();
+  await expect(results).toContainText("Running");
+  await expect(page.getByRole("button", { name: "Test connections" })).toBeDisabled();
+  await page.reload();
+  await expect(results).toContainText("Running");
+  await expect(results).toContainText("Finished", { timeout: 60_000 });
+  await away();
+  await expect(results.getByRole("listitem").filter({ hasText: "echo" })).toContainText("connected · 1 tool");
+  await results.getByRole("button", { name: "Dismiss" }).click();
+  await away();
+  await expect(page.getByRole("button", { name: "Test connections" })).toBeEnabled();
+  await expect(results).toHaveCount(0);
+});
+
 test("a local package is installed and removed from the Plugins tab", async ({ page }) => {
   test.slow();
   const pkg = join(root, "pkg");
@@ -59,6 +81,25 @@ test("a provider sign-in shows Pi's questions and can be cancelled", async ({ pa
   await job.getByRole("button", { name: "Cancel" }).click();
   await expect(job).toContainText("Cancelled");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a sign-in waiting for an answer still asks it after the reader leaves Models and comes back", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  const open = async () => {
+    await page.getByRole("searchbox", { name: "Search providers" }).fill("anthropic");
+    await page.getByRole("button", { name: /^Anthropic\b/ }).first().click();
+  };
+  await open();
+  await page.getByRole("button", { name: "Sign in to Anthropic" }).click();
+  const job = page.getByRole("region", { name: "Sign in to anthropic" });
+  await expect(job.getByRole("radiogroup")).toBeVisible();
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("tab", { name: "Models" }).click();
+  await open();
+  await expect(job.getByRole("radiogroup")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign in to Anthropic" })).toBeDisabled();
+  await job.getByRole("button", { name: "Cancel" }).click();
+  await expect(job).toContainText("Cancelled");
 });
 
 test("after a connection test, each tool of a server gets its own exposure", async ({ page }) => {

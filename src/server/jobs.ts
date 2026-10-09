@@ -9,7 +9,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { AuthPrompt } from "@earendil-works/pi-ai";
-import type { JobAction, JobPrompt, JobView } from "../shared/jobs.ts";
+import type { JobInput, JobPrompt, JobSummary, JobView } from "../shared/jobs.ts";
 import { isRecord, readMcpServers } from "./mcp-config.ts";
 import { maskArgs } from "./mcp-secrets.ts";
 import type { ProjectRegistry } from "./projects.ts";
@@ -86,8 +86,8 @@ const body = z.discriminatedUnion("action", [
 
 export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, command = piCommand(), onPackageChange = () => {}) {
   const jobs = new Map<string, Job>();
-  function create(action: JobAction, title: string, secrets: string[]): Job {
-    const job: Job = { id: randomUUID(), action, title, status: "running", output: "", events: [], secrets, cancel: () => {} };
+  function create(input: JobInput, title: string, secrets: string[]): Job {
+    const job: Job = { id: randomUUID(), action: input.action, input, title, status: "running", output: "", events: [], secrets, cancel: () => {} };
     jobs.set(job.id, job);
     for (const old of [...jobs.values()].filter(other => other.status !== "running").slice(0, Math.max(0, jobs.size - MAX_JOBS))) jobs.delete(old.id);
     return job;
@@ -178,65 +178,70 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
     .post("/", async c => {
       const input = body.parse(await c.req.json());
       const project = "project" in input && input.project !== undefined ? await registry.require(input.project) : undefined;
+      // The same request while it runs answers with that job: a second click, or a tab coming back, starts nothing.
+      const same = [...jobs.values()].find(job => job.status === "running" && JSON.stringify(job.input) === JSON.stringify(input));
+      if (same) return c.json(view(same));
       const local = project ? ["-l"] : [];
       const cwd = project ?? agentDir;
       const secrets = await knownSecrets(store, project ? registry.storeFor(project) : undefined);
       switch (input.action) {
         case "mcp-test": {
-          const job = create(input.action, "Test MCP connections", secrets);
+          const job = create(input, "Test MCP connections", secrets);
           runPi(job, ["mcp", "list", "--json"], cwd, (done, stdout) => {
             try { done.result = JSON.parse(stdout); } catch { /* the output explains */ }
           });
           return c.json(view(job));
         }
         case "mcp-login": case "mcp-logout": {
-          const job = create(input.action, `${input.action === "mcp-login" ? "Sign in to" : "Sign out of"} ${input.server}`, secrets);
+          const job = create(input, `${input.action === "mcp-login" ? "Sign in to" : "Sign out of"} ${input.server}`, secrets);
           runPi(job, input.action === "mcp-login" ? ["mcp", "login", input.server, "--timeout", "300"] : ["mcp", "logout", input.server], cwd);
           return c.json(view(job));
         }
         case "package-install": case "package-remove": {
-          const job = create(input.action, `${input.action === "package-install" ? "Install" : "Remove"} ${input.source}`, secrets);
+          const job = create(input, `${input.action === "package-install" ? "Install" : "Remove"} ${input.source}`, secrets);
           onPackageChange();
           runPi(job, [input.action === "package-install" ? "install" : "remove", input.source, ...local], cwd, onPackageChange);
           return c.json(view(job));
         }
         case "package-update": {
-          const job = create(input.action, `Update ${input.source}`, secrets);
+          const job = create(input, `Update ${input.source}`, secrets);
           onPackageChange();
           runPi(job, ["update", input.source], cwd, onPackageChange);
           return c.json(view(job));
         }
         case "packages-update": {
-          const job = create(input.action, "Update all packages", secrets);
+          const job = create(input, "Update all packages", secrets);
           onPackageChange();
           runPi(job, ["update", "--extensions"], cwd, onPackageChange);
           return c.json(view(job));
         }
         case "models-refresh": {
-          const job = create(input.action, "Refresh model catalogs", secrets);
+          const job = create(input, "Refresh model catalogs", secrets);
           runPi(job, ["update", "--models"], agentDir);
           return c.json(view(job));
         }
         case "provider-check": {
-          const job = create(input.action, `Check the credential of ${input.provider}`, secrets);
+          const job = create(input, `Check the credential of ${input.provider}`, secrets);
           runPi(job, ["auth", "check", "--provider", input.provider, "--json"], agentDir, (done, stdout) => {
             try { done.check = JSON.parse(stdout); } catch { /* the output explains */ }
           });
           return c.json(view(job));
         }
         case "pi-update": {
-          const job = create(input.action, "Update Pi", secrets);
+          const job = create(input, "Update Pi", secrets);
           runPi(job, ["update", "--self"], agentDir);
           return c.json(view(job));
         }
         case "provider-login": case "provider-setup": {
-          const job = create(input.action, `${input.action === "provider-login" ? "Sign in to" : "Set up"} ${input.provider}`, secrets);
+          const job = create(input, `${input.action === "provider-login" ? "Sign in to" : "Set up"} ${input.provider}`, secrets);
           try { await providerLogin(job, input.provider, input.action === "provider-login" ? "oauth" : "api_key"); }
           catch (error) { jobs.delete(job.id); throw error; }
           return c.json(view(job));
         }
       }
     })
+    /** Every job still known, newest first, without its output: a tab coming back finds its own here. */
+    .get("/", c => c.json([...jobs.values()].reverse().map((job): JobSummary => ({ id: job.id, status: job.status, input: redact(job.input, job.secrets) }))))
     .get("/:id", c => {
       const job = jobs.get(c.req.param("id"));
       return job ? c.json(view(job)) : c.json({ error: "This job is no longer known. Start it again." }, 404);
