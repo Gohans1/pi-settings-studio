@@ -7,33 +7,23 @@ import { Button } from "./components/ui/button";
 import { Spinner } from "./components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group";
 import { ToolList } from "./ToolList";
+import { useCached } from "./useCached";
 
 export function PluginTools({ path, project }: { path: string; project?: string }) {
-  const [view, setView] = useState<PluginToolsView>();
-  const [error, setError] = useState("");
-  const [attempt, setAttempt] = useState(0);
+  const { data: view, error, loading, refresh } = useCached<PluginToolsView>(`plugin-tools\0${project ?? ""}\0${path}`,
+    (signal, fresh) => loadPluginTools(path, project, signal, fresh));
   const [modelOnly, setModelOnly] = useState(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    setView(undefined); setError(""); setModelOnly(false);
-    loadPluginTools(path, project, controller.signal).then(result => {
-      if (!controller.signal.aborted) setView(result);
-    }).catch(cause => {
-      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Could not inspect tools.");
-    });
-    return () => controller.abort();
-  }, [path, project, attempt]);
-  const loading = !view && !error;
+  useEffect(() => setModelOnly(false), [path, project]);
   const declared = view?.tools.filter(tool => tool.visibility === "model") ?? [];
   const tools = modelOnly ? declared : view?.tools ?? [];
   return <section className="mt-6 grid gap-3" aria-label="Extension tools" aria-busy={loading}>
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h3>Tools</h3>
-      <Button variant="outline" size="sm" disabled={loading} onClick={() => setAttempt(value => value + 1)}><RefreshCw aria-hidden="true" data-icon="inline-start" />Refresh tools</Button>
+      <Button variant="outline" size="sm" disabled={loading} onClick={refresh}><RefreshCw aria-hidden="true" data-icon="inline-start" />Refresh tools</Button>
     </div>
     <p className="muted">{project ? "Global + selected project settings, trusted for inspection." : "Global settings only."} Startup preview, not a running thread.</p>
-    {loading && <p className="loading" role="status"><Spinner aria-hidden="true" />Loading tools with Pi…</p>}
-    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not inspect tools</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    {loading && <p className="loading" role="status"><Spinner aria-hidden="true" />{view ? "Checking for changes…" : "Loading tools with Pi…"}</p>}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>{view ? "Could not check again" : "Could not inspect tools"}</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {view && <>
       {!view.complete && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not verify all tools</AlertTitle>
         <AlertDescription><p>The list may be incomplete. Fix the extension or connection, then refresh.</p>

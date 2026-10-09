@@ -58,8 +58,8 @@ export const saveCodemode = (revision: string, patch: { preference?: string; mod
   request<CodemodeView>(withProject("/api/codemode", project), "PATCH", { revision, ...patch });
 export const saveMcpSettings = (revision: string, patch: { autoEnableCodemode: boolean | null }, target: McpTarget = GLOBAL) =>
   request<McpFileView>(mcpUrl(target, "/settings"), "PATCH", { revision, ...patch });
-export const loadSessions = () => request<SessionSummary[]>("/api/sessions");
-export const loadSystemPrompt = (id: string) => request<SystemPromptView>(`/api/sessions/${encodeURIComponent(id)}/system-prompt`);
+export const loadSessions = (signal?: AbortSignal) => request<SessionSummary[]>("/api/sessions", "GET", undefined, signal);
+export const loadSystemPrompt = (id: string, signal?: AbortSignal) => request<SystemPromptView>(`/api/sessions/${encodeURIComponent(id)}/system-prompt`, "GET", undefined, signal);
 export const loadSkills = (project?: string) => request<SkillsView>(withProject("/api/skills", project));
 export const saveSkills = (scope: Scope, revision: string, paths: string[], enabled: boolean, project?: string) =>
   request<SkillsView>(withProject("/api/skills", project), "PATCH", { scope, revision, paths, enabled });
@@ -68,9 +68,11 @@ export const loadRawSettings = (scope: Scope = "global", project?: string) => re
 export const saveRawSettings = (revision: string, text: string, scope: Scope = "global", project?: string) =>
   request<RawSettings>(withProject(`/api/settings/${scope}/raw`, project), "PUT", { revision, text });
 export const loadPlugins = (project?: string) => request<PluginsView>(withProject("/api/plugins", project));
-export const loadPluginTools = (path: string, project?: string, signal?: AbortSignal) =>
-  request<PluginToolsView>(withProject("/api/plugins/tools", project), "POST", { path }, signal);
-export const loadTools = (project?: string, signal?: AbortSignal) => request<ToolsView>(withProject("/api/tools", project), "POST", {}, signal);
+/** Tool inspections; `fresh` asks the server for a new one instead of the one it kept. */
+export const loadPluginTools = (path: string, project?: string, signal?: AbortSignal, fresh = false) =>
+  request<PluginToolsView>(withProject("/api/plugins/tools", project), "POST", { path, ...(fresh ? { fresh } : {}) }, signal);
+export const loadTools = (project?: string, signal?: AbortSignal, fresh = false) =>
+  request<ToolsView>(withProject("/api/tools", project), "POST", fresh ? { fresh } : {}, signal);
 export const checkPackageUpdates = (project?: string) => request<PackageUpdateCheck>(withProject("/api/plugins/updates", project), "POST", {});
 export const savePlugins = (scope: Scope, revision: string, items: { type: string; path: string }[], enabled: boolean, project?: string) =>
   request<PluginsView>(withProject("/api/plugins", project), "PATCH", { scope, revision, items, enabled });

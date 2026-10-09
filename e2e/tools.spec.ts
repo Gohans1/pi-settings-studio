@@ -112,6 +112,24 @@ test("the project picker applies the project's settings; at 320px the list and a
   await expect(row(page, /^What the model sees/)).toBeVisible();
 });
 
+test("returning to Tools shows the last result at once and checks again behind it; Refresh tools asks for a fresh one", async ({ page }) => {
+  await page.goto(server.url + "#tools");
+  await expect(pane(page).getByRole("region", { name: "tools.ts" })).toContainText("visible_tool");
+  let release!: () => void;
+  const hold = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/tools*", async route => { await hold; await route.continue(); });
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("tab", { name: "Tools" }).click();
+  await expect(pane(page).getByRole("region", { name: "tools.ts" })).toContainText("visible_tool");
+  await expect(page.getByRole("status").filter({ hasText: "Checking for changes" })).toBeVisible();
+  release();
+  await expect(page.getByText("Checking for changes")).toHaveCount(0);
+  await page.unroute("**/api/tools*");
+  const fresh = page.waitForRequest(request => request.url().includes("/api/tools") && request.postDataJSON()?.fresh === true);
+  await page.getByRole("button", { name: "Refresh tools", exact: true }).click();
+  await fresh;
+});
+
 test("a failed inspection says the list may be incomplete, and Refresh tools retries", async ({ page }) => {
   await writeFile(file, 'throw new Error("fixture cannot load"); export default () => {};');
   await page.goto(server.url + "#tools");

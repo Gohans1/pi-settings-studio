@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { CircleAlert, CircleCheck, CircleX, Eye, EyeOff, RefreshCw, TriangleAlert } from "lucide-react";
 import type { ToolsView } from "../shared/plugin-tools";
 import { loadTools } from "./api";
@@ -12,6 +12,7 @@ import { Disclosure } from "./Disclosure";
 import { PageHeader } from "./PageHeader";
 import { SearchField } from "./SearchField";
 import { FAMILY_ICON, REACH, SourceLine, SourceTag, TAB_NAMES, Tally, ToolRows } from "./ToolRows";
+import { useCached } from "./useCached";
 import { ListItem, Workbench } from "./Workbench";
 import { FAMILIES, REACHES, buildCatalog, bySource, isOff, type Catalog, type Source, type Tool } from "./tool-catalog";
 
@@ -117,25 +118,12 @@ function headline(source: Source, tools: Tool[], query: string) {
 }
 
 export function ToolsTab({ project }: { project?: string }) {
-  const [view, setView] = useState<ToolsView>();
-  const [error, setError] = useState("");
-  const [attempt, setAttempt] = useState(0);
+  const { data: view, error, loading, refresh } = useCached<ToolsView>(`tools\0${project ?? ""}`, (signal, fresh) => loadTools(project, signal, fresh));
   // Kept across refreshes: the chosen view or source, the narrow screen's pane and the search.
   const [chosen, setChosen] = useState<string>("sees");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  useEffect(() => {
-    const controller = new AbortController();
-    setView(undefined); setError("");
-    loadTools(project, controller.signal).then(result => {
-      if (!controller.signal.aborted) setView(result);
-    }).catch(cause => {
-      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Could not inspect tools.");
-    });
-    return () => controller.abort();
-  }, [project, attempt]);
   const catalog = useMemo(() => view && buildCatalog(view), [view]);
-  const loading = !view && !error;
   const words = query.trim();
 
   function workbench(catalog: Catalog) {
@@ -171,9 +159,9 @@ export function ToolsTab({ project }: { project?: string }) {
 
   return <>
     <PageHeader title="Tools" description="What a new session gives the model, and where each tool comes from: Pi, an extension or an MCP server. Read-only."
-      actions={<Button variant="outline" size="sm" disabled={loading} onClick={() => setAttempt(value => value + 1)}><RefreshCw aria-hidden="true" data-icon="inline-start" />Refresh tools</Button>} />
-    {loading && <p className="loading" role="status"><Spinner aria-hidden="true" />Loading tools with Pi…</p>}
-    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not inspect tools</AlertTitle><AlertDescription>{error} Try Refresh tools.</AlertDescription></Alert>}
+      actions={<Button variant="outline" size="sm" disabled={loading} onClick={refresh}><RefreshCw aria-hidden="true" data-icon="inline-start" />Refresh tools</Button>} />
+    {loading && <p className="loading" role="status"><Spinner aria-hidden="true" />{view ? "Checking for changes…" : "Loading tools with Pi…"}</p>}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>{view ? "Could not check again" : "Could not inspect tools"}</AlertTitle><AlertDescription>{error} Try Refresh tools.</AlertDescription></Alert>}
     {view && catalog && <>
       {!view.complete && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not verify all tools</AlertTitle>
         <AlertDescription><p>The list may be incomplete. Fix the extension or MCP server, then Refresh tools.</p>

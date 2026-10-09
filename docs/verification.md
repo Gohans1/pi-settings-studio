@@ -1,3 +1,27 @@
+# Verification — slow tabs keep their last result, 2026-10-09
+
+Scope: every load measured on a real agent folder (read-only GETs; 100 session files, 166 MB) and the two tool inspections. Slow: `/api/sessions` about 0.9 s on every visit to System prompt and again to open a session; Tools and an extension's tools start Pi, every extension and every MCP server each time. Every other GET answered in under 0.1 s and is unchanged.
+
+| Check | Result |
+|---|---|
+| `bun test` (`HOME` an empty folder) | 290 passed (44 files), up from 285: a second inspection reuses the kept result; a settings, extension-file or `mcp.json` change, or `fresh`, inspects again; an incomplete one is not kept; an extension's inspection likewise; a changed or new session file shows in the next listing |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run build` | Passed. JS 865.1 kB (gzip 263.4 kB) with the new sounds from main; the >500 kB chunk warning remains |
+| `bun run test:e2e` (same `HOME`) | 124 passed. New: returning to Tools, to an extension in Plugins and to System prompt shows the last result while the next request is held (`page.route`), with "Checking for changes…"; Refresh tools sends `fresh: true` |
+| Timing | `/api/sessions` 0.92 s, then 0.016 s while no session file changes; opening a session 0.04 s. Tools on a temporary folder with one MCP server: 587 ms, then 25 ms after a reload; on returning to the tab the list shows at once |
+
+RED/GREEN: the inspection tests failed on the missing reuse and the unknown `fresh` field, the three browser tests on the spinner shown while the request was held, then passed. The session listing is a speed change with no new behaviour: its test passed before the change, still passes, and fails with the folder stamp held constant.
+
+Decisions:
+- The cache key is what Pi reads, not a timer alone: settings and `mcp.json` revisions (both scopes), `auth.json`, the mtime of `mcp-auth.json` and of each enabled extension file, plus a ten-minute limit for what it cannot see (imported files, an MCP server's own tool list).
+- Pi creates `auth.json` on its first run, so a folder without one misses once; the test fixtures write `{}` as a folder in use has.
+- Session folders are stamped by their files' names, sizes and times; Pi's per-file reader is not exported, so a folder with one changed file is read again whole. Only the fields the app shows are kept, not every message's text.
+- Results are in memory only: a service restart starts cold.
+
+Manual: `agent-browser` in its own session on a temporary agent folder: Tools, then General, then Tools again showed the list at once; a reload answered from the kept inspection. The real `~/.pi` was read by the timing GETs only and not written.
+
+---
+
 # Verification — interaction sounds with cuelume, 2026-10-09
 
 Scope: cuelume 0.2.4 (latest on npm; MIT; no dependencies, no install scripts; the published JavaScript makes no request, reads no storage and runs no eval) plays the app's sounds. `Sound.tsx` maps each clicked control to a cue by its ARIA role and state, plays outcomes from the toast, error Alerts, refused forms and jobs, and holds the Sounds Toggle in the top bar (on by default, stored in `localStorage`).

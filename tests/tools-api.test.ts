@@ -26,12 +26,14 @@ async function fixture(t: import("node:test").TestContext, servers: Record<strin
   await writeFile(join(agent, "extensions", "tools.ts"), extension);
   await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProjectTrust: "always" }));
   await writeFile(join(agent, "mcp.json"), JSON.stringify({ mcpServers: servers }));
+  // Pi creates auth.json on its first run; agent folders in use have one.
+  await writeFile(join(agent, "auth.json"), "{}");
   const app = createApp({ store: new ConfigStore({ global: agent }), agentDir: agent, projects: [project], origins: [origin] });
-  const request = (scope?: string) => app.request(origin + "/api/tools" + (scope ? `?project=${encodeURIComponent(scope)}` : ""), {
-    method: "POST", headers: { host: new URL(origin).host, origin, "content-type": "application/json" }, body: "{}",
+  const request = (scope?: string, body: object = {}) => app.request(origin + "/api/tools" + (scope ? `?project=${encodeURIComponent(scope)}` : ""), {
+    method: "POST", headers: { host: new URL(origin).host, origin, "content-type": "application/json" }, body: JSON.stringify(body),
   });
-  async function inspect(scope?: string) {
-    const response = await request(scope);
+  async function inspect(scope?: string, body?: object) {
+    const response = await request(scope, body);
     assert.equal(response.status, 200, await response.clone().text());
     return response.json();
   }
@@ -93,6 +95,32 @@ test("a project's mcp.json can turn a global server off there", async t => {
   const view = await f.inspect(f.project);
   assert.equal(named(view, "mcp__echo_server__echo"), undefined);
   assert.deepEqual(view.idleSources.find((entry: { source: Record<string, string> }) => entry.source.server === "echo-server"), { source: { kind: "mcp", server: "echo-server" }, status: "off" });
+});
+
+test("a second inspection with nothing changed answers with the stored result", async t => {
+  const f = await fixture(t);
+  const first = await f.inspect();
+  assert.equal((await f.inspect()).checkedAt, first.checkedAt);
+});
+
+test("a change to what Pi reads, or asking for a fresh result, inspects again", async t => {
+  const f = await fixture(t);
+  await f.inspect();
+  await writeFile(join(f.agent, "settings.json"), JSON.stringify({ defaultProjectTrust: "always", defaultTools: ["+grep"] }));
+  assert.equal(named(await f.inspect(), "grep")?.visibility, "model");
+  await writeFile(join(f.agent, "extensions", "tools.ts"), extension.replace('tool("visible_tool");', 'tool("visible_tool"); tool("new_tool");'));
+  assert.ok(named(await f.inspect(), "new_tool"));
+  await writeFile(join(f.agent, "mcp.json"), JSON.stringify({ mcpServers: {} }));
+  const settled = await f.inspect();
+  assert.equal(named(settled, "mcp__echo_server__echo"), undefined);
+  assert.notEqual((await f.inspect(undefined, { fresh: true })).checkedAt, settled.checkedAt);
+});
+
+test("an incomplete inspection is not kept: the next request tries again", async t => {
+  const f = await fixture(t, { broken: { command: "/nonexistent/pi-settings-fixture-mcp" } });
+  const first = await f.inspect();
+  assert.equal(first.complete, false);
+  assert.notEqual((await f.inspect()).checkedAt, first.checkedAt);
 });
 
 test("only known projects can be inspected", async t => {

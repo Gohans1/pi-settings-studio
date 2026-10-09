@@ -55,3 +55,20 @@ test("shows the recorded system prompt of a chosen project and session", async (
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("You are Pi.\n\nRule two.");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("returning to System prompt shows the last prompt at once while it reads the sessions again", async ({ page }) => {
+  await page.goto(server.url + "#system-prompt");
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: projA, exact: true }).click();
+  await expect(page.getByRole("button", { name: "Copy full prompt" })).toBeVisible();
+  let release!: () => void;
+  const hold = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/sessions**", async route => { await hold; await route.continue(); });
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("tab", { name: "System prompt" }).click();
+  await expect(page.getByLabel("Session")).toContainText("Fix the login bug");
+  await expect(page.getByRole("button", { name: "Copy full prompt" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Checking for changes" })).toBeVisible();
+  release();
+  await expect(page.getByText("Checking for changes")).toHaveCount(0);
+});

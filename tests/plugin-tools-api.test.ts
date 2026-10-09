@@ -29,12 +29,14 @@ async function fixture(t: import("node:test").TestContext, source = extension) {
   await writeFile(path, source);
   const settings = join(agent, "settings.json");
   await writeFile(settings, JSON.stringify({ defaultProjectTrust: "always" }));
+  // Pi creates auth.json on its first run; agent folders in use have one.
+  await writeFile(join(agent, "auth.json"), "{}");
   const app = createApp({ store: new ConfigStore({ global: agent }), agentDir: agent, projects: [project], origins: [origin] });
-  const request = (target = path, scope?: string) => app.request(origin + "/api/plugins/tools" + (scope ? `?project=${encodeURIComponent(scope)}` : ""), {
-    method: "POST", headers: { host: new URL(origin).host, origin, "content-type": "application/json" }, body: JSON.stringify({ path: target }),
+  const request = (target = path, scope?: string, extra: object = {}) => app.request(origin + "/api/plugins/tools" + (scope ? `?project=${encodeURIComponent(scope)}` : ""), {
+    method: "POST", headers: { host: new URL(origin).host, origin, "content-type": "application/json" }, body: JSON.stringify({ path: target, ...extra }),
   });
-  async function inspect(target = path, scope?: string) {
-    const response = await request(target, scope);
+  async function inspect(target = path, scope?: string, extra?: object) {
+    const response = await request(target, scope, extra);
     assert.equal(response.status, 200, await response.clone().text());
     return response.json();
   }
@@ -61,6 +63,16 @@ test("project codemode-only hides direct declarations but keeps model-only tools
   assert.equal(project.tools.find((tool: { name: string }) => tool.name === "late_tool").visibility, "model");
   const global = await f.inspect();
   assert.equal(global.tools.find((tool: { name: string }) => tool.name === "visible_tool").visibility, "model");
+});
+
+test("an extension's inspection is kept until its file or the settings change, or a fresh one is asked for", async t => {
+  const f = await fixture(t);
+  const first = await f.inspect();
+  assert.equal((await f.inspect()).checkedAt, first.checkedAt);
+  await writeFile(f.path, extension.replace('tool("visible_tool");', 'tool("visible_tool"); tool("new_tool");'));
+  const edited = await f.inspect();
+  assert.ok(edited.tools.some((tool: { name: string }) => tool.name === "new_tool"));
+  assert.notEqual((await f.inspect(f.path, undefined, { fresh: true })).checkedAt, edited.checkedAt);
 });
 
 test("a disabled extension is inspected for its catalogue without enabling it in settings", async t => {

@@ -2,6 +2,10 @@
 
 Selecting an extension in Plugins automatically inspects it with the pinned Pi SDK (1.1.0). No extra project or session selector is needed. `None` uses global configuration only; a selected project adds its settings and extensions. Refresh tools starts a fresh inspection.
 
+## Kept results
+
+An inspection starts Pi, every enabled extension and every MCP server, so the server keeps a complete one in memory and answers the same request with it while nothing it read has changed: the global and project `settings.json` and `mcp.json`, `auth.json`, `mcp-auth.json` (MCP sign-in) and the extensions' own files, for ten minutes at most. Refresh tools sends `fresh: true` for a new one. An incomplete result is not kept, so the next visit tries again. Not noticed until Refresh tools or the age limit: a file an extension imports, and an MCP server whose tools change without a configuration change. The browser also keeps the last result per tab, extension and project, so returning shows it at once with "Checking for changes…" while it asks again.
+
 - **All tools** lists tools registered by that extension during loading and `session_start`, including dynamic registrations. It does not promise tools that may be created by later commands or turns.
 - **Model sees** counts direct model declarations at startup. Pi's `prepareLoadout` hidden declarations (including codemode-only mode) are excluded. Indirect tools may still appear inside codemode's description; they are labelled **Indirect only**, not unreachable.
 - Disabled extensions are loaded for their catalogue but every tool is labelled **Extension off**. No settings are changed to enable them.

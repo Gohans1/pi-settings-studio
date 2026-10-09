@@ -3,7 +3,7 @@
 // the resources; a toggle writes `+pattern`/`-pattern` to the settings array, or to the
 // package's own filter for package resources.
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 import { Hono } from "hono";
@@ -12,7 +12,7 @@ import { DefaultPackageManager, loadSkills, parseFrontmatter, ProjectTrustStore,
 import type { PackageUpdateCheck, PackageView, PluginsView, ResourceType, ResourceView, SkillsView } from "../shared/resources.ts";
 import type { ToolSource, ToolsView } from "../shared/plugin-tools.ts";
 import { isRecord, mcpNamespace, readMcpServers } from "./mcp-config.ts";
-import { ConfigError, type ConfigStore, type Scope } from "./store.ts";
+import { ConfigError, type ConfigStore, type DocumentName, type Scope } from "./store.ts";
 import type { ProjectRegistry } from "./projects.ts";
 import { runToolProbe, runToolsProbe } from "./plugin-tools.ts";
 import { knownSecrets, redact } from "./jobs.ts";
@@ -194,8 +194,39 @@ export function skillRoutes(store: ConfigStore, registry: ProjectRegistry, agent
     });
 }
 
+/** Complete tool inspections by what they read; memory only. */
+export type ProbeCache = Map<string, { stamp: string; at: number; result: unknown }>;
+const PROBE_MAX_AGE = 10 * 60_000;
+
+/**
+ * What an inspection reads besides the settings: the MCP and credential files and the extensions' own
+ * files. A file an extension imports, or a server whose tools change, waits for Refresh tools or the age limit.
+ */
+async function inspectionStamp(store: ConfigStore, projectStore: ConfigStore | undefined, agentDir: string, settings: (string | undefined)[], paths: string[]) {
+  const revision = (target: ConfigStore | undefined, scope: Scope, file: DocumentName) => target?.read(scope, file).then(document => document.revision, () => "unreadable");
+  const modified = (path: string) => stat(path).then(info => info.mtimeMs, () => 0);
+  return JSON.stringify([...settings, await revision(store, "global", "mcp.json"), await revision(projectStore, "project", "mcp.json"),
+    await revision(store, "global", "auth.json"), await modified(join(agentDir, "mcp-auth.json")),
+    ...await Promise.all(paths.map(async path => path.startsWith(BUILTIN_PREFIX) ? path : `${path}@${await modified(path)}`))]);
+}
+
+/** A complete inspection is reused while what it read is unchanged, for ten minutes at most; fresh asks for a new one. */
+async function stored<T extends { complete: boolean }>(cache: ProbeCache, key: string, stamp: string, fresh: boolean, run: () => Promise<T>): Promise<T> {
+  const kept = cache.get(key);
+  if (!fresh && kept?.stamp === stamp && Date.now() - kept.at < PROBE_MAX_AGE) return kept.result as T;
+  const result = await run();
+  cache.delete(key);
+  // An incomplete one (an extension or server failed) is tried again next time.
+  if (result.complete) {
+    if (cache.size >= 30) cache.delete(cache.keys().next().value!);
+    cache.set(key, { stamp, at: Date.now(), result });
+  }
+  return result;
+}
+
 /** A tool inspection's result, or its error, with known credentials hidden. */
-async function redacted<T>(secrets: string[], run: () => Promise<T>): Promise<T> {
+async function redacted<T>(known: string[] | Promise<string[]>, run: () => Promise<T>): Promise<T> {
+  const secrets = await known;
   try { return redact(await run(), secrets); } catch (error) {
     if (error instanceof ConfigError) throw new ConfigError(redact(error.message, secrets), error.status);
     throw error;
@@ -213,12 +244,12 @@ async function mcpServersOf(store: ConfigStore, projectStore?: ConfigStore): Pro
 }
 
 /** Every tool a new session registers, with the Pi feature, extension or MCP server it comes from, and the sources it takes none from. */
-export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
+export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, probes: ProbeCache = new Map()) {
   const context = resourceContext(store, registry, agentDir);
   return new Hono().post("/", async c => {
-    z.object({}).strict().parse(await c.req.json());
+    const { fresh } = z.object({ fresh: z.boolean().optional() }).strict().parse(await c.req.json());
     const project = c.req.query("project");
-    const { resolved, settings } = await context.resolve(project);
+    const { resolved, settings, revision, projectRevision } = await context.resolve(project);
     const projectStore = project ? registry.storeFor(project) : undefined;
     const extensions = new Map(await Promise.all(resolved.extensions.map(async item => [item.path, await describe("extensions", item, agentDir)] as const)));
     const servers = await mcpServersOf(store, projectStore);
@@ -231,10 +262,11 @@ export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentD
       if (extension) return { kind: "extension", name: extension.name, group: extension.group };
       return path.startsWith(BUILTIN_PREFIX) ? { kind: "pi" } : { kind: "extension", name: basename(path) };
     }
-    return c.json(await redacted(await knownSecrets(store, projectStore), async (): Promise<ToolsView> => {
+    const paths = resolved.extensions.filter(item => item.enabled).map(item => item.path);
+    const stamp = await inspectionStamp(store, projectStore, agentDir, [revision, projectRevision], paths);
+    return c.json(await stored(probes, `tools\0${project ?? ""}`, stamp, !!fresh, () => redacted(knownSecrets(store, projectStore), async (): Promise<ToolsView> => {
       const view = await runToolsProbe({
-        agentDir, cwd: project ?? agentDir, project: !!project,
-        paths: resolved.extensions.filter(item => item.enabled).map(item => item.path),
+        agentDir, cwd: project ?? agentDir, project: !!project, paths,
         globalSettings: settings.global, projectSettings: settings.project,
       }, c.req.raw.signal);
       const tools = view.tools.map(({ path, namespace, ...tool }) => ({ ...tool, source: sourceOf(path, namespace) }));
@@ -249,7 +281,7 @@ export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentD
         ...[...servers].flatMap(([server, on]) => idle({ kind: "mcp", server }, on)),
       ];
       return { ...view, tools, idleSources };
-    }));
+    })));
   });
 }
 
@@ -261,7 +293,7 @@ export type PackageUpdateCache = Map<string, {
   revision: string; projectRevision?: string; result?: PackageUpdateCheck; pending?: Promise<PackageUpdateCheck>;
 }>;
 
-export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, checks: PackageUpdateCache = new Map()) {
+export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, checks: PackageUpdateCache = new Map(), probes: ProbeCache = new Map()) {
   const context = resourceContext(store, registry, agentDir);
   async function view(project: string | undefined): Promise<PluginsView> {
     const { resolved, revision, projectRevision, manager, settings } = await context.resolve(project);
@@ -284,16 +316,17 @@ export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agen
     .get("/", async c => c.json(await view(c.req.query("project"))))
     .post("/tools", async c => {
       const project = c.req.query("project");
-      const { path } = z.object({ path: z.string().min(1).max(4096) }).strict().parse(await c.req.json());
-      const { resolved, settings } = await context.resolve(project);
+      const { path, fresh } = z.object({ path: z.string().min(1).max(4096), fresh: z.boolean().optional() }).strict().parse(await c.req.json());
+      const { resolved, settings, revision, projectRevision } = await context.resolve(project);
       const selected = resolved.extensions.find(item => item.path === path);
       if (!selected) throw new ConfigError("Choose an extension from the current project's plugin list.", 400);
-      const secrets = await knownSecrets(store, project ? registry.storeFor(project) : undefined);
-      return c.json(await redacted(secrets, () => runToolProbe({
-        agentDir, cwd: project ?? agentDir, project: !!project, path, enabled: selected.enabled,
-        paths: resolved.extensions.filter(item => item.enabled || item.path === path).map(item => item.path),
+      const projectStore = project ? registry.storeFor(project) : undefined;
+      const paths = resolved.extensions.filter(item => item.enabled || item.path === path).map(item => item.path);
+      const stamp = await inspectionStamp(store, projectStore, agentDir, [revision, projectRevision], paths);
+      return c.json(await stored(probes, `plugin\0${project ?? ""}\0${path}`, stamp, !!fresh, () => redacted(knownSecrets(store, projectStore), () => runToolProbe({
+        agentDir, cwd: project ?? agentDir, project: !!project, path, enabled: selected.enabled, paths,
         globalSettings: settings.global, projectSettings: settings.project,
-      }, c.req.raw.signal)));
+      }, c.req.raw.signal))));
     })
     .post("/updates", async c => {
       z.object({}).strict().parse(await c.req.json());
