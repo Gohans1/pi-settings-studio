@@ -8,6 +8,7 @@ import { Checkbox } from "./components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Spinner } from "./components/ui/spinner";
+import { ScrollArea } from "./components/ui/scroll-area";
 import { OptionSelect } from "./OptionSelect";
 import { useFieldErrors } from "./useFieldErrors";
 import { NamedRows } from "./McpServerForm";
@@ -107,13 +108,13 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
           <CardTitle id={id + "found-title"}>Models the endpoint offers</CardTitle>
           <CardDescription>Uses the stored key and headers only while the base URL is unchanged. A key that is a command is not run.</CardDescription>
         </CardHeader>
-        <CardContent>{found.length ? <ul className="found-models">{found.map(model => <li key={model.id}><Field orientation="horizontal" className="flex-wrap">
+        <CardContent>{found.length ? <ScrollArea className="flex max-h-80 flex-col"><ul className="found-models">{found.map(model => <li key={model.id}><Field orientation="horizontal" className="flex-wrap">
           <Checkbox id={`${id}found-${model.id}`} checked={known.has(model.id) || picked.has(model.id)} disabled={known.has(model.id)}
             onCheckedChange={checked => setPicked(current => { const next = new Set(current); if (checked) next.add(model.id); else next.delete(model.id); return next; })} />
           <FieldLabel htmlFor={`${id}found-${model.id}`} className="flex-wrap"><code>{model.id}</code>{model.name && <span className="muted">{model.name}</span>}
             {model.contextWindow && <span className="muted">{model.contextWindow.toLocaleString("en")} context</span>}
             {known.has(model.id) && <span className="muted">in the list</span>}</FieldLabel>
-        </Field></li>)}</ul> : <p className="muted">The endpoint lists no models.</p>}</CardContent>
+        </Field></li>)}</ul></ScrollArea> : <p className="muted">The endpoint lists no models.</p>}</CardContent>
         <CardFooter><div className="actions">
           <Button type="button" size="sm" disabled={!picked.size} onClick={() => {
             setModels(rows => [...rows.filter(row => row.id.trim()), ...found.filter(model => picked.has(model.id)).map(toRow)]);

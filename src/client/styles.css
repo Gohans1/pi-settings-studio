@@ -142,9 +142,12 @@
 
   /* Workbench: a list and the chosen item's details, side by side; each pane scrolls on its own. */
   .workbench { flex: 1 1 0; min-height: 28rem; display: grid; grid-template-columns: var(--list-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); border: 1px solid var(--border); border-radius: var(--radius-frame); overflow: hidden; }
-  .workbench-list { overflow: auto; overscroll-behavior: contain; padding: --spacing(2) --spacing(2) --spacing(4); background: var(--sidebar); border-inline-end: 1px solid var(--border); }
-  .workbench-detail { overflow: auto; overscroll-behavior: contain; padding: --spacing(5) --spacing(7) 0; }
-  .workbench-detail > :last-child { padding-bottom: --spacing(7); }
+  /* Each pane scrolls in a shadcn ScrollArea that fills it. */
+  .workbench-list { min-height: 0; background: var(--sidebar); border-inline-end: 1px solid var(--border); }
+  .workbench-detail { min-height: 0; }
+  .workbench-list-content { padding: --spacing(2) --spacing(2) --spacing(4); }
+  .workbench-detail-content { padding: --spacing(5) --spacing(7) 0; }
+  .workbench-detail-content > :last-child { padding-bottom: --spacing(7); }
   .list-search { position: sticky; top: calc(--spacing(2) * -1); z-index: 1; margin: calc(--spacing(2) * -1) calc(--spacing(2) * -1) 0; padding: --spacing(2); background: var(--sidebar); }
   .list-count { margin: 0; padding: --spacing(2) --spacing(2) 0; padding-inline-start: --spacing(2.5); color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
   /* A group's name leads its rows: body size, semibold, the body colour; rows are regular weight (ListItem). */
@@ -192,9 +195,10 @@
   .oauth-fields { display: grid; gap: --spacing(3); }
   .switch-row { display: flex; gap: --spacing(3); align-items: center; font-weight: var(--font-weight-normal); }
 
-  /* File contents, prompts and logs. */
-  :is(.log-tail, .prompt pre, .prompt-preview pre, .job-body pre) { font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
-  .log-tail { margin: 0; padding: --spacing(3); max-height: 32rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--muted); border-radius: var(--radius); }
+  /* File contents, prompts, logs and job output; each scrolls in a shadcn ScrollArea of a set maximum height. */
+  :is(.log-tail, .prompt, .prompt-preview, .job-body) pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
+  .log-tail { overflow: hidden; background: var(--muted); border-radius: var(--radius); }
+  .log-tail pre { padding: --spacing(3); }
   .resource-editor, .instruction, .raw-editor { display: grid; gap: --spacing(3); }
   :is(.resource-editor, .instruction, .raw-editor) h2 { margin: 0; }
   .resource-editor .file-list { display: flex; flex-wrap: wrap; gap: --spacing(1); }
@@ -217,7 +221,7 @@
   .detail > .remove-credential { margin-top: --spacing(4); }
   .model-rows { display: grid; gap: --spacing(2); }
   .model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); align-items: center; }
-  .found-models { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); max-height: 20rem; overflow: auto; }
+  .found-models { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); }
   .pattern-add { display: flex; gap: --spacing(2); }
   .model-map-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: --spacing(1.5); width: 100%; }
 
@@ -230,7 +234,6 @@
   /* Jobs that run Pi: what runs, its state, its questions and its output. */
   .job-body { display: grid; gap: --spacing(2); }
   .job-body p { margin: 0; }
-  .job-body pre { margin: 0; max-height: 20rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .job-prompt { display: grid; gap: --spacing(2); }
   .job-results { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); }
   .job-results li { display: flex; flex-wrap: wrap; gap: --spacing(1) --spacing(3); }
@@ -253,7 +256,6 @@
   .folder-block-title { color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-semibold); }
   .add-path { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2); }
   /* Sub-agents and resources. */
-  .prompt-preview pre { margin: --spacing(1) 0 0; max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .plain-list { list-style: none; margin: 0; padding: --spacing(1) --spacing(2); display: grid; gap: --spacing(1); }
   .list-note { margin: 0; padding: --spacing(1) --spacing(2.5); }
 
@@ -261,7 +263,6 @@
   .prompt { display: grid; gap: --spacing(2); }
   .prompt-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); padding-bottom: --spacing(1); color: var(--muted-foreground); font-size: var(--text-small); font-variant-numeric: tabular-nums; }
   .prompt [data-slot=accordion-trigger] .muted { margin-inline-start: --spacing(1); font-weight: var(--font-weight-normal); font-variant-numeric: tabular-nums; }
-  .prompt pre { margin: 0; max-height: 30rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .tool-list { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(2); }
   .tool-list li { display: grid; gap: --spacing(0.5); }
 
@@ -309,7 +310,10 @@
 @media (width < 56rem) {
   :root { --gutter: --spacing(5); }
   .workbench { display: block; flex: none; min-height: 0; border: 0; overflow: visible; }
-  .workbench-list, .workbench-detail { overflow: visible; padding: 0; background: none; border: 0; }
+  .workbench-list, .workbench-detail { background: none; border: 0; }
+  .workbench-list-content, .workbench-detail-content { padding: 0; }
+  /* The page scrolls here, not the pane: the ScrollArea gives up its boxes, so sticky save rows follow the page. */
+  .workbench :is([data-slot=scroll-area], [data-slot=scroll-area-viewport]) { display: contents; }
   .workbench[data-open] .workbench-list, .workbench:not([data-open]) .workbench-detail { display: none; }
   .list-search { position: static; margin: 0 0 --spacing(2); padding: 0; }
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: --spacing(4); }

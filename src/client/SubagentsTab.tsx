@@ -11,6 +11,7 @@ import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Spinner } from "./components/ui/spinner";
 import { ItemGroup } from "./components/ui/item";
+import { ScrollArea } from "./components/ui/scroll-area";
 import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -76,7 +77,7 @@ function AgentDetail({ agent, busy, onEdit, onRemove }: { agent: AgentView; busy
       {agent.extraKeys.length > 0 && <div><dt>Other keys</dt><dd className="flex flex-wrap items-center gap-1.5">{agent.extraKeys.map(key => <Badge key={key} variant="outline" render={<code />}>{key}</Badge>)}<span className="muted">kept as they are</span></dd></div>}
       <div><dt>File</dt><dd><code>{agent.file}</code><span className="muted"> · {agent.scope === "project" ? "this project's .pi/agents" : "global"}</span></dd></div>
     </dl>
-    <div className="prompt-preview"><Disclosure label="System prompt"><pre>{agent.prompt || "(empty)"}</pre></Disclosure></div>
+    <div className="prompt-preview"><Disclosure label="System prompt"><ScrollArea className="mt-1 flex max-h-96 flex-col"><pre>{agent.prompt || "(empty)"}</pre></ScrollArea></Disclosure></div>
   </section>;
 }
 
