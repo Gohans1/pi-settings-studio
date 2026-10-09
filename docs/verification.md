@@ -1,3 +1,16 @@
+# Verification — ScrollArea scrollbars under the app's CSP, 2026-10-09
+
+Found while adding sounds: Base UI hides a ScrollArea viewport's native scrollbar with a `<style>` element it injects, and the app's Content-Security-Policy (`style-src 'self'`) blocks it. Where scrollbars are classic, as in Chrome and Edge on Windows, every pane showed a 15 px native scrollbar, horizontal too, beside shadcn's thumb. Headless browsers draw overlay scrollbars, which hid it from the earlier checks.
+
+Fix, as Base UI's CSP Provider docs describe: `<CSPProvider disableStyleElements>` around the app (`main.tsx`) and Base UI's `.base-ui-disable-scrollbar` rule in `styles.css`.
+
+| Check | Result |
+|---|---|
+| New e2e | Every viewport has `scrollbar-width: none` and the page logs no CSP violation: failed first (`auto`), then passed |
+| Manual (`agent-browser --hide-scrollbars false`, classic scrollbars) | Native scrollbar 15 px before, 0 px after |
+
+---
+
 # Verification — Tools as a workbench, 2026-10-09
 
 Scope: the Tools tab rebuilt as the variant the user chose after two rounds behind a `?variant=` picker (round 1: Lanes, Sources, Ledger, Split, Focus; round 2 around Split: Pair, Trio, Overview; chosen: Pair). `/api/tools` adds `idleSources`. The harness and its branch were deleted.

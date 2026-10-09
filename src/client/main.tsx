@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { CSPProvider } from "@base-ui/react/csp-provider";
 import { App } from "./App";
 import "./styles.css";
 
@@ -17,4 +18,5 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   requestAnimationFrame(() => requestAnimationFrame(() => delete root.dataset.themeSwitch));
 });
 
-createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
+// The server's CSP allows no inline <style>: Base UI's scrollbar rule lives in styles.css instead.
+createRoot(document.getElementById("root")!).render(<StrictMode><CSPProvider disableStyleElements><App /></CSPProvider></StrictMode>);
