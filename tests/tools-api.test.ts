@@ -71,6 +71,30 @@ test("the chosen project's settings decide what a session there starts with; glo
   assert.equal(named(await f.inspect(), "grep")?.visibility, "inactive");
 });
 
+test("sources Pi takes no tools from are listed: turned off in settings, or on without any", async t => {
+  const f = await fixture(t, { "echo-server": { command: "bun", args: [ECHO] }, "off-server": { command: "bun", args: [ECHO], enabled: false } });
+  await writeFile(join(f.agent, "extensions", "quiet.ts"), "export default () => {};");
+  await writeFile(join(f.agent, "extensions", "off.ts"), extension);
+  await writeFile(join(f.agent, "settings.json"), JSON.stringify({ defaultProjectTrust: "always", extensions: ["-extensions/off.ts"] }));
+  const view = await f.inspect();
+  const idle = (name: string) => view.idleSources.find((entry: { source: Record<string, string> }) => (entry.source.name ?? entry.source.server) === name);
+  assert.equal(idle("off.ts")?.status, "off");
+  assert.equal(idle("quiet.ts")?.status, "empty");
+  assert.deepEqual(idle("off-server"), { source: { kind: "mcp", server: "off-server" }, status: "off" });
+  // Sources that gave tools are not idle, and the MCP extension's tools belong to their servers.
+  assert.equal(idle("tools.ts"), undefined);
+  assert.equal(idle("echo-server"), undefined);
+  assert.equal(idle("mcp"), undefined);
+});
+
+test("a project's mcp.json can turn a global server off there", async t => {
+  const f = await fixture(t);
+  await writeFile(join(f.project, ".pi", "mcp.json"), JSON.stringify({ mcpServers: { "echo-server": { enabled: false } } }));
+  const view = await f.inspect(f.project);
+  assert.equal(named(view, "mcp__echo_server__echo"), undefined);
+  assert.deepEqual(view.idleSources.find((entry: { source: Record<string, string> }) => entry.source.server === "echo-server"), { source: { kind: "mcp", server: "echo-server" }, status: "off" });
+});
+
 test("only known projects can be inspected", async t => {
   const f = await fixture(t);
   assert.equal((await f.request(join(f.root, "unknown"))).status, 400);

@@ -17,4 +17,8 @@ export type SessionTools = z.infer<typeof sessionToolsSchema>;
 
 /** Where a tool comes from: Pi itself, an extension (built-in ones included), or an MCP server. */
 export type ToolSource = { kind: "pi" } | { kind: "extension"; name: string; group?: string } | { kind: "mcp"; server: string };
-export type ToolsView = Omit<SessionTools, "tools"> & { tools: (PluginToolsView["tools"][number] & { source: ToolSource })[] };
+export type ToolsView = Omit<SessionTools, "tools"> & {
+  tools: (PluginToolsView["tools"][number] & { source: ToolSource })[];
+  /** Sources a new session takes no tools from: turned off in settings, or on and registering none. */
+  idleSources: { source: ToolSource; status: "off" | "empty" }[];
+};
