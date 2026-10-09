@@ -93,7 +93,8 @@
   h2 { font-size: var(--text-heading); font-weight: var(--font-weight-semibold); line-height: var(--leading-snug); text-wrap: balance; }
   h3 { font-size: var(--text-body); font-weight: var(--font-weight-semibold); }
   p { text-wrap: pretty; }
-  a { color: var(--primary); text-underline-offset: 0.2em; text-decoration-thickness: from-font; }
+  /* Links in running text; a link styled with classes (buttonVariants, the skip link) brings its own colour. */
+  a:not([class]) { color: var(--primary); text-underline-offset: 0.2em; text-decoration-thickness: from-font; }
   code { font-size: var(--text-caption); overflow-wrap: anywhere; }
   svg { flex-shrink: 0; }
   /* Tailwind 4 gives buttons the default cursor; shadcn's pointer option brings the hand back. */
@@ -269,9 +270,6 @@
   /* General: a section index beside the settings; the save bar follows the edits. */
   .settings-layout { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: --spacing(10); align-items: start; }
   .section-nav { position: sticky; top: 0; display: grid; gap: --spacing(0.25); padding-top: --spacing(1); }
-  .section-nav a { position: relative; display: flex; align-items: center; justify-content: space-between; gap: --spacing(2); padding: --spacing(1.5) --spacing(2.5); border-radius: var(--radius-md); color: var(--muted-foreground); font-size: var(--text-small); text-decoration: none; }
-  @media (hover: hover) { .section-nav a:hover { background: var(--secondary); color: var(--foreground); } }
-  .section-nav a[aria-current=true] { background: var(--selected); color: var(--foreground); }
   .nav-count { color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
   .nav-dot { flex: none; width: --spacing(1.5); height: --spacing(1.5); border-radius: calc(infinity * 1px); background: var(--primary); }
   .settings-content { min-width: 0; }
@@ -318,9 +316,9 @@
   .list-search { position: static; margin: 0 0 --spacing(2); padding: 0; }
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: --spacing(4); }
   /* One scrolling row of groups; the faded edge says there are more. */
-  .section-nav { position: static; display: flex; gap: --spacing(1); padding: 0 var(--gutter); margin-inline: calc(var(--gutter) * -1); overflow-x: auto; scrollbar-width: none;
+  /* Relative, so the links' visually hidden counts stay inside this scroller. */
+  .section-nav { position: relative; display: flex; gap: --spacing(1); padding: 0 var(--gutter); margin-inline: calc(var(--gutter) * -1); overflow-x: auto; scrollbar-width: none;
     mask-image: linear-gradient(to right, transparent, black --spacing(4), black calc(100% - --spacing(4)), transparent); }
-  .section-nav a { flex: none; white-space: nowrap; padding: --spacing(1) --spacing(2.5); background: var(--secondary); border-radius: calc(infinity * 1px); }
 }
 @media (width < 40rem) {
   :root { --gutter: --spacing(4); }
