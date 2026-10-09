@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { Hono } from "hono";
@@ -8,6 +8,8 @@ import type { SessionSummary, SystemPromptView } from "../shared/sessions.ts";
 import { isRecord } from "./mcp-config.ts";
 
 type SessionInfo = Awaited<ReturnType<typeof SessionManager.listAll>>[number];
+/** What the app reads of a session; Pi's listing also carries every message's text. */
+type Listed = Pick<SessionInfo, "path" | "id" | "cwd" | "name" | "firstMessage" | "modified" | "messageCount">;
 
 const settingsOf = async (path: string): Promise<Record<string, unknown>> => {
   try { const value = JSON.parse(await readFile(path, "utf8")); return isRecord(value) ? value : {}; } catch { return {}; }
@@ -16,8 +18,26 @@ const settingsOf = async (path: string): Promise<Record<string, unknown>> => {
 const expand = (value: string) => value === "~" ? homedir() : value.startsWith("~/") ? join(homedir(), value.slice(2)) : value;
 const sessionDirOf = (value: unknown, cwd: string) => typeof value === "string" && value ? resolve(cwd, expand(value)) : undefined;
 
+/** The names, sizes and times of a folder's session files: any write to a session changes it. */
+async function stampOf(dir: string) {
+  try {
+    const files = (await readdir(dir)).filter(file => file.endsWith(".jsonl")).sort();
+    return (await Promise.all(files.map(file => stat(join(dir, file)).then(info => `${file}:${info.size}:${info.mtimeMs}`, () => file)))).join("|");
+  } catch { return ""; }
+}
+
+/** Pi reads every session file to list a folder, so a folder whose files have not changed keeps its listing. */
+const listings = new Map<string, { stamp: string; sessions: Listed[] }>();
+
 /** Sessions of one flat directory, as Pi writes them into a custom sessionDir. */
-const flat = (dir: string) => SessionManager.listAll(dir).catch(() => [] as SessionInfo[]);
+async function flat(dir: string): Promise<Listed[]> {
+  const stamp = await stampOf(dir), kept = listings.get(dir);
+  if (kept?.stamp === stamp) return kept.sessions;
+  const sessions = (await SessionManager.listAll(dir).catch(() => [] as SessionInfo[]))
+    .map(({ path, id, cwd, name, firstMessage, modified, messageCount }) => ({ path, id, cwd, name, firstMessage, modified, messageCount }));
+  listings.set(dir, { stamp, sessions });
+  return sessions;
+}
 
 /**
  * Pi keeps sessions in <agentDir>/sessions/<one folder per cwd>, or flat in the sessionDir setting

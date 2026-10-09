@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { appendFile, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ConfigStore } from "../src/server/store.ts";
@@ -34,8 +34,20 @@ async function fixture(t: import("node:test").TestContext) {
     { type: "message", id: "f1", parentId: null, timestamp: "2026-10-02T10:00:01.000Z", message: { role: "user", content: "Second project", timestamp: Date.parse("2026-10-02T10:00:01.000Z") } },
   ));
   const app = createApp({ store: new ConfigStore({ global: agent, project: join(root, "p", ".pi") }), agentDir: agent, origins: [origin] });
-  return (path: string) => app.request(new Request(origin + path, { headers: { host: new URL(origin).host } }));
+  const request = (path: string) => app.request(new Request(origin + path, { headers: { host: new URL(origin).host } }));
+  return Object.assign(request, { fileA, dirB });
 }
+
+test("a session that changed since the last listing shows its new state, and a new one appears", async (t) => {
+  const request = await fixture(t);
+  const count = async () => Object.fromEntries((await (await request("/api/sessions")).json()).map((s: { id: string; messageCount: number }) => [s.id, s.messageCount]));
+  const before = await count();
+  await appendFile(request.fileA, lines({ type: "message", id: "e4", parentId: "e3", timestamp: at(4), message: { role: "user", content: "Again", timestamp: Date.parse(at(4)) } }));
+  await writeFile(join(request.dirB, "2026-10-03T10-00-00-000Z_cccc.jsonl"), lines({ type: "session", version: 3, id: "cccc", timestamp: "2026-10-03T10:00:00.000Z", cwd: "/tmp/proj-b" }));
+  const after = await count();
+  assert.equal(after.aaaa, before.aaaa + 1);
+  assert.equal(after.cccc, 0);
+});
 
 test("sessions are listed by latest activity with their project, without message text", async (t) => {
   const request = await fixture(t);
