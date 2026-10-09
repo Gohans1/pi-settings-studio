@@ -1,3 +1,26 @@
+# Verification — suggested free text in a list like the selects, 2026-10-09
+
+Scope: the five free-text fields with suggestions (Default provider and model, the Enabled models pattern, the model rows of the per-model maps in Defaults and General, an MCP server's Pi provider) leave the browser's `datalist`, whose list the browser draws outside the page and its styles, for `SuggestInput`: shadcn's Combobox, added with `shadcn add combobox` and unchanged, on Base UI's Autocomplete root. In Base UI 1.8.0 every Autocomplete part but the root is the Combobox part (`autocomplete/index.parts`), and the root is the Combobox root with `selectionMode: "none"`, so the shipped parts keep whatever is typed. A click lists every suggestion, as the selects do; typing narrows by ID or name; providers are grouped Set up, then Not set up; each suggestion shows its name beside its ID. This replaces the datalist kept in the two entries below that name it (docs-mcp `base-ui`: Autocomplete, Combobox; `shadcn-ui`: Combobox; `shadcn search`: no autocomplete in @shadcn; @coss/autocomplete brings its own input and scroll area).
+
+| Check | Result |
+|---|---|
+| `shadcn add combobox --dry-run --diff` | No changed line |
+| `bun test` (`HOME` an empty folder) | 337 passed (48 files), unchanged |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 142 passed. New: the default provider list (below its field, Set up first, a choice fills the ID, opened again it lists every provider, typing narrows, a name it lacks is kept with a note, axe), an Enabled models pattern picked with the arrow keys (Enter fills the highlighted suggestion, Enter again adds it). Rewritten to pick from the list: defaults saved from the catalog, a default outside Enabled models, per-model thinking, an MCP server's Pi provider |
+| RED/GREEN | 6 failed on the datalist client (no listbox; Enter added the typed text), then passed |
+
+Found:
+- While the list is open, Base UI's focus manager hides the rest of the page from assistive technology (`ComboboxPopup` manages focus modally when the input is outside the popup). Tests that go on to another control press Tab first, as a keyboard reader would. Escape closes the list; a second Escape, with the list closed, clears the field (Base UI's input).
+- Base UI names the trigger from its own Field or Combobox label; shadcn's FieldLabel is a plain label, so ComboboxInput's trigger had no name (axe button-name, critical). `SuggestInput` builds ComboboxInput's row from the same parts with an `aria-label`. ComboboxInput's `data-pressed:bg-transparent` is not repeated: `@shadcn/lint` no-restyle refuses it outside `components/ui`, so the open trigger keeps the ghost button's pressed shade.
+- Base UI fixes a controlled or uncontrolled `open` on the first render: fields whose suggestions arrive later stayed closed until `open` was always controlled.
+- General focused an invalid field through `[data-slot=input]`; an InputGroup's input is `input-group-control`.
+
+Manual: `agent-browser` in its own session on a temporary agent folder, 1280×800 dark, after the T3 preview host disconnected: the provider list, a provider's models next to the Thinking level select, a pattern narrowed to Haiku; no console errors. Before: the running service in light, navigation only, nothing saved: the datalist's arrow (its list is drawn outside the page and is not in a screenshot). The real `~/.pi` was not written.
+
+---
+
 # Verification — General as a workbench, with each setting's real default, 2026-10-09
 
 Scope: General's layout and what its rows say, chosen from a variant round (Rows, Panels, Sheet in a throwaway Vite harness on the real data, read-only; Rows chosen, harness deleted). The list holds Pi, the nine groups, Keyboard shortcuts and Not editable here; the detail shows one group, its advanced rows under their own heading. Every row says Default or Custom; Use default only where the value differs. Defaults the control cannot show are named: Pi's own `getShellConfig` and `SettingsManager` resolve the shell and external editor on the server, the session folder follows the agent folder, the provider timeout follows the HTTP idle timeout, thinking budgets carry pi-ai's `DEFAULT_THINKING_BUDGETS`. Saving follows VS Code (`settingsEditor2.ts` `updateChangedSetting`): in the global file a value equal to Pi's default removes the key; a project file keeps it; untouched keys stay, even when they repeat a default.
