@@ -27,6 +27,34 @@ test("on a wide screen the provider list scrolls on its own and keeps its search
   expect(await page.locator("main").evaluate(element => element.scrollTop)).toBe(0);
 });
 
+test("a select drops its options beside its field, never over it, whichever option is chosen", async ({ page }) => {
+  // Measured once the list has opened and settled; a list that covers its field never passes.
+  const clear = async (field: import("@playwright/test").Locator) => {
+    await expect(page.getByRole("listbox")).toHaveCount(1);
+    await expect.poll(async () => {
+      const trigger = (await field.boundingBox())!;
+      const list = (await page.getByRole("listbox").boundingBox())!;
+      return list.y >= trigger.y + trigger.height || list.y + list.height <= trigger.y;
+    }).toBe(true);
+  };
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const thinking = page.getByRole("region", { name: "Defaults" }).getByRole("combobox", { name: "Thinking level" });
+  await thinking.click();
+  await clear(thinking);
+  await page.getByRole("option", { name: "high", exact: true }).click();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await thinking.click();
+  await clear(thinking);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await page.getByRole("button", { name: "Add custom provider" }).click();
+  const api = page.getByRole("form", { name: "Add custom provider" }).getByRole("combobox", { name: "API", exact: true });
+  await api.click();
+  await clear(api);
+});
+
 test("API keys are stored, removed and restored without ever being shown", async ({ page }) => {
   const auth = async () => JSON.parse(await readFile(join(agent, "auth.json"), "utf8"));
   await page.goto(server.url + "#models");

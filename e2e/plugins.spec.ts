@@ -53,6 +53,8 @@ test("a package's resource filters are edited in settings.json", async ({ page }
   const form = page.getByRole("form", { name: "Filters for ./pkgs/my-pack" });
   await form.getByRole("combobox", { name: "Extensions", exact: true }).click();
   await page.getByRole("option", { name: "Only these patterns", exact: true }).click();
+  // A closing list fades out for 100 ms; wait for it before opening the next one.
+  await expect(page.getByRole("listbox")).toHaveCount(0);
   await form.getByLabel("Extension patterns").fill("extensions/*.ts\n!extensions/legacy.ts");
   await form.getByRole("combobox", { name: "Prompts", exact: true }).click();
   await page.getByRole("option", { name: "None", exact: true }).click();
@@ -62,6 +64,7 @@ test("a package's resource filters are edited in settings.json", async ({ page }
   await page.getByRole("button", { name: "Filters for ./pkgs/my-pack" }).click();
   await form.getByRole("combobox", { name: "Extensions", exact: true }).click();
   await page.getByRole("option", { name: "Everything the package allows", exact: true }).click();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
   await form.getByRole("combobox", { name: "Prompts", exact: true }).click();
   await page.getByRole("option", { name: "Everything the package allows", exact: true }).click();
   await form.getByRole("button", { name: "Save filters" }).click();
