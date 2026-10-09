@@ -23,9 +23,9 @@ const misses = {
   "no-match": "No model matches",
 };
 
-/** A value Pi may not accept: the icon carries the tone. */
+/** A value Pi may not accept: a note under its field, which describes the field. The Alert sizes its icon. */
 function Warning({ id, children }: { id: string; children: React.ReactNode }) {
-  return <FieldDescription id={id}><TriangleAlert aria-hidden="true" className="me-1.5 inline size-4 align-text-bottom text-warning" />{children}</FieldDescription>;
+  return <Alert role="note" id={id}><TriangleAlert aria-hidden="true" /><AlertDescription>{children}</AlertDescription></Alert>;
 }
 
 /** enabledModels as rows: what each pattern selects among the providers that are set up, and an adder. */
