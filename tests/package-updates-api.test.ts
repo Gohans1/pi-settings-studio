@@ -51,6 +51,21 @@ test("checking uses Pi's npm update rules only on request, stores scoped notices
   await assert.rejects(access(join(root, "executed")));
 });
 
+test("a check in progress shows in the plugins view, and asking again joins it", async t => {
+  const { registry, plugins, check } = await fixture(t);
+  const release = registry.hold();
+  const first = check();
+  for (let i = 0; i < 100 && !registry.requests.length; i++) await Bun.sleep(50);
+  assert.equal((await plugins()).updateChecking, true);
+  const again = check();
+  release();
+  const [a, b] = await Promise.all([(await first).json(), (await again).json()]);
+  assert.equal(b.checkedAt, a.checkedAt);
+  const after = await plugins();
+  assert.equal(after.updateChecking, undefined);
+  assert.equal(after.updateCheck.checkedAt, a.checkedAt);
+});
+
 test("rechecking replaces notices, and a changed settings revision invalidates previous results", async t => {
   const { agent, registry, plugins, check } = await fixture(t);
   assert.equal((await (await check()).json()).updates.length, 1);

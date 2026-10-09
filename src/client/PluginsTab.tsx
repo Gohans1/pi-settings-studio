@@ -102,6 +102,9 @@ export function PluginsTab({ project }: { project?: string }) {
     }
   }
 
+  // A check started before the reader left still runs on the server: join it, so its progress and result show here.
+  useEffect(() => { if (view?.updateChecking && !checking) void checkUpdates(); }, [view?.updateChecking]);
+
   async function toggle(items: ResourceView[], enabled: boolean, label = items[0]?.name) {
     if (!view || !items.length) return;
     setBusy(true); setError(""); setMessage("");

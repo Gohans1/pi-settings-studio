@@ -292,8 +292,9 @@ export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agen
       });
     });
     const cached = checks.get(project ?? "");
-    const updateCheck = cached?.revision === revision && cached.projectRevision === projectRevision ? cached.result : undefined;
-    return { revision, ...(projectRevision ? { projectRevision } : {}), resources, packages, ...(updateCheck ? { updateCheck } : {}) };
+    const current = cached?.revision === revision && cached.projectRevision === projectRevision ? cached : undefined;
+    return { revision, ...(projectRevision ? { projectRevision } : {}), resources, packages,
+      ...(current?.result ? { updateCheck: current.result } : {}), ...(current?.pending ? { updateChecking: true as const } : {}) };
   }
   return new Hono()
     .get("/", async c => c.json(await view(c.req.query("project"))))
