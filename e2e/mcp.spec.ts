@@ -120,6 +120,16 @@ test("a long form in the detail pane keeps its save row in view on a wide screen
   expect(await page.locator("main").evaluate(element => element.scrollTop)).toBe(0);
 });
 
+test("on a narrow screen the page scrolls the form, and its save row stays in view", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "Add server", exact: true }).click();
+  const form = page.getByRole("form", { name: "Add MCP server" });
+  await form.getByLabel("Timeout (seconds)").scrollIntoViewIfNeeded();
+  expect(await page.locator("main").evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+  await expect(form.getByRole("button", { name: "Save server" })).toBeInViewport();
+});
+
 test("add a server, edit it without seeing its secret, remove it and undo", async ({ page }) => {
   await page.goto(server.url + "#mcp");
   const readServers = async () => JSON.parse(await readFile(file, "utf8")).mcpServers;
