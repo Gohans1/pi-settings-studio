@@ -7,6 +7,10 @@ Selecting an extension in Plugins automatically inspects it with the pinned Pi S
 - Disabled extensions are loaded for their catalogue but every tool is labelled **Extension off**. No settings are changed to enable them.
 - Failures display an incomplete/unverified result, never a successful empty catalogue. The refresh action retries. Inspection times out after 30 seconds; changing selection cancels the client request.
 
+## Tools tab
+
+Tools runs the same inspection without a selected extension, when the tab opens and on Refresh tools, and lists every tool the session registers. Each tool is grouped by source: Pi's own tools (`builtin:<tool>`), an extension (named as in Plugins, built-in ones such as codemode included), or an MCP server, named as configured in `mcp.json`: tool names only carry the sanitized `mcp__<server>` namespace. The badge says whether the model gets a declaration (**Model declaration**), can reach the tool only through codemode or tool search (**Indirect only**), or not at all (**Inactive**: registered but not in the startup tool set; **Hidden**). Only enabled extensions load, so a tool is never labelled Extension off or shadowed here. A failure keeps the tools found and says the list may be incomplete.
+
 ## Trust and side effects
 
 The owner explicitly trusts installed extensions. Inspection loads enabled extensions plus the selected extension in a disposable Bun subprocess, with the app's environment and OS permissions. It is **not a sandbox**: extension code can access files and the network, and its own side effects are not rolled back. Configured MCP servers connect as they do at Pi startup. The app itself does not prompt a model or execute a model tool to inspect the catalogue.
@@ -25,4 +29,4 @@ The inspector uses in-memory settings/session storage and skips missing packages
 
 ## Verification
 
-`tests/plugin-tools-api.test.ts` exercises actual Pi registration, dynamic startup tools, project codemode-only mode, disabled extensions, computed names, failures, credential masking, scope validation, timeouts/cancellation and process crashes on temporary directories. `e2e/plugin-tools.spec.ts` covers automatic loading, filters, toggles, the existing project picker, keyboard/mobile use, accessibility, retry, empty results and stale responses. No installed user extension is needed by the tests.
+`tests/tools-api.test.ts` and `e2e/tools.spec.ts` cover the Tools tab: sources (an MCP server name with a dash), reach, project settings, an MCP startup failure, credential masking, the filter, a narrow screen and accessibility. `tests/plugin-tools-api.test.ts` exercises actual Pi registration, dynamic startup tools, project codemode-only mode, disabled extensions, computed names, failures, credential masking, scope validation, timeouts/cancellation and process crashes on temporary directories. `e2e/plugin-tools.spec.ts` covers automatic loading, filters, toggles, the existing project picker, keyboard/mobile use, accessibility, retry, empty results and stale responses. No installed user extension is needed by the tests.

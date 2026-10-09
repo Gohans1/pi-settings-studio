@@ -4,7 +4,7 @@
 A personal, local GUI for **Pi core configuration**, used next to T3Code. Settings only: no chat, sessions UI, terminal or orchestration. The settings panel of [agegr/pi-web](https://github.com/agegr/pi-web) is the reference for features and feel; it is re-implemented here, not forked.
 
 ## Scope: Pi core only
-Tabs below. A project picker (folders Pi has sessions in) adds each tab's project scope and shows project trust. Operations that run something (MCP connection test, OAuth sign-in, package install) use Pi's own CLI or runtime. Installed extensions are trusted: selecting an extension automatically inspects its tools in a disposable Pi runtime.
+Tabs below. A project picker (folders Pi has sessions in) adds each tab's project scope and shows project trust. Operations that run something (MCP connection test, OAuth sign-in, package install) use Pi's own CLI or runtime. Installed extensions are trusted: selecting an extension automatically inspects its tools in a disposable Pi runtime, and opening Tools inspects every tool the same way.
 
 | Tab | Contents |
 |---|---|
@@ -15,6 +15,7 @@ Tabs below. A project picker (folders Pi has sessions in) adds each tab's projec
 | Instructions | Context files (`AGENTS.md`…), `SYSTEM.md`, `APPEND_SYSTEM.md`, global and project. |
 | Models | Providers and API-key status, custom providers/models (`models.json`), default provider/model, enabled models, thinking levels. OAuth sign-in, credential check, model lists from a custom endpoint. |
 | Plugins | Packages (install, update, remove, filters) and per-resource toggles; edit and create prompts, themes and extensions. Extension tools: all registered tools and direct model declarations in a startup configuration preview, scoped by the existing project picker. |
+| Tools | Read-only. Every tool a new session registers at startup, grouped by source (Pi built-in; each extension, built-in ones included; each MCP server by its configured name), with how the model reaches it: a direct declaration, only indirectly through codemode or tool search, inactive or hidden. The trusted extension inspection, scoped by the project picker; Refresh tools. |
 | Sub-agents | Profiles in the format of Pi's official example subagent extension (`name`, `description`, `tools`, `model`, prompt body) in `~/.pi/agent/agents/` and `.pi/agents/`. Unknown frontmatter keys are kept. |
 
 Out of scope: configuration that belongs to individual third-party extensions.
@@ -23,7 +24,7 @@ Out of scope: configuration that belongs to individual third-party extensions.
 - **Pi's own logic.** Use public exports of `@earendil-works/pi-coding-agent`, pinned to the Pi version installed on this machine. Where Pi keeps logic internal (for example `mcp.json` validation and edits), port it from Pi's MIT source with attribution and record the Pi version it came from. A test fails when the installed Pi version differs, so the port is re-checked on every update.
 - **Files are authoritative.** Agent directory: `PI_CODING_AGENT_DIR`, else `~/.pi/agent`. Fixed document identifiers only, never arbitrary paths from HTTP. Patch only edited keys and keep unknown keys. Never overwrite invalid JSON. Lock with `proper-lockfile` as Pi does, check revisions, stage writes in the same directory and rename. Keep one private backup generation for restore/undo. Refuse symlinked configuration paths.
 - **Secrets stay on the server.** `auth.json` values, MCP `env`/`headers` values and OAuth secrets are never sent to the browser. The UI shows names only; edits are write-only (empty means keep).
-- **Trusted extension inspection.** Resource-list reads remain non-executing. Selecting an extension automatically posts a tool-inspection request that loads installed extensions and connects configured MCP servers through Pi in a separate process. This is not a sandbox. A disabled selected extension is loaded for its catalogue only, not enabled in settings. The preview treats the selected project as trusted without changing trust.json. See [Extension tools](docs/plugin-tools.md).
+- **Trusted extension inspection.** Resource-list reads remain non-executing. Selecting an extension, or opening Tools, automatically posts a tool-inspection request that loads installed extensions and connects configured MCP servers through Pi in a separate process. This is not a sandbox. A disabled selected extension is loaded for its catalogue only, not enabled in settings. The preview treats the selected project as trusted without changing trust.json. See [Extension tools](docs/plugin-tools.md).
 - **Saved means written to the file.** T3Code applies changes after `/reload` or in a new thread. Never claim live state.
 
 ## Local HTTP boundary

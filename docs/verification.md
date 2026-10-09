@@ -1,3 +1,26 @@
+# Verification — Tools tab, 2026-10-09
+
+Scope: a Tools tab listing every tool a new session registers at startup, grouped by source (Pi built-in, each extension including built-in ones, each MCP server by its configured name) with how the model reaches it. `POST /api/tools` runs the existing tool probe without a selected extension; the extension tool list moved into a shared `ToolList`.
+
+| Check | Result |
+|---|---|
+| `bun test` (`HOME` an empty folder) | 283 passed (44 files), up from 277: six for `POST /api/tools` (sources, reach, project settings, unknown project, MCP startup failure, credential masking). With the real home, the four skills tests still fail on main as on this branch (`~/.agents/skills/shadcn`) |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run build` | Passed. JS 812.1 kB (gzip 248.2 kB); the >500 kB chunk warning remains |
+| `bun run test:e2e` (same `HOME`) | 108 passed, up from 104: four for Tools (sources and reach with axe, the Model sees filter, the project picker at 390 px with axe, a failed inspection and Refresh tools) |
+
+RED/GREEN: the six API tests failed first on the missing route (404) and the four browser tests on the missing tab, then passed. The ToolList move kept `e2e/plugin-tools.spec.ts` at 5 of 5 before the new tab used it.
+
+Decisions:
+- An MCP tool is labelled with the server name from `mcp.json`, matched through the ported `mcpNamespace`; a server that only an extension registers falls back to its namespace.
+- Built-in extensions (codemode, tool-search, and the resource tools of `builtin:mcp`) are grouped as extensions, named as in Plugins; Pi's own tools are "Pi built-in".
+- When an extension or server fails, the tools found keep their computed reach and the issues say what may be missing, unlike one extension's view, where every tool becomes Unverified.
+- The whole result, source names included, goes through credential redaction.
+
+Manual: before, T3 preview (System prompt, no Tools tab); after, `agent-browser` in its own session when the preview host disconnected. 1280×900 and 390 px light on a temporary agent folder with an extension and two echo MCP servers (codemode and direct exposure): six groups, no horizontal overflow, API 200, no page errors. Not checked: dark mode. The real `~/.pi` was not written; one exploratory script, run before the tests without `PI_CODING_AGENT_DIR`, connected the real enabled MCP servers read-only and changed no file there.
+
+---
+
 # Verification — shadcn composition gaps, 2026-10-09
 
 Scope: the six gaps an audit against shadcn's agent skill found after the registry pass (`@shadcn/lint` cannot see them): Save buttons without a Spinner; Empty states without EmptyHeader; two Cards that were all CardContent; list panes as `ul`s instead of ItemGroups; a divider drawn with a CSS border; icons sized inside shadcn components.
