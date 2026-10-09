@@ -28,3 +28,4 @@
 - [x] Every component from the shadcn registry, kept as shipped and checked by @shadcn/lint.
 - [x] Tools tab: every tool a new session registers, by source, and how the model reaches it.
 - [x] Tools as a workbench (chosen from two variant rounds): what the model sees and doesn't, every source including idle ones, search.
+- [x] Slow tabs: kept tool inspections and session listings on the server, the last result shown at once in the browser.
