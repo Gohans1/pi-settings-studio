@@ -4,3 +4,5 @@ ignoreScripts = true
 
 [test]
 root = "tests"
+# An empty home folder for the run, so Pi finds none of the user's own skills (tests/setup.ts).
+preload = ["./tests/setup.ts"]
