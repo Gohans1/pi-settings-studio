@@ -5,11 +5,12 @@ import { Bot, CircleAlert, Plus, TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
-import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Spinner } from "./components/ui/spinner";
+import { ItemGroup } from "./components/ui/item";
 import { Disclosure } from "./Disclosure";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -53,7 +54,7 @@ function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
       <Textarea id={id + "prompt"} className="field-sizing-fixed" rows={12} value={prompt} onChange={e => setPrompt(e.target.value)} /></Field>
     {agent && agent.extraKeys.length > 0 && <FieldDescription>Kept as they are: {agent.extraKeys.join(", ")}.</FieldDescription>}
     </FieldGroup>
-    <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save profile"}</Button>
+    <div className="form-actions"><Button type="submit" disabled={busy}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save profile"}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;
 }
@@ -109,10 +110,10 @@ export function SubagentsTab({ project }: { project?: string }) {
   const agents = view?.agents ?? [];
   const current = agents.find(agent => agent.scope === selected?.scope && agent.file === selected.file);
   const add = (scope: AgentScope) => { setAddScope(scope); setMode("add"); setFormError(""); };
-  const list = (scope: AgentScope) => <ul className="item-list">{agents.filter(agent => agent.scope === scope).map(agent => <li key={agent.file}>
+  const list = (scope: AgentScope) => <ItemGroup>{agents.filter(agent => agent.scope === scope).map(agent => <div key={agent.file} role="listitem" className="list-row">
     <ListItem selected={selected?.scope === scope && agent.file === selected.file} onSelect={() => { setSelected({ scope, file: agent.file }); setMode("view"); }}
       name={agent.name ?? agent.file} tone={agent.error ? "refused" : undefined} state={agent.error ? "skipped" : agent.shadowed ? "replaced here" : agent.model ?? ""} />
-  </li>)}</ul>;
+  </div>)}</ItemGroup>;
   const open = mode !== "view" || !!current;
   return <>
     <PageHeader title="Sub-agents" description="Profiles in the format of Pi's example subagent extension." files={[view?.dir]}
@@ -124,12 +125,12 @@ export function SubagentsTab({ project }: { project?: string }) {
     {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading profiles…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode("view"); }} backLabel="All profiles" list={<>
       <section className="item-group" aria-label="Global profiles">
         <div className="list-header"><h2>Global</h2><span>{agents.filter(agent => agent.scope === "user").length}</span></div>
-        {agents.some(agent => agent.scope === "user") ? list("user") : <Empty><EmptyDescription>No profiles yet.</EmptyDescription></Empty>}
+        {agents.some(agent => agent.scope === "user") ? list("user") : <Empty><EmptyHeader><EmptyDescription>No profiles yet.</EmptyDescription></EmptyHeader></Empty>}
       </section>
       {project && <section className="item-group" aria-label="This project's profiles">
         <div className="list-header"><h2>This project</h2><span>{agents.filter(agent => agent.scope === "project").length} in .pi/agents</span>
           <IconButton label="Add profile to project" disabled={busy} onClick={() => add("project")}><Plus aria-hidden="true" /></IconButton></div>
-        {agents.some(agent => agent.scope === "project") ? list("project") : <Empty><EmptyDescription>No profiles in this project yet.</EmptyDescription></Empty>}
+        {agents.some(agent => agent.scope === "project") ? list("project") : <Empty><EmptyHeader><EmptyDescription>No profiles in this project yet.</EmptyDescription></EmptyHeader></Empty>}
       </section>}
     </>} detail={mode !== "view" ? <AgentForm key={mode + addScope + (selected?.file ?? "")} agent={mode === "edit" ? current : undefined} busy={busy} error={formError}
         title={mode === "add" && addScope === "project" ? "Add profile to this project" : undefined}

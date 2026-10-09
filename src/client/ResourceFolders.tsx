@@ -3,6 +3,7 @@ import { CircleAlert, TriangleAlert } from "lucide-react";
 import type { ResourcePathsView, ResourceType } from "../shared/resources";
 import { changeResourcePath, loadResourcePaths } from "./api";
 import { Alert, AlertDescription } from "./components/ui/alert";
+import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
@@ -70,15 +71,19 @@ export function ResourceFolders({ type, project, level = 3, onChanged }: {
           const notes = [
             home(entry.resolved) !== entry.entry && <span>as <code translate="no">{entry.entry}</code></span>,
             entry.scope === "project" && "This project",
-            entry.exists ? `${entry.found} ${entry.found === 1 ? singular : plural}${entry.kind === "file" ? " (a file)" : ""}`
-              : <span className="folder-missing"><TriangleAlert aria-hidden="true" />Not found</span>,
-            !!entry.replaces && <span className="folder-missing"><TriangleAlert aria-hidden="true" />{entry.replaces} {entry.replaces === 1 ? "replaces a skill" : "replace skills"} of the same name</span>,
-            !!entry.skipped && <span className="folder-missing"><TriangleAlert aria-hidden="true" />{entry.skipped} not loaded (same name)</span>,
+            entry.exists && `${entry.found} ${entry.found === 1 ? singular : plural}${entry.kind === "file" ? " (a file)" : ""}`,
           ].filter(Boolean);
+          const warnings = [
+            !entry.exists && "Not found",
+            !!entry.replaces && `${entry.replaces} ${entry.replaces === 1 ? "replaces a skill" : "replace skills"} of the same name`,
+            !!entry.skipped && `${entry.skipped} not loaded (same name)`,
+          ].filter((text): text is string => !!text);
           return <Fragment key={entry.scope + entry.entry}>{index > 0 && <ItemSeparator aria-hidden="true" />}<Item size="xs" role="listitem">
             <ItemContent>
               <FilePath path={entry.resolved} folder={entry.kind !== "file"} />
-              <ItemDescription>{notes.map((note, i) => <Fragment key={i}>{i > 0 && " · "}{note}</Fragment>)}</ItemDescription>
+              {notes.length > 0 && <ItemDescription>{notes.map((note, i) => <Fragment key={i}>{i > 0 && " · "}{note}</Fragment>)}</ItemDescription>}
+              {warnings.length > 0 && <div className="flex flex-wrap gap-1">{warnings.map(text => <Badge key={text} variant="outline">
+                <TriangleAlert aria-hidden="true" data-icon="inline-start" className="text-warning" />{text}</Badge>)}</div>}
             </ItemContent>
             <ItemActions><Button variant="ghost" size="xs" disabled={busy} aria-label={`Remove ${entry.entry}`} onClick={() => void change("DELETE", entry.scope, entry.entry)}>Remove</Button></ItemActions>
           </Item></Fragment>;

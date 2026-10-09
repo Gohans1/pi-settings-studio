@@ -23,9 +23,9 @@ const misses = {
   "no-match": "No model matches",
 };
 
-/** A value Pi may not accept: the icon carries the tone. */
+/** A value Pi may not accept: a note under its field, which describes the field. The Alert sizes its icon. */
 function Warning({ id, children }: { id: string; children: React.ReactNode }) {
-  return <FieldDescription id={id}><TriangleAlert aria-hidden="true" className="me-1.5 inline size-4 align-text-bottom text-warning" />{children}</FieldDescription>;
+  return <Alert role="note" id={id}><TriangleAlert aria-hidden="true" /><AlertDescription>{children}</AlertDescription></Alert>;
 }
 
 /** enabledModels as rows: what each pattern selects among the providers that are set up, and an adder. */
@@ -174,7 +174,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
         <FieldDescription id="default-thinking-help">Pi limits the level to what the model supports.</FieldDescription></Field>
       <EnabledModels patterns={enabled} scope={modelScope} ids={ids} inherited={inheritedEnabled} onChange={setEnabled} />
       </FieldGroup>
-      <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save defaults"}</Button></div>
+      <div className="form-actions"><Button type="submit" disabled={busy}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save defaults"}</Button></div>
     </form>}
   </section>;
 }

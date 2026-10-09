@@ -35,6 +35,24 @@ test("a profile the browser would refuse says why under each field, focuses the 
   expect((await readdir(dir)).sort()).toEqual(["broken.md", "scout.md"]);
 });
 
+test("while a profile saves, Save profile shows a spinner", async ({ page }) => {
+  await page.goto(server.url + "#subagents");
+  await page.getByRole("button", { name: "Add profile" }).click();
+  const form = page.getByRole("form", { name: "Add profile" });
+  await form.getByLabel("Name").fill("reviewer");
+  await form.getByLabel("Description").fill("Reviews diffs");
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", route => route.request().method() === "GET" ? route.continue() : held.then(() => route.continue()));
+  await form.getByRole("button", { name: "Save profile" }).click();
+  const saving = page.getByRole("button", { name: "Saving…" });
+  await expect(saving).toBeDisabled();
+  await expect(saving.locator("[data-slot=spinner]")).toBeVisible();
+  release();
+  await expect(saving).toBeHidden();
+  await page.unrouteAll({ behavior: "wait" });
+});
+
 test("sub-agent profiles can be read, added, edited, removed and restored", async ({ page }) => {
   await page.goto(server.url + "#subagents");
   await expect(page.getByText("No installed extension reads these profiles yet")).toBeVisible();

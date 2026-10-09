@@ -8,6 +8,7 @@ import { Checkbox } from "./components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
+import { Spinner } from "./components/ui/spinner";
 import { Disclosure } from "./Disclosure";
 import { OptionSelect } from "./OptionSelect";
 import { useFieldErrors } from "./useFieldErrors";
@@ -185,7 +186,7 @@ export function McpServerForm({ server, busy, error, title: heading, scope = "gl
     <Field><FieldLabel htmlFor={id + "description"}>Description</FieldLabel><Input id={id + "description"} value={draft.description} placeholder="What the server offers, in a sentence" onChange={event => set({ description: event.target.value })} /></Field>
     <Field data-invalid={!!errors[id + "timeout"] || undefined}><FieldLabel htmlFor={id + "timeout"}>Timeout (seconds)</FieldLabel><Input id={id + "timeout"} type="number" min={1} step="any" value={draft.timeout} placeholder="60" {...describe(id + "timeout")} onChange={event => set({ timeout: event.target.value })} /><FieldError id={id + "timeout-error"}>{errors[id + "timeout"]}</FieldError></Field>
     </FieldGroup>
-    <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save server"}</Button>
+    <div className="form-actions"><Button type="submit" disabled={busy}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save server"}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;
 }

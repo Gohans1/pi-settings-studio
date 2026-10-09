@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Field, FieldContent, FieldError, FieldGroup, FieldSeparator, FieldTitle } from "./components/ui/field";
 import { Input } from "./components/ui/input";
+import { Spinner } from "./components/ui/spinner";
 import { FilePath } from "./PageHeader";
 import { SearchField } from "./SearchField";
 
@@ -68,6 +69,6 @@ export function KeybindingsPanel({ onMessage }: { onMessage: (text: string) => v
     {view && view.unknown.length > 0 && <p className="muted">Also in the file and kept: {view.unknown.join(", ")}.</p>}
     {(changes.length > 0 || invalid.length > 0) && <div className="save-bar" role="region" aria-label="Unsaved shortcuts">
       <p>{invalid.length ? `${invalid.length} ${invalid.length === 1 ? "shortcut needs" : "shortcuts need"} a key Pi understands` : `${changes.length} unsaved ${changes.length === 1 ? "shortcut" : "shortcuts"}`}</p>
-      <Button disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : "Save shortcuts"}</Button></div>}
+      <Button disabled={busy} onClick={() => void save()}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save shortcuts"}</Button></div>}
   </section>;
 }

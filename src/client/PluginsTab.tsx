@@ -7,7 +7,7 @@ import { NewResourceForm, ResourceEditor } from "./ResourceEditor";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
-import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { Field, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { OptionSelect } from "./OptionSelect";
@@ -16,6 +16,7 @@ import { JobPanel, useJob } from "./JobPanel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
 import { Spinner } from "./components/ui/spinner";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemSeparator } from "./components/ui/item";
+import { Separator } from "./components/ui/separator";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
 import { EmptyDetail, ListItem, Workbench } from "./Workbench";
@@ -183,7 +184,7 @@ export function PluginsTab({ project }: { project?: string }) {
       </ItemActions>
       {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
         onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}
-    </Item></Fragment>)}</ItemGroup> : <Empty><EmptyDescription>No packages yet. Install one by its npm name, git URL or folder.</EmptyDescription></Empty>}
+    </Item></Fragment>)}</ItemGroup> : <Empty><EmptyHeader><EmptyDescription>No packages yet. Install one by its npm name, git URL or folder.</EmptyDescription></EmptyHeader></Empty>}
   </section>;
   return <>
     <PageHeader title="Plugins" description="Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab."
@@ -198,21 +199,22 @@ export function PluginsTab({ project }: { project?: string }) {
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading plugins…</div> : <Workbench open={open} onBack={back} backLabel="All plugins" list={<section aria-label="Plugin list">
       <div className="list-search"><SearchField label="Search plugins" placeholder="Search plugins…" value={query} onChange={setQuery} /></div>
-      <ul className="item-list pinned">
-        <li><ListItem selected={pinned === "packages"} onSelect={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }} icon={Package} name="Packages" state={updateCount ? `${updateCount} ${updateCount === 1 ? "update" : "updates"}` : view.packages.length} /></li>
-        <li><ListItem selected={pinned === "folders"} onSelect={() => { setPinned("folders"); setSelected(undefined); setMode(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds plugins" /></li></ul>
-      {!visible.length && <Empty><EmptyDescription>{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</EmptyDescription></Empty>}
+      <ItemGroup>
+        <div role="listitem" className="list-row"><ListItem selected={pinned === "packages"} onSelect={() => { setPinned("packages"); setSelected(undefined); setMode(undefined); }} icon={Package} name="Packages" state={updateCount ? `${updateCount} ${updateCount === 1 ? "update" : "updates"}` : view.packages.length} /></div>
+        <div role="listitem" className="list-row"><ListItem selected={pinned === "folders"} onSelect={() => { setPinned("folders"); setSelected(undefined); setMode(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds plugins" /></div></ItemGroup>
+      <Separator className="mt-2" />
+      {!visible.length && <Empty><EmptyHeader><EmptyDescription>{resources.length ? `No plugins match “${query.trim()}”.` : "No plugins found."}</EmptyDescription></EmptyHeader></Empty>}
       {groups.map(group => {
         const members = visible.filter(item => item.group === group);
         return <div key={group} className="item-group">
           <div className="list-header"><h2>{group}</h2>
             <Switch aria-label={`Enable everything in ${group}`} checked={members.every(item => item.enabled)} disabled={busy}
               onCheckedChange={enabled => void toggle(members.filter(item => item.enabled !== enabled), enabled, `Everything in ${group}`)} /></div>
-          <ul className="item-list">{members.map(item => <li key={item.type + item.path}>
+          <ItemGroup>{members.map(item => <div key={item.type + item.path} role="listitem" className="list-row">
             <ListItem selected={item.path === selected} onSelect={() => { setSelected(item.path); setMode(undefined); setPinned(undefined); }}
               name={item.name} state={item.enabled ? typeLabels[item.type] : "off"} />
             <Switch aria-label={`Enable ${item.name}`} checked={item.enabled} disabled={busy} onCheckedChange={enabled => void toggle([item], enabled)} />
-          </li>)}</ul>
+          </div>)}</ItemGroup>
         </div>;
       })}
     </section>} detail={pinned === "packages" ? packages

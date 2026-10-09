@@ -5,7 +5,7 @@ import { loadSessions, loadSystemPrompt } from "./api";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
-import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { Field, FieldLabel } from "./components/ui/field";
 import { Spinner } from "./components/ui/spinner";
 import { OptionSelect } from "./OptionSelect";
@@ -50,7 +50,7 @@ export function SystemPromptTab({ project }: { project?: string }) {
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not show the prompt</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {!sessions ? !error && <div className="loading" aria-busy="true"><Spinner />Reading sessions…</div>
       : !project ? <Alert role="note"><AlertDescription>Choose a project at the top to see its sessions.</AlertDescription></Alert>
-      : !projectSessions.length ? <Empty><EmptyDescription>This project has no Pi sessions yet. Start a thread in T3Code, then come back.</EmptyDescription></Empty>
+      : !projectSessions.length ? <Empty><EmptyHeader><EmptyDescription>This project has no Pi sessions yet. Start a thread in T3Code, then come back.</EmptyDescription></EmptyHeader></Empty>
       : <>
         <Field className="mb-5 max-w-180"><FieldLabel htmlFor="prompt-session">Session</FieldLabel>
           <OptionSelect id="prompt-session" className="w-full" value={sessionId} onChange={setSessionId}

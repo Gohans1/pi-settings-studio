@@ -9,11 +9,13 @@ import type { JobView } from "../shared/jobs";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
-import { Empty, EmptyDescription } from "./components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader } from "./components/ui/empty";
 import { Field, FieldDescription, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
 import { DropdownMenuItem } from "./components/ui/dropdown-menu";
 import { Spinner } from "./components/ui/spinner";
+import { ItemGroup } from "./components/ui/item";
+import { Separator } from "./components/ui/separator";
 import { ModelDefaults } from "./ModelDefaults";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
@@ -172,7 +174,8 @@ export function ModelsTab({ project }: { project?: string }) {
       onClose={saved => { setRaw(false); if (saved) { setMessage("Saved models.json. Applies to new T3Code threads, or after /reload."); void refresh(); } }} />
     : !view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading providers…</div> : <Workbench open={open} onBack={() => setSelected(undefined)} backLabel="All providers" list={<section aria-label="Providers">
       <div className="list-search"><SearchField label="Search providers" placeholder="Search providers…" value={query} onChange={setQuery} /></div>
-      <ul className="item-list pinned"><li><ListItem selected={selected === DEFAULTS} onSelect={() => setSelected(DEFAULTS)} icon={SlidersHorizontal} name="Defaults" state="provider, model, thinking" /></li></ul>
+      <ItemGroup><div role="listitem" className="list-row"><ListItem selected={selected === DEFAULTS} onSelect={() => setSelected(DEFAULTS)} icon={SlidersHorizontal} name="Defaults" state="provider, model, thinking" /></div></ItemGroup>
+      <Separator className="mt-2" />
       <section className="item-group" aria-label="Custom providers">
         <div className="list-header"><h2>Custom providers</h2><span>{custom?.providers.length ?? 0} in models.json</span>
           <IconButton label="Add custom provider" disabled={busy || !!custom?.error} onClick={() => { setSelected(NEW_CUSTOM); setFormError(""); }}><Plus aria-hidden="true" /></IconButton>
@@ -180,18 +183,18 @@ export function ModelsTab({ project }: { project?: string }) {
         </div>
         {custom?.error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertDescription>{custom.error}</AlertDescription></Alert>}
         {custom && !custom.error && !custom.providers.length && <p className="muted list-note">Ollama, LM Studio, a proxy: any endpoint that speaks an API Pi knows.</p>}
-        <ul className="item-list">{(custom?.providers ?? []).map(entry => <li key={entry.id}>
+        <ItemGroup>{(custom?.providers ?? []).map(entry => <div key={entry.id} role="listitem" className="list-row">
           <ListItem selected={selected === CUSTOM + entry.id} onSelect={() => { setSelected(CUSTOM + entry.id); setFormError(""); }}
-            name={entry.name ?? entry.id} state={entry.models.length ? `${entry.models.length} ${entry.models.length === 1 ? "model" : "models"}` : entry.otherKeys.join(", ")} /></li>)}</ul>
+            name={entry.name ?? entry.id} state={entry.models.length ? `${entry.models.length} ${entry.models.length === 1 ? "model" : "models"}` : entry.otherKeys.join(", ")} /></div>)}</ItemGroup>
       </section>
       {groups.map(([title, members]) => members.length > 0 && <div key={title} className="item-group">
         <div className="list-header"><h2>{title}</h2><span>{members.length}</span></div>
-        <ul className="item-list">{members.map(provider => <li key={provider.id}>
+        <ItemGroup>{members.map(provider => <div key={provider.id} role="listitem" className="list-row">
           <ListItem selected={provider.id === selected} onSelect={() => setSelected(provider.id)} name={provider.name} quiet={!provider.auth.configured}
             tone={provider.auth.configured ? "ready" : undefined} state={provider.auth.configured ? <><CircleCheck aria-hidden="true" />{state(provider)}</> : state(provider)} />
-        </li>)}</ul>
+        </div>)}</ItemGroup>
       </div>)}
-      {!visible.length && <Empty><EmptyDescription>No providers match “{query.trim()}”.</EmptyDescription></Empty>}
+      {!visible.length && <Empty><EmptyHeader><EmptyDescription>No providers match “{query.trim()}”.</EmptyDescription></EmptyHeader></Empty>}
     </section>} detail={selected === NEW_CUSTOM || customEntry ? <CustomProviderForm key={selected + (customEntry ? custom!.revision : "")} provider={customEntry} busy={busy} error={formError}
           onCancel={() => setSelected(undefined)}
           onSave={(id, input) => void runCustom(revision => customEntry ? editCustomProvider(customEntry.id, revision, input) : addCustomProvider(revision, id, input),

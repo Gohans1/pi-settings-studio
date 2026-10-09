@@ -17,6 +17,22 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+test("while an instruction file saves, Save file shows a spinner", async ({ page }) => {
+  await page.goto(server.url + "#instructions");
+  await page.getByRole("button", { name: /^Instructions/ }).first().click();
+  await page.getByLabel("Contents of AGENTS.md").fill("# Global rules\n- Be brief.\n");
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", route => route.request().method() === "GET" ? route.continue() : held.then(() => route.continue()));
+  await page.getByRole("button", { name: "Save file" }).click();
+  const saving = page.getByRole("button", { name: "Saving…" });
+  await expect(saving).toBeDisabled();
+  await expect(saving.locator("[data-slot=spinner]")).toBeVisible();
+  release();
+  await expect(saving).toBeHidden();
+  await page.unrouteAll({ behavior: "wait" });
+});
+
 test("instruction files are edited, created and removed with undo", async ({ page }) => {
   await page.goto(server.url + "#instructions");
   await page.getByRole("button", { name: /^Instructions/ }).first().click();

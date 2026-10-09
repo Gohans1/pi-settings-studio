@@ -152,17 +152,15 @@
   .list-header { display: flex; align-items: center; gap: --spacing(2); min-height: --spacing(8); padding-inline: --spacing(2.5) --spacing(2); }
   .list-header h2 { margin: 0; margin-inline-end: auto; font-size: var(--text-body); font-weight: var(--font-weight-semibold); line-height: var(--leading-tight); overflow-wrap: anywhere; text-wrap: wrap; }
   .list-header > span { color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .item-list { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(0.25); }
   /* A row is its Item, then the switch that turns it on or off. */
-  .item-list li { display: flex; align-items: center; gap: --spacing(2); }
-  .item-list li:has(> [data-slot=switch]) { padding-inline-end: --spacing(2); }
+  .list-row { display: flex; align-items: center; gap: --spacing(2); }
+  .list-row:has(> [data-slot=switch]) { padding-inline-end: --spacing(2); }
   .item-state { margin-inline-start: auto; font-size: var(--text-caption); color: var(--muted-foreground); white-space: nowrap; }
   .item-state[data-state=refused] { color: var(--destructive); }
   .item-state:has(svg) { display: inline-flex; align-items: center; gap: --spacing(1); }
   .item-state svg { width: --spacing(3.5); height: --spacing(3.5); }
   .item-state[data-state=shadowed] svg { color: var(--warning); }
   .item-state[data-state=ready] svg { color: var(--success); }
-  .pinned { padding-bottom: --spacing(2); border-bottom: 1px solid var(--border); }
 
   /* Detail pane. */
   .detail { min-width: 0; }
@@ -253,8 +251,6 @@
   .folder-block > p { margin: 0; }
   .folder-block .file-path { color: var(--foreground); }
   .folder-block-title { color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-semibold); }
-  .folder-missing { display: inline-flex; align-items: center; gap: --spacing(1); color: var(--warning); font-size: var(--text-small); }
-  .folder-missing svg { width: --spacing(3.5); height: --spacing(3.5); }
   .add-path { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2); }
   /* Sub-agents and resources. */
   .prompt-preview pre { margin: --spacing(1) 0 0; max-height: 24rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -282,7 +278,6 @@
   .settings-group + .settings-group { margin-top: --spacing(10); }
   .settings-group > h2 { margin: 0 0 --spacing(2); }
   .settings-group > [data-slot=alert] { margin-bottom: --spacing(3); }
-  .settings-advanced { margin-top: --spacing(4); padding-top: --spacing(2); border-top: 1px solid var(--border); }
   .setting-key { color: var(--muted-foreground); }
   .setting-control { min-width: 0; display: grid; gap: --spacing(1.5); align-content: start; }
   .field-meta { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(1) --spacing(2); min-height: --spacing(7); color: var(--muted-foreground); font-size: var(--text-caption); }
@@ -333,7 +328,7 @@
   .save-bar .actions > * { flex-grow: 1; }
 }
 @media (forced-colors: active) {
-  .item-list [aria-pressed=true], .section-nav a[aria-current=true] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .list-row [aria-pressed=true], .section-nav a[aria-current=true] { outline: 2px solid Highlight; outline-offset: -2px; }
 }
 @media (prefers-reduced-motion: reduce) {
   /* Unlayered policy wins over component/utility layers without specificity escalation. */
