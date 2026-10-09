@@ -1,3 +1,16 @@
+# Verification — ScrollArea scrollbars under the app's CSP, 2026-10-09
+
+Found while adding sounds: Base UI hides a ScrollArea viewport's native scrollbar with a `<style>` element it injects, and the app's Content-Security-Policy (`style-src 'self'`) blocks it. Where scrollbars are classic, as in Chrome and Edge on Windows, every pane showed a 15 px native scrollbar, horizontal too, beside shadcn's thumb. Headless browsers draw overlay scrollbars, which hid it from the earlier checks.
+
+Fix, as Base UI's CSP Provider docs describe: `<CSPProvider disableStyleElements>` around the app (`main.tsx`) and Base UI's `.base-ui-disable-scrollbar` rule in `styles.css`.
+
+| Check | Result |
+|---|---|
+| New e2e | Every viewport has `scrollbar-width: none` and the page logs no CSP violation: failed first (`auto`), then passed |
+| Manual (`agent-browser --hide-scrollbars false`, classic scrollbars) | Native scrollbar 15 px before, 0 px after |
+
+---
+
 # Verification — selects drop below their field, 2026-10-09
 
 Scope: every Select (21, all through `OptionSelect`) opened over its field, with the chosen option laid on the field and the list growing both ways (Base UI's `alignItemWithTrigger`, true by default). It now drops below the field, or above it when there is no room, like the menus.

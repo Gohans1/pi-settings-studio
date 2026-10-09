@@ -19,6 +19,17 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+test("scroll areas hide the native scrollbar, and the strict CSP blocks nothing on the page", async ({ page }) => {
+  const blocked: string[] = [];
+  page.on("console", message => { if (message.text().includes("Content Security Policy")) blocked.push(message.text()); });
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: /^docs/ }).click();
+  const viewports = page.locator("[data-slot=scroll-area-viewport]");
+  await expect(viewports).toHaveCount(2);
+  for (const viewport of await viewports.all()) await expect(viewport).toHaveCSS("scrollbar-width", "none");
+  expect(blocked).toEqual([]);
+});
+
 test("the window title names the open tab", async ({ page }) => {
   await page.goto(server.url + "#mcp");
   await expect(page).toHaveTitle("MCP · Pi Settings");

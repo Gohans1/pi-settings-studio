@@ -105,6 +105,9 @@
 }
 
 @layer components {
+  /* Base UI's own rule for a ScrollArea's viewport, which it cannot inject under the app's CSP (main.tsx). */
+  .base-ui-disable-scrollbar { scrollbar-width: none; }
+  .base-ui-disable-scrollbar::-webkit-scrollbar { display: none; }
 
   /* App shell: the top bar scrolls nothing; main is the one scroller, so the chrome never moves. */
   .app { display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); height: 100svh; }
