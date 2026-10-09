@@ -34,6 +34,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## cuelume
+
+The app's interaction sounds come from [cuelume](https://github.com/danielwh2/cuelume) 0.2.4 (`src/client/Sound.tsx`), bundled into the client. License: MIT, Copyright (c) 2026 Daniel Belyi.
+
 ## Flexoki
 
 `src/client/flexoki.css` copies colour values from [Flexoki](https://stephango.com/flexoki) (palette 2.0, `github.com/kepano/flexoki`). License: MIT, Copyright (c) 2023 Steph Ango.

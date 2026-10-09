@@ -70,6 +70,12 @@ Secret values are never displayed; fields that hold them say "value hidden" and 
 
 Components move as shadcn ships them: menus, selects, tooltips and dialogs fade and zoom (tw-animate-css), accordions open to their height, toasts slide in and stack, buttons press down a pixel, disclosure chevrons turn and disclosures open at once (shadcn's Collapsible has no panel motion). Keyboard actions settle at once: `main.tsx` marks the last input as keyboard or pointer, and keyboard input switches transitions and animations off. The app's own motion, the save bar rising into place and the loading text fading in, uses the strong ease-out (`--ease-out`) and names the properties it animates. Reduced motion shortens every transition to 0.01ms, so end events still fire; an OS theme switch holds transitions for one frame (`main.tsx`).
 
+## Sound
+
+Interactions sound, through [cuelume](https://github.com/danielwh2/cuelume): synthesized cues, one per interface job, from its "Which cue?" table. `Sound.tsx` holds it all. One capture listener reads each clicked control's ARIA role and state, so shadcn's components keep their source: buttons and links tap; a switch, checkbox or Toggle toggles on or off; an option, menu item, radio, list row or toggle-group item selects, rising or falling with its direction; a tab navigates; a menu, select or disclosure opens or closes; a dialog trigger opens. Outcomes play where the app reports them: a confirmation toast plays success quietly, an error Alert (`role="alert"`, announced now) plays error, a refused form or shortcut plays error quietly, and a job plays loading, then success or error, and attention when Pi asks a question. Typing and hovering make no sound.
+
+A Base UI checkbox or switch forwards its click to a hidden input; the input stands for its control, and a control plays once per action. Sounds are on by default; the Sounds Toggle in the top bar turns them off for this browser (`localStorage`), as cuelume leaves that choice to the app. Nothing plays before the reader's first interaction.
+
 ## Do's and Don'ts
 
 - Do use a semantic token; when no role fits, add one rather than borrowing a token for its value.
@@ -78,6 +84,7 @@ Components move as shadcn ships them: menus, selects, tooltips and dialogs fade 
 - Don't edit files in `components/ui`; reinstall them with the shadcn CLI and change an instance through props, variants or a layout `className`.
 - Don't silence `@shadcn/lint` with a disable comment; a deliberate exception is a contract in `.oxlintrc.json`, with its reason here.
 - Don't write colour literals, raw spacing or font sizes, or `!important` in `styles.css`; the design-token tests fail on them.
+- Don't play a sound from a component's own code for an interaction; `Sound.tsx` reads it from the control. Play outcomes with `play()` where the app reports them.
 - Don't render a link through `Button render={<a />}`; put `buttonVariants` on a plain `<a>`.
 - Don't scroll a box with `overflow: auto`; wrap it in a ScrollArea with a maximum height.
 - Don't size an icon inside a shadcn component; use the component that sizes it (Button with `data-icon`, Alert, Badge).
