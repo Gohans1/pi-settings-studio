@@ -13,6 +13,7 @@ export function OptionSelect<Value>({ options, value, onChange, placeholder, dis
 }) {
   return <Select items={options} value={value} onValueChange={next => { if (next !== null) onChange(next); }} disabled={disabled}>
     <SelectTrigger id={id} className={className} {...aria}><SelectValue placeholder={placeholder} /></SelectTrigger>
-    <SelectContent><SelectGroup>{options.map(option => <SelectItem key={JSON.stringify(option.value)} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent>
+    {/* Below the field (above when there is no room), like the app's menus; never over the field. */}
+    <SelectContent alignItemWithTrigger={false}><SelectGroup>{options.map(option => <SelectItem key={JSON.stringify(option.value)} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent>
   </Select>;
 }
