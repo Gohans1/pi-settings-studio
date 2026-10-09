@@ -29,3 +29,4 @@
 - [x] Tools tab: every tool a new session registers, by source, and how the model reaches it.
 - [x] Tools as a workbench (chosen from two variant rounds): what the model sees and doesn't, every source including idle ones, search.
 - [x] Slow tabs: kept tool inspections and session listings on the server, the last result shown at once in the browser.
+- [x] Leaving a tab mid-work: inspections run on and are joined, job panels pick their job up again, a running package check shows on return.

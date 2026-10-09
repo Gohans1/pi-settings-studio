@@ -1,3 +1,27 @@
+# Verification — leaving a tab mid-work, 2026-10-09
+
+Scope: what happens when the reader leaves a tab, reloads, or changes selection while something slow runs. Measured first on a temporary folder with an MCP server that answers in 3 s: a Tools inspection cancelled after 1 s was killed on the server, and returning took the full 3.4 s again; Plugins' extension tools the same. A job (here Test connections) ran on, but its panel was gone on return. Session listings already finished on the server. Fixed: inspections (A), job panels (B), the package check's state (C).
+
+| Check | Result |
+|---|---|
+| `bun test` (`HOME` an empty folder) | 298 passed (45 files), up from 290: `Inspections` (a request that leaves does not stop the run, the next joins it; three idle runs at most, oldest stopped first; a waited-for run is never stopped; changed files or fresh start anew without a stale overwrite; incomplete not kept), an early-leaving `/api/tools` request starts the MCP server once, a repeated job request returns the running job and `GET /api/jobs` lists it without output, a running package check shows in `/api/plugins` and a second request joins it |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run build` | Passed. JS 865.8 kB (gzip 263.7 kB); the >500 kB chunk warning remains |
+| `bun run test:e2e` (same `HOME`) | 128 passed. New: leaving Tools during its first load and returning starts the MCP server once; Test connections keeps its panel across leaving, a reload and leaving again until dismissed, its button disabled while it runs; a sign-in waiting for an answer still asks it after leaving Models; leaving Plugins during a package check and returning shows it checking, then the result |
+| Manual timing | Tools opened, General after 1 s, back to Tools: the list after 4.0 s in all, 1.3 s after coming back, one MCP server start (before: 2.9 s more after coming back, two starts) |
+
+RED/GREEN: each new test failed first for its reason (two server starts; a second job id; no `updateChecking`; no panel or question after returning; "Not checked yet"), then passed. The browser tests for A and B were also run against the old server and client code, where they fail.
+
+Decisions:
+- A request's abort now means "stop waiting", not "stop the work": the browser still cancels its fetch on leaving, and the server decides. Idle runs are bounded (three, 30 s each), so clicking through many extensions does not pile up processes.
+- Jobs match the request that started them exactly (action, project, server, source, provider). A panel shows a job in its scope that still runs, or one this page showed and the reader has not dismissed; after a reload only running ones come back.
+- `GET /api/jobs` returns summaries; the panel loads the one job it needs, so output does not travel on every tab change.
+- Fixtures write `auth.json` as an agent folder in use has one: Pi creates it on its first run, which changes the files an inspection is keyed on.
+
+Manual: `agent-browser` in its own session on a temporary agent folder; the real `~/.pi` was not written.
+
+---
+
 # Verification — slow tabs keep their last result, 2026-10-09
 
 Scope: every load measured on a real agent folder (read-only GETs; 100 session files, 166 MB) and the two tool inspections. Slow: `/api/sessions` about 0.9 s on every visit to System prompt and again to open a session; Tools and an extension's tools start Pi, every extension and every MCP server each time. Every other GET answered in under 0.1 s and is unchanged.
