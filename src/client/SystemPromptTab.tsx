@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CircleAlert, Copy } from "lucide-react";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import { loadSessions, loadSystemPrompt } from "./api";
@@ -12,49 +12,44 @@ import { ScrollArea } from "./components/ui/scroll-area";
 import { OptionSelect } from "./OptionSelect";
 import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
+import { useCached } from "./useCached";
 
 const count = (text: string) => `${text.length.toLocaleString("en")} characters`;
 
 export function SystemPromptTab({ project }: { project?: string }) {
-  const [sessions, setSessions] = useState<SessionSummary[]>();
-  const [sessionId, setSessionId] = useState("");
-  const [prompt, setPrompt] = useState<SystemPromptView>();
-  const [error, setError] = useState("");
+  const listing = useCached<SessionSummary[]>("sessions", signal => loadSessions(signal));
+  const sessions = listing.data;
+  const [chosen, setChosen] = useState("");
+  const [copyError, setCopyError] = useState("");
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    loadSessions().then(setSessions).catch(cause => setError(cause instanceof Error ? cause.message : "Could not list sessions."));
-  }, []);
-  // The newest session of the project chosen at the top.
-  useEffect(() => { setSessionId((sessions ?? []).find(session => session.cwd === project)?.id ?? ""); }, [sessions, project]);
-  useEffect(() => {
-    if (!sessionId) return;
-    let active = true;
-    setPrompt(undefined); setError(""); setMessage("");
-    loadSystemPrompt(sessionId).then(view => { if (active) setPrompt(view); })
-      .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Could not read the session."); });
-    return () => { active = false; };
-  }, [sessionId]);
-
   const projectSessions = (sessions ?? []).filter(session => session.cwd === project);
+  // The session chosen in this project, else its newest (the list is newest first).
+  const sessionId = projectSessions.some(session => session.id === chosen) ? chosen : projectSessions[0]?.id ?? "";
+  const recorded = useCached<SystemPromptView>(sessionId ? `prompt\0${sessionId}` : undefined, signal => loadSystemPrompt(sessionId, signal));
+  const prompt = recorded.data;
+  const error = listing.error || recorded.error || copyError;
+  const checking = (listing.loading && !!sessions) || (recorded.loading && !!prompt);
+  function choose(id: string) { setChosen(id); setCopyError(""); setMessage(""); }
+
   async function copy() {
     if (!prompt) return;
     try {
       await navigator.clipboard.writeText(prompt.text);
-      setMessage(`Copied ${count(prompt.text)}.`);
-    } catch { setError("The browser did not allow copying. Select the text instead."); }
+      setCopyError(""); setMessage(`Copied ${count(prompt.text)}.`);
+    } catch { setCopyError("The browser did not allow copying. Select the text instead."); }
   }
 
   return <>
     <PageHeader title="System prompt" description="Exactly what Pi recorded for a session: the prompt sections and tool declarations the model received. Read-only." />
     <Feedback message={message} onDismiss={() => setMessage("")} />
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not show the prompt</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    {checking && <p className="loading" role="status"><Spinner aria-hidden="true" />Checking for changes…</p>}
     {!sessions ? !error && <div className="loading" aria-busy="true"><Spinner />Reading sessions…</div>
       : !project ? <Alert role="note"><AlertDescription>Choose a project at the top to see its sessions.</AlertDescription></Alert>
       : !projectSessions.length ? <Empty><EmptyHeader><EmptyDescription>This project has no Pi sessions yet. Start a thread in T3Code, then come back.</EmptyDescription></EmptyHeader></Empty>
       : <>
         <Field className="mb-5 max-w-180"><FieldLabel htmlFor="prompt-session">Session</FieldLabel>
-          <OptionSelect id="prompt-session" className="w-full" value={sessionId} onChange={setSessionId}
+          <OptionSelect id="prompt-session" className="w-full" value={sessionId} onChange={choose}
             options={projectSessions.map(session => ({ value: session.id, label: `${new Date(session.modified).toLocaleString()} — ${session.title}` }))} /></Field>
         {!prompt ? !error && sessionId && <div className="loading" aria-busy="true"><Spinner />Reading the session…</div>
           : !prompt.text && !prompt.tools.length ? <Alert role="note"><AlertDescription>This session has no recorded system prompt. Sessions record it on their first request.</AlertDescription></Alert>

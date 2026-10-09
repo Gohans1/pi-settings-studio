@@ -103,6 +103,23 @@ test("failed inspection is distinguishable from zero tools and Refresh tools ret
   await expect(tools).not.toContainText("visible_tool");
 });
 
+test("an extension chosen again shows its last tools at once while they load", async ({ page }) => {
+  await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: /^tools\.ts/ }).click();
+  const tools = page.getByRole("region", { name: "Extension tools" });
+  await expect(tools.getByRole("button", { name: "All tools (5)", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^empty\.ts/ }).click();
+  await expect(tools).toContainText("No tools registered at startup.");
+  let release!: () => void;
+  const hold = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/plugins/tools*", async route => { await hold; await route.continue(); });
+  await page.getByRole("button", { name: /^tools\.ts/ }).click();
+  await expect(tools.getByRole("button", { name: "All tools (5)", exact: true })).toBeVisible();
+  await expect(tools.getByRole("status").filter({ hasText: "Checking for changes" })).toBeVisible();
+  release();
+  await expect(tools.getByText("Checking for changes")).toHaveCount(0);
+});
+
 test("a late inspection response never replaces the newly selected extension", async ({ page }) => {
   let release!: () => void;
   const hold = new Promise<void>(resolve => { release = resolve; });
