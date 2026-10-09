@@ -1,3 +1,21 @@
+# Verification — selects drop below their field, 2026-10-09
+
+Scope: every Select (21, all through `OptionSelect`) opened over its field, with the chosen option laid on the field and the list growing both ways (Base UI's `alignItemWithTrigger`, true by default). It now drops below the field, or above it when there is no room, like the menus.
+
+| Check | Result |
+|---|---|
+| `bun test` (`HOME` an empty folder) | 283 passed |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings |
+| `bun run test:e2e` (same `HOME`) | 113 passed. New: the Thinking level and API selects never cover their field, with the first or a later option chosen |
+
+RED/GREEN: the new test failed on the first open (the list covered the Thinking level field), then passed with `alignItemWithTrigger={false}`.
+
+Manual (T3 preview, then `agent-browser` in its own session when the preview host disconnected), 1280×800 dark: API near the bottom of the pane opens above, Thinking level below, the project picker below; a menu's tooltip closes when the menu opens; the popup is opaque once its 100 ms fade-in ends.
+
+Kept: the five free-text fields with suggestions use the browser's own datalist list. shadcn's registry has no autocomplete and its Combobox accepts only listed values.
+
+---
+
 # Verification — ScrollArea and the section index, 2026-10-09
 
 Scope: seven boxes that scrolled with `overflow: auto` (the workbench's two panes, the mcp.log, a job's output, both prompt views, an endpoint's model list) now scroll in shadcn's ScrollArea (base-nova, added with the CLI); General's section index is drawn with `buttonVariants` on plain links. Left native on purpose: `main`, the page's one scroller, and the two strips that scroll sideways with a faded edge and no scrollbar (the tab bar, the narrow section index).
