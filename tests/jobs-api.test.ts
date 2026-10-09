@@ -47,6 +47,23 @@ test("Test connections runs `pi mcp list` and reports each server, with secrets 
   assert.match(byName.dead.transport, /‹hidden›/);
 });
 
+test("a job asked for again while it runs is the same job; running jobs are listed with what started them", async (t) => {
+  const { agent, request, start, settle } = await fixture(t);
+  await writeFile(join(agent, "mcp.json"), JSON.stringify({ mcpServers: { echo: { command: "bun", args: [ECHO], env: { ECHO_DELAY_MS: "2000" } } } }));
+  const first = await (await start({ action: "mcp-test" })).json();
+  assert.equal((await (await start({ action: "mcp-test" })).json()).id, first.id);
+  // A different request is a different job.
+  const other = await (await start({ action: "provider-check", provider: "anthropic" })).json();
+  assert.notEqual(other.id, first.id);
+  const listed = await (await request("/api/jobs")).json();
+  assert.deepEqual(listed.find((job: { id: string }) => job.id === first.id), { id: first.id, status: "running", input: { action: "mcp-test" } });
+  assert.equal("output" in listed[0], false);
+  await settle(first.id);
+  // A finished job does not stand in for a new run.
+  assert.notEqual((await (await start({ action: "mcp-test" })).json()).id, first.id);
+  await settle(other.id);
+});
+
 test("a local package is installed and removed through the pi CLI; option-like sources are refused", async (t) => {
   const { root, agent, start, settle } = await fixture(t);
   const pkg = join(root, "pkg");
