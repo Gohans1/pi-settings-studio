@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import type { JobView } from "../shared/jobs";
-import { answerJob, cancelJob, loadJob, startJob } from "./api";
+import type { JobAction, JobInput, JobView } from "../shared/jobs";
+import { answerJob, cancelJob, loadJob, loadJobs, startJob } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
@@ -12,9 +12,22 @@ import { ScrollArea } from "./components/ui/scroll-area";
 import { Disclosure } from "./Disclosure";
 import { play } from "./Sound";
 
-/** Start a job on click and follow it until it ends. */
-export function useJob(onFinish?: (job: JobView) => void) {
+/** The jobs a panel shows: these actions, for this provider when given. A job for another project is not shown. */
+export type JobScope = { actions: JobAction[]; project?: string; provider?: string };
+const inScope = (input: JobInput, scope: JobScope) => scope.actions.includes(input.action)
+  && (scope.provider === undefined || input.provider === scope.provider) && (input.project === undefined || input.project === scope.project);
+
+// Jobs this page started or showed, until dismissed: a panel coming back shows them again, finished or not.
+const shown = new Set<string>();
+
+/**
+ * Start a job on click and follow it until it ends. Jobs run on the server, so a panel that comes back
+ * (another tab, a reload) picks up its job that still runs, or one this page showed and was not dismissed.
+ */
+export function useJob(scope: JobScope, onFinish?: (job: JobView) => void) {
   const [job, setJob] = useState<JobView>();
+  const current = useRef(job);
+  current.current = job;
   const [error, setError] = useState("");
   const finished = useRef(onFinish);
   finished.current = onFinish;
@@ -29,6 +42,22 @@ export function useJob(onFinish?: (job: JobView) => void) {
     else if (fresh || before?.status === "running") { if (job.status === "done") play("success"); else if (job.status === "failed") play("error"); }
     if (job.prompt && job.prompt.id !== before?.prompt?.id) play("attention");
   }, [job]);
+  const key = JSON.stringify(scope);
+  useEffect(() => {
+    let active = true;
+    loadJobs().then(async list => {
+      const found = list.find(entry => inScope(entry.input, scope) && (entry.status === "running" || shown.has(entry.id)));
+      if (!found || !active || current.current) return;
+      const next = await loadJob(found.id);
+      if (!active || current.current) return;
+      // Coming back is not a new start or a new outcome: nothing to hear.
+      heard.current = next;
+      shown.add(next.id);
+      setJob(next);
+    }).catch(() => { /* the panel starts empty and its button still starts a job */ });
+    return () => { active = false; };
+  // The scope's JSON is its identity; a new object with the same fields is not a new scope.
+  }, [key]);
   useEffect(() => {
     if (!job || job.status !== "running") return;
     const timer = setTimeout(() => {
@@ -39,7 +68,7 @@ export function useJob(onFinish?: (job: JobView) => void) {
   }, [job]);
   async function start(body: Record<string, unknown>) {
     setError("");
-    try { setJob(await startJob(body)); }
+    try { const started = await startJob(body); shown.add(started.id); setJob(started); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not start."); }
   }
   const act = (change: (job: JobView) => Promise<JobView>) => job && change(job).then(setJob).catch(cause => setError(cause instanceof Error ? cause.message : "Failed."));
@@ -47,7 +76,7 @@ export function useJob(onFinish?: (job: JobView) => void) {
     job, error, start, running: job?.status === "running",
     answer: (value: string) => act(current => answerJob(current.id, current.prompt!.id, value)),
     cancel: () => act(current => cancelJob(current.id)),
-    dismiss: () => { setJob(undefined); setError(""); },
+    dismiss: () => { if (job) shown.delete(job.id); setJob(undefined); setError(""); },
   };
 }
 

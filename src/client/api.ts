@@ -9,7 +9,7 @@ import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelScopeV
 import type { ProjectView, TrustView } from "../shared/projects";
 import type { InstructionsView } from "../shared/instructions";
 import type { KeybindingsView } from "../shared/keybindings";
-import type { JobView } from "../shared/jobs";
+import type { JobSummary, JobView } from "../shared/jobs";
 import type { ThemeView } from "../shared/themes";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown, signal?: AbortSignal): Promise<T> {
@@ -116,6 +116,7 @@ export const saveKeybindings = (revision: string, changes: { id: string; keys: s
   request<KeybindingsView>("/api/keybindings", "PATCH", { revision, changes });
 export const startJob = (body: Record<string, unknown>) => request<JobView>("/api/jobs", "POST", body);
 export const loadJob = (id: string) => request<JobView>(`/api/jobs/${id}`);
+export const loadJobs = () => request<JobSummary[]>("/api/jobs");
 export const answerJob = (id: string, promptId: string, value: string) => request<JobView>(`/api/jobs/${id}/answer`, "POST", { promptId, value });
 export const cancelJob = (id: string) => request<JobView>(`/api/jobs/${id}/cancel`, "POST", {});
 export const loadModelsRaw = () => request<RawSettings>("/api/models/custom/raw");

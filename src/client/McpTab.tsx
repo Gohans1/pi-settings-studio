@@ -127,13 +127,13 @@ export function McpTab({ project }: { project?: string }) {
   const [undo, setUndo] = useState<McpTarget>();
   const target = (scope: "global" | "project"): McpTarget => ({ scope, project });
   // Running servers is explicit: `pi mcp list` connects every enabled server.
-  const check = useJob();
+  const check = useJob({ actions: ["mcp-test"], project });
   const [rawScope, setRawScope] = useState<"global" | "project">();
   const [log, setLog] = useState<{ path: string; exists: boolean; text: string }>();
   const showLog = () => { setSelected(undefined); setForm(undefined); loadMcpLog(project).then(setLog).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read mcp.log.")); };
   const loadRaw = useCallback(() => loadMcpRaw(target(rawScope ?? "global")), [rawScope, project]);
   const saveRaw = useCallback((revision: string, text: string) => saveMcpRaw(target(rawScope ?? "global"), revision, text), [rawScope, project]);
-  const signIn = useJob();
+  const signIn = useJob({ actions: ["mcp-login", "mcp-logout"], project });
   const test = () => void check.start({ action: "mcp-test", ...(project ? { project } : {}) });
 
   async function refresh() {
