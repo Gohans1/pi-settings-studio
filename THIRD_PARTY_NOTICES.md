@@ -10,7 +10,7 @@
 
 ## shadcn/ui (Base Nova)
 
-Every file in `src/client/components/ui` (accordion, alert, alert-dialog, badge, button, card, checkbox, collapsible, dropdown-menu, empty, field, input, input-group, item, kbd, label, radio-group, select, separator, spinner, switch, tabs, textarea, toast, toggle, toggle-group, tooltip) comes from the shadcn registry, base-nova style, installed or reinstalled with `shadcn@4.21.4` (the latest release) on 2026-10-08 and not edited since. `shadcn add --dry-run --diff` finds no difference beyond a `"use client"` line, which the CLI adds or drops from run to run and which a Vite app ignores. `src/client/styles.css` imports `shadcn/tailwind.css` from the `shadcn` package; `tw-animate-css` and `cn` are dependencies, and `@shadcn/lint` (Copyright (c) 2026 shadcn) a development dependency, under their own MIT licenses.
+Every file in `src/client/components/ui` (accordion, alert, alert-dialog, badge, button, card, checkbox, collapsible, dropdown-menu, empty, field, input, input-group, item, kbd, label, radio-group, scroll-area, select, separator, spinner, switch, tabs, textarea, toast, toggle, toggle-group, tooltip) comes from the shadcn registry, base-nova style, installed or reinstalled with `shadcn@4.21.4` (the latest release) on 2026-10-08 and not edited since. `shadcn add --dry-run --diff` finds no difference beyond a `"use client"` line, which the CLI adds or drops from run to run and which a Vite app ignores. `src/client/styles.css` imports `shadcn/tailwind.css` from the `shadcn` package; `tw-animate-css` and `cn` are dependencies, and `@shadcn/lint` (Copyright (c) 2026 shadcn) a development dependency, under their own MIT licenses.
 
 MIT License
 
