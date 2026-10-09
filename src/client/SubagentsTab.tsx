@@ -53,7 +53,7 @@ function AgentForm({ agent, busy, error, title: heading, onSave, onCancel }: {
       <Textarea id={id + "prompt"} className="field-sizing-fixed" rows={12} value={prompt} onChange={e => setPrompt(e.target.value)} /></Field>
     {agent && agent.extraKeys.length > 0 && <FieldDescription>Kept as they are: {agent.extraKeys.join(", ")}.</FieldDescription>}
     </FieldGroup>
-    <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save profile"}</Button>
+    <div className="form-actions"><Button type="submit" disabled={busy}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save profile"}</Button>
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;
 }

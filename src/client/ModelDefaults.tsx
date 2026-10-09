@@ -174,7 +174,7 @@ export function ModelDefaults({ providers, project, onSaved }: { providers: Prov
         <FieldDescription id="default-thinking-help">Pi limits the level to what the model supports.</FieldDescription></Field>
       <EnabledModels patterns={enabled} scope={modelScope} ids={ids} inherited={inheritedEnabled} onChange={setEnabled} />
       </FieldGroup>
-      <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save defaults"}</Button></div>
+      <div className="form-actions"><Button type="submit" disabled={busy}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save defaults"}</Button></div>
     </form>}
   </section>;
 }

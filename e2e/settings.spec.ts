@@ -43,6 +43,20 @@ test("save writes native files directly, preserves unknown values, and survives 
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("new-model");
 });
 
+test("while the settings save, Save shows a spinner", async ({ page }) => {
+  await page.getByLabel("Shell command prefix", { exact: true }).fill("held");
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", route => route.request().method() === "GET" ? route.continue() : held.then(() => route.continue()));
+  await page.getByRole("region", { name: "Unsaved changes" }).getByRole("button", { name: "Save", exact: true }).click();
+  const saving = page.getByRole("button", { name: "Saving…" });
+  await expect(saving).toBeDisabled();
+  await expect(saving.locator("[data-slot=spinner]")).toBeVisible();
+  release();
+  await expect(saving).toBeHidden();
+  await page.unrouteAll({ behavior: "wait" });
+});
+
 test("stale saves retain the draft and never overwrite a concurrent update", async ({ page }) => {
   await page.getByLabel("Shell command prefix", { exact: true }).fill("my-draft");
   await writeFile(file, '{"shellCommandPrefix":"other-session","unknown":42}');
@@ -137,6 +151,38 @@ test("the raw JSON editor saves exactly what was typed and repairs a broken file
   await page.getByRole("button", { name: "Save JSON" }).click();
   await expect(page.getByRole("alert")).toContainText("JSON object");
   expect(await readFile(file, "utf8")).toBe('{ "shellCommandPrefix": "repaired" }');
+});
+
+test("while the shortcuts save, their Save shows a spinner", async ({ page }) => {
+  const panel = page.getByRole("region", { name: "Keyboard shortcuts" });
+  await panel.getByRole("searchbox", { name: "Search shortcuts" }).fill("new session");
+  await panel.getByLabel("Keys for app.session.new").fill("ctrl+shift+n");
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", route => route.request().method() === "GET" ? route.continue() : held.then(() => route.continue()));
+  await panel.getByRole("button", { name: "Save shortcuts" }).click();
+  const saving = page.getByRole("button", { name: "Saving…" });
+  await expect(saving).toBeDisabled();
+  await expect(saving.locator("[data-slot=spinner]")).toBeVisible();
+  release();
+  await expect(saving).toBeHidden();
+  await page.unrouteAll({ behavior: "wait" });
+});
+
+test("while the raw JSON saves, Save JSON shows a spinner", async ({ page }) => {
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Edit as JSON" }).click();
+  await expect(page.getByLabel("settings.json", { exact: true })).toBeVisible();
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", route => route.request().method() === "GET" ? route.continue() : held.then(() => route.continue()));
+  await page.getByRole("button", { name: "Save JSON" }).click();
+  const saving = page.getByRole("button", { name: "Saving…" });
+  await expect(saving).toBeDisabled();
+  await expect(saving.locator("[data-slot=spinner]")).toBeVisible();
+  release();
+  await expect(saving).toBeHidden();
+  await page.unrouteAll({ behavior: "wait" });
 });
 
 test("keyboard shortcuts are edited, disabled and reset in keybindings.json", async ({ page }) => {

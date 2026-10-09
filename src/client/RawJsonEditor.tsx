@@ -40,7 +40,7 @@ export function RawJsonEditor({ file, load, save, note, onClose }: {
     {raw ? <Field><FieldLabel htmlFor={id}>{file}</FieldLabel>
       <Textarea id={id} className="field-sizing-fixed font-mono" value={text} rows={22} spellCheck={false} autoComplete="off" onChange={event => setText(event.target.value)} /></Field>
       : !error && <div className="loading" aria-busy="true"><Spinner />Reading {file}…</div>}
-    <div className="form-actions"><Button disabled={!raw || busy} onClick={() => void submit()}>{busy ? "Saving…" : "Save JSON"}</Button>
+    <div className="form-actions"><Button disabled={!raw || busy} onClick={() => void submit()}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save JSON"}</Button>
       <Button variant="outline" disabled={busy} onClick={() => onClose(false)}>Cancel</Button></div>
   </section>;
 }

@@ -53,6 +53,38 @@ test("the list names its groups and says which providers are ready, and the chos
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("while the defaults save, Save defaults shows a spinner", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  await page.getByRole("region", { name: "Defaults" }).getByLabel("Default provider").fill("anthropic");
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", route => route.request().method() === "GET" ? route.continue() : held.then(() => route.continue()));
+  await page.getByRole("button", { name: "Save defaults" }).click();
+  const saving = page.getByRole("button", { name: "Saving…" });
+  await expect(saving).toBeDisabled();
+  await expect(saving.locator("[data-slot=spinner]")).toBeVisible();
+  release();
+  await expect(saving).toBeHidden();
+  await page.unrouteAll({ behavior: "wait" });
+});
+
+test("while a custom provider saves, Save provider shows a spinner", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: "Add custom provider" }).click();
+  await page.getByRole("form", { name: "Add custom provider" }).getByLabel("Provider ID").fill("lmstudio");
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", route => route.request().method() === "GET" ? route.continue() : held.then(() => route.continue()));
+  await page.getByRole("button", { name: "Save provider" }).click();
+  const saving = page.getByRole("button", { name: "Saving…" });
+  await expect(saving).toBeDisabled();
+  await expect(saving.locator("[data-slot=spinner]")).toBeVisible();
+  release();
+  await expect(saving).toBeHidden();
+  await page.unrouteAll({ behavior: "wait" });
+});
+
 test("defaults are chosen from Pi's catalog and saved to settings.json", async ({ page }) => {
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: /^Defaults/ }).click();

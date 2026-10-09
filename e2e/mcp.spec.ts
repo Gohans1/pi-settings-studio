@@ -91,6 +91,24 @@ test("switches and the exposure choice save to mcp.json immediately", async ({ p
   await expect(page.getByText("2 of 3 servers on")).toBeVisible();
 });
 
+test("while a server saves, Save server shows a spinner", async ({ page }) => {
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "Add server", exact: true }).click();
+  const form = page.getByRole("form", { name: "Add MCP server" });
+  await form.getByLabel("Name", { exact: true }).fill("files");
+  await form.getByLabel("Command", { exact: true }).fill("npx");
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", route => route.request().method() === "GET" ? route.continue() : held.then(() => route.continue()));
+  await form.getByRole("button", { name: "Save server" }).click();
+  const saving = page.getByRole("button", { name: "Saving…" });
+  await expect(saving).toBeDisabled();
+  await expect(saving.locator("[data-slot=spinner]")).toBeVisible();
+  release();
+  await expect(saving).toBeHidden();
+  await page.unrouteAll({ behavior: "wait" });
+});
+
 test("add a server, edit it without seeing its secret, remove it and undo", async ({ page }) => {
   await page.goto(server.url + "#mcp");
   const readServers = async () => JSON.parse(await readFile(file, "utf8")).mcpServers;

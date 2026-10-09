@@ -230,7 +230,7 @@ export function GeneralTab({ project }: { project?: string }) {
               <p>{changes.length} unsaved {changes.length === 1 ? "change" : "changes"}</p>
               <div className="actions">
                 <Button variant="outline" disabled={busy} onClick={() => { setDraft({}); setError(""); setMessage("Draft discarded. No file was changed."); }}>Discard</Button>
-                <Button disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : "Save"}</Button>
+                <Button disabled={busy} onClick={() => void save()}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save"}</Button>
               </div>
             </div>}
           </div>

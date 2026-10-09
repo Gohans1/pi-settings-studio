@@ -7,6 +7,7 @@ import { Card, CardContent } from "./components/ui/card";
 import { Checkbox } from "./components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
+import { Spinner } from "./components/ui/spinner";
 import { OptionSelect } from "./OptionSelect";
 import { useFieldErrors } from "./useFieldErrors";
 import { NamedRows } from "./McpServerForm";
@@ -123,7 +124,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
     </FieldSet>
     {provider && provider.otherKeys.length > 0 && <FieldDescription>Kept as they are: {provider.otherKeys.join(", ")}.</FieldDescription>}
     </FieldGroup>
-    <div className="form-actions"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save provider"}</Button>
+    <div className="form-actions"><Button type="submit" disabled={busy}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save provider"}</Button>
       {onRemove && <Button type="button" variant="destructive" disabled={busy} onClick={onRemove} aria-label={`Remove ${provider?.id}`}>Remove</Button>}
       <Button type="button" variant="outline" disabled={busy} onClick={onCancel}>Cancel</Button></div>
   </form>;

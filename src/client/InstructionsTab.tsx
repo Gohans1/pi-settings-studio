@@ -44,7 +44,7 @@ function Editor({ file, files, project, loadsInProject, busy, onSave, onDelete }
       {file.others?.length ? <Alert role="note"><AlertDescription>Pi ignores {file.others.join(", ")} in this folder, because {baseName(file.path)} comes first.</AlertDescription></Alert> : null}
       <Textarea aria-label={`Contents of ${baseName(file.path)}`} className="field-sizing-fixed font-mono" value={text} rows={22} spellCheck={false} onChange={event => setText(event.target.value)} />
       <div className="form-actions">
-        <Button disabled={busy || (file.exists && !changed)} onClick={() => onSave(text)}>{busy ? "Saving…" : file.exists ? "Save file" : "Create file"}</Button>
+        <Button disabled={busy || (file.exists && !changed)} onClick={() => onSave(text)}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : file.exists ? "Save file" : "Create file"}</Button>
         {changed && <Button variant="outline" disabled={busy} onClick={() => setText(file.text ?? "")}>Discard changes</Button>}
         {file.exists && <Button variant="destructive" disabled={busy || changed} onClick={onDelete}>Delete file</Button>}
       </div>
