@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bot, Boxes, FileText, Layers, Puzzle, ScrollText, Server, SlidersHorizontal } from "lucide-react";
+import { Bot, Boxes, FileText, Layers, Puzzle, ScrollText, Server, SlidersHorizontal, Wrench } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Toaster } from "./components/ui/toast";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -12,6 +12,7 @@ import { PluginsTab } from "./PluginsTab";
 import { SubagentsTab } from "./SubagentsTab";
 import { SkillsTab } from "./SkillsTab";
 import { SystemPromptTab } from "./SystemPromptTab";
+import { ToolsTab } from "./ToolsTab";
 
 type Panel = (props: { project?: string; loadsInProject?: boolean }) => React.ReactElement;
 // Only implemented tabs are listed (SPEC.md: no fake tabs).
@@ -22,6 +23,7 @@ const tabs: { id: string; label: string; icon: typeof SlidersHorizontal; Panel: 
   { id: "subagents", label: "Sub-agents", icon: Bot, Panel: SubagentsTab },
   { id: "plugins", label: "Plugins", icon: Puzzle, Panel: PluginsTab },
   { id: "mcp", label: "MCP", icon: Server, Panel: McpTab },
+  { id: "tools", label: "Tools", icon: Wrench, Panel: ToolsTab },
   { id: "instructions", label: "Instructions", icon: FileText, Panel: InstructionsTab },
   { id: "system-prompt", label: "System prompt", icon: ScrollText, Panel: SystemPromptTab },
 ];

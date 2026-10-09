@@ -3,7 +3,7 @@ import type { McpFileView, McpImportPreview, McpServerInput } from "../shared/mc
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PackageUpdateCheck, PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
-import type { PluginToolsView } from "../shared/plugin-tools";
+import type { PluginToolsView, ToolsView } from "../shared/plugin-tools";
 import type { AgentInput, AgentsView } from "../shared/agents";
 import type { CustomModel, CustomProviderInput, CustomProvidersView, ModelScopeView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
@@ -70,6 +70,7 @@ export const saveRawSettings = (revision: string, text: string, scope: Scope = "
 export const loadPlugins = (project?: string) => request<PluginsView>(withProject("/api/plugins", project));
 export const loadPluginTools = (path: string, project?: string, signal?: AbortSignal) =>
   request<PluginToolsView>(withProject("/api/plugins/tools", project), "POST", { path }, signal);
+export const loadTools = (project?: string, signal?: AbortSignal) => request<ToolsView>(withProject("/api/tools", project), "POST", {}, signal);
 export const checkPackageUpdates = (project?: string) => request<PackageUpdateCheck>(withProject("/api/plugins/updates", project), "POST", {});
 export const savePlugins = (scope: Scope, revision: string, items: { type: string; path: string }[], enabled: boolean, project?: string) =>
   request<PluginsView>(withProject("/api/plugins", project), "PATCH", { scope, revision, items, enabled });
