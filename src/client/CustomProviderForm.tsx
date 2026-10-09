@@ -3,7 +3,7 @@ import { CircleAlert, X } from "lucide-react";
 import type { CustomModel, CustomProviderInput, CustomProviderView } from "../shared/models";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
-import { Card, CardContent } from "./components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
 import { Checkbox } from "./components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "./components/ui/field";
 import { Input } from "./components/ui/input";
@@ -102,24 +102,26 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
         <Button type="button" variant="outline" size="sm" disabled={listing || !baseUrl.trim() || !api} onClick={() => void listModels()}>{listing ? "Listing…" : "List models from the endpoint"}</Button>
       </div>
       {listError && <FieldError>{listError}</FieldError>}
-      {found && <Card size="sm"><CardContent><FieldSet>
-        <FieldLegend variant="label">Models the endpoint offers</FieldLegend>
-        {found.length ? <ul className="found-models">{found.map(model => <li key={model.id}><Field orientation="horizontal" className="flex-wrap">
+      {found && <Card size="sm" role="group" aria-labelledby={id + "found-title"}>
+        <CardHeader>
+          <CardTitle id={id + "found-title"}>Models the endpoint offers</CardTitle>
+          <CardDescription>Uses the stored key and headers only while the base URL is unchanged. A key that is a command is not run.</CardDescription>
+        </CardHeader>
+        <CardContent>{found.length ? <ul className="found-models">{found.map(model => <li key={model.id}><Field orientation="horizontal" className="flex-wrap">
           <Checkbox id={`${id}found-${model.id}`} checked={known.has(model.id) || picked.has(model.id)} disabled={known.has(model.id)}
             onCheckedChange={checked => setPicked(current => { const next = new Set(current); if (checked) next.add(model.id); else next.delete(model.id); return next; })} />
           <FieldLabel htmlFor={`${id}found-${model.id}`} className="flex-wrap"><code>{model.id}</code>{model.name && <span className="muted">{model.name}</span>}
             {model.contextWindow && <span className="muted">{model.contextWindow.toLocaleString("en")} context</span>}
             {known.has(model.id) && <span className="muted">in the list</span>}</FieldLabel>
-        </Field></li>)}</ul> : <FieldDescription>The endpoint lists no models.</FieldDescription>}
-        <div className="actions">
+        </Field></li>)}</ul> : <p className="muted">The endpoint lists no models.</p>}</CardContent>
+        <CardFooter><div className="actions">
           <Button type="button" size="sm" disabled={!picked.size} onClick={() => {
             setModels(rows => [...rows.filter(row => row.id.trim()), ...found.filter(model => picked.has(model.id)).map(toRow)]);
             setFound(undefined);
           }}>Add {picked.size} model{picked.size === 1 ? "" : "s"}</Button>
           <Button type="button" variant="outline" size="sm" onClick={() => setFound(undefined)}>Close</Button>
-        </div>
-        <FieldDescription>Uses the stored key and headers only while the base URL is unchanged. A key that is a command is not run.</FieldDescription>
-      </FieldSet></CardContent></Card>}
+        </div></CardFooter>
+      </Card>}
       <FieldDescription>Other model fields (cost, compat, thinking maps) stay as they are in the file.</FieldDescription>
     </FieldSet>
     {provider && provider.otherKeys.length > 0 && <FieldDescription>Kept as they are: {provider.otherKeys.join(", ")}.</FieldDescription>}
