@@ -76,3 +76,21 @@ export type CustomProviderInput = {
   authHeader?: boolean;
   models: CustomModel[];
 };
+
+/**
+ * The APIs Pi implements (pi-ai's KnownApi, Pi 1.1.0), as the custom-provider form names them; models.json also
+ * accepts APIs that extensions register. listsModels: the form can list the endpoint's models
+ * (server/model-discovery.ts). tests/model-discovery.test.ts fails when either list drifts.
+ */
+export const APIS = [
+  { id: "openai-completions", name: "OpenAI Chat Completions", hint: "Most local servers and proxies: Ollama, LM Studio, vLLM, SGLang.", listsModels: true },
+  { id: "openai-responses", name: "OpenAI Responses", hint: "OpenAI's Responses API, and servers that offer it.", listsModels: true },
+  { id: "anthropic-messages", name: "Anthropic Messages", hint: "Anthropic's API, and proxies that speak it. The base URL ends before /v1.", listsModels: true },
+  { id: "google-generative-ai", name: "Google Generative AI", hint: "The Gemini API.", listsModels: true },
+  { id: "google-vertex", name: "Google Vertex AI", hint: "Gemini on Google Cloud's Vertex AI.", listsModels: false },
+  { id: "mistral-conversations", name: "Mistral Conversations", hint: "Mistral's API. The base URL ends before /v1.", listsModels: true },
+  { id: "azure-openai-responses", name: "Azure OpenAI Responses", hint: "OpenAI models deployed on Azure.", listsModels: false },
+  { id: "openai-codex-responses", name: "OpenAI Codex Responses", hint: "OpenAI's Codex endpoint, used with a ChatGPT sign-in.", listsModels: false },
+  { id: "bedrock-converse-stream", name: "Amazon Bedrock Converse", hint: "Models on Amazon Bedrock.", listsModels: false },
+  { id: "pi-messages", name: "Pi Messages", hint: "Pi's own protocol, spoken by the Radius gateway.", listsModels: false },
+] as const;

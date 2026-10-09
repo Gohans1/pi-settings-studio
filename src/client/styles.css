@@ -230,6 +230,8 @@
   .provider-models > p { margin: 0; }
   .model-rows { display: grid; gap: --spacing(2); }
   .model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); align-items: center; }
+  .model-row-head { color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-medium); }
+  .model-row-head > span:last-child { grid-column: span 4; }
   .found-models { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); }
   .pattern-add { display: flex; gap: --spacing(2); }
   /* Enabled models: providers as rows that open to their models, each with its own checkbox. */
@@ -392,6 +394,7 @@
   .page-actions { width: 100%; flex-wrap: nowrap; }
   .detail-list > div { grid-template-columns: minmax(0, 1fr); gap: --spacing(1); }
   .model-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .model-row-head { display: none; }
   .save-bar .actions { width: 100%; }
   .save-bar .actions > * { flex-grow: 1; }
 }

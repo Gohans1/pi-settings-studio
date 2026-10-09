@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { CircleAlert, X } from "lucide-react";
-import type { CustomModel, CustomProviderInput, CustomProviderView } from "../shared/models";
+import { APIS, type CustomModel, type CustomProviderInput, type CustomProviderView } from "../shared/models";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
@@ -14,9 +14,8 @@ import { useFieldErrors } from "./useFieldErrors";
 import { NamedRows } from "./McpServerForm";
 import { discoverCustomModels } from "./api";
 
-// pi-ai's KnownApi values (Pi 1.0.3); models.json also accepts APIs that extensions register.
-const APIS = ["openai-completions", "openai-responses", "anthropic-messages", "google-generative-ai", "google-vertex",
-  "mistral-conversations", "azure-openai-responses", "openai-codex-responses", "bedrock-converse-stream", "pi-messages"];
+const listing = APIS.filter(entry => entry.listsModels).map(entry => entry.name);
+const listingText = `Listing models works for ${listing.slice(0, -1).join(", ")} and ${listing.at(-1)}.`;
 const keyKinds = { literal: "a key", environment: "an environment variable reference", command: "a command" };
 
 type ModelRow = { id: string; name: string; reasoning: boolean; image: boolean; contextWindow: string; maxTokens: string };
@@ -41,6 +40,8 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
   const [listing, setListing] = useState(false);
   const [listError, setListError] = useState("");
   const title = provider ? `Edit ${provider.id}` : "Add custom provider";
+  const chosen = APIS.find(entry => entry.id === api);
+  const apiHelp = chosen ? `Writes api: ${chosen.id}. ${chosen.hint}` : api ? `Writes api: ${api}, which an extension provides.` : "The API the endpoint speaks.";
   const id = useId();
   const { errors, check, clear, describe } = useFieldErrors({ [id + "id"]: "Use letters, digits, ., _ and -, starting with a letter or digit." });
   const headerInput = () => headers.filter(row => row.name.trim()).map(row => ({ name: row.name.trim(), ...(row.value ? { value: row.value } : {}) }));
@@ -80,19 +81,23 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
     <Field><FieldLabel htmlFor={id + "name"}>Display name</FieldLabel><Input id={id + "name"} value={name} placeholder={providerId || "Optional"} onChange={e => setName(e.target.value)} /></Field>
     <Field><FieldLabel htmlFor={id + "url"}>Base URL</FieldLabel><Input id={id + "url"} value={baseUrl} placeholder="http://localhost:11434/v1" autoComplete="off" spellCheck={false} onChange={e => setBaseUrl(e.target.value)} /></Field>
     <Field><FieldLabel htmlFor={id + "api"}>API</FieldLabel>
-      <OptionSelect id={id + "api"} className="w-full" value={api} onChange={setApi}
-        options={[{ value: "", label: "Not set" }, ...[...new Set([...(api && !APIS.includes(api) ? [api] : []), ...APIS])].map(value => ({ value, label: value }))]} /></Field>
+      <OptionSelect id={id + "api"} className="w-full" value={api} onChange={setApi} aria-describedby={id + "api-help"}
+        options={[{ value: "", label: "Not set" }, ...(api && !chosen ? [{ value: api, label: api }] : []), ...APIS.map(entry => ({ value: entry.id as string, label: entry.name }))]} />
+      <FieldDescription id={id + "api-help"}>{apiHelp}</FieldDescription></Field>
     <Field><FieldLabel htmlFor={id + "key"}>API key</FieldLabel><Input id={id + "key"} type="password" value={apiKey} autoComplete="new-password" disabled={clearKey}
       placeholder={provider?.apiKey ? `Stored (${keyKinds[provider.apiKey]}). Leave empty to keep.` : "Literal key, $ENV_NAME or !command"} onChange={e => setApiKey(e.target.value)} /></Field>
     {provider?.apiKey && <Field orientation="horizontal"><Checkbox id={id + "clear"} checked={clearKey} onCheckedChange={setClearKey} /><FieldLabel htmlFor={id + "clear"}>Remove the stored API key</FieldLabel></Field>}
     <Field orientation="horizontal"><Checkbox id={id + "bearer"} checked={authHeader} onCheckedChange={setAuthHeader} /><FieldLabel htmlFor={id + "bearer"}>Also send the key as <code>Authorization: Bearer</code></FieldLabel></Field>
     <FieldSet><FieldLegend variant="label">Headers</FieldLegend><NamedRows kind="header" rows={headers} onChange={setHeaders} /></FieldSet>
     <FieldSet><FieldLegend variant="label">Models</FieldLegend>
-      <div className="model-rows">{models.map((row, index) => <div className="model-row" key={index}>
-        <Input aria-label={`Model ID ${index + 1}`} value={row.id} placeholder="model-id" spellCheck={false} onChange={e => update(index, { id: e.target.value })} />
-        <Input aria-label={`Model name ${index + 1}`} value={row.name} placeholder="Display name" onChange={e => update(index, { name: e.target.value })} />
-        <Input aria-label={`Context window ${index + 1}`} type="number" min={1} value={row.contextWindow} placeholder="Context" aria-invalid={!!errors[`Context window ${index + 1}`] || undefined} onChange={e => update(index, { contextWindow: e.target.value })} />
-        <Input aria-label={`Max output tokens ${index + 1}`} type="number" min={1} value={row.maxTokens} placeholder="Max out" aria-invalid={!!errors[`Max output tokens ${index + 1}`] || undefined} onChange={e => update(index, { maxTokens: e.target.value })} />
+      <div className="model-rows">
+        {/* Column names for sighted readers; each field has its own accessible name. */}
+        {models.length > 0 && <div className="model-row model-row-head" aria-hidden="true"><span>Model ID</span><span>Display name</span><span>Context</span><span>Max output</span></div>}
+        {models.map((row, index) => <div className="model-row" key={index}>
+        <Input aria-label={`Model ID ${index + 1}`} value={row.id} placeholder="qwen2.5-coder:7b" spellCheck={false} onChange={e => update(index, { id: e.target.value })} />
+        <Input aria-label={`Model name ${index + 1}`} value={row.name} placeholder="Optional" onChange={e => update(index, { name: e.target.value })} />
+        <Input aria-label={`Context window ${index + 1}`} type="number" min={1} value={row.contextWindow} placeholder="128000" aria-invalid={!!errors[`Context window ${index + 1}`] || undefined} onChange={e => update(index, { contextWindow: e.target.value })} />
+        <Input aria-label={`Max output tokens ${index + 1}`} type="number" min={1} value={row.maxTokens} placeholder="16384" aria-invalid={!!errors[`Max output tokens ${index + 1}`] || undefined} onChange={e => update(index, { maxTokens: e.target.value })} />
         <Field orientation="horizontal" className="w-auto"><Checkbox id={`${id}reasoning-${index}`} checked={row.reasoning} onCheckedChange={reasoning => update(index, { reasoning })} /><FieldLabel htmlFor={`${id}reasoning-${index}`}>Reasoning</FieldLabel></Field>
         <Field orientation="horizontal" className="w-auto"><Checkbox id={`${id}image-${index}`} checked={row.image} onCheckedChange={image => update(index, { image })} /><FieldLabel htmlFor={`${id}image-${index}`}>Images</FieldLabel></Field>
         <Button type="button" variant="ghost" size="icon" aria-label={`Remove model ${row.id || index + 1}`} onClick={() => setModels(rows => rows.filter((_, i) => i !== index))}><X aria-hidden="true" /></Button>
@@ -100,8 +105,9 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
       <FieldError errors={models.flatMap((_, index) => [errors[`Context window ${index + 1}`], errors[`Max output tokens ${index + 1}`]]).filter(Boolean).map(message => ({ message }))} />
       <div className="actions">
         <Button type="button" variant="outline" size="sm" onClick={() => setModels(rows => [...rows, toRow()])}>Add model</Button>
-        <Button type="button" variant="outline" size="sm" disabled={listing || !baseUrl.trim() || !api} onClick={() => void listModels()}>{listing ? "Listing…" : "List models from the endpoint"}</Button>
+        <Button type="button" variant="outline" size="sm" disabled={listing || !baseUrl.trim() || !chosen?.listsModels} onClick={() => void listModels()}>{listing ? "Listing…" : "List models from the endpoint"}</Button>
       </div>
+      {api && !chosen?.listsModels && <FieldDescription>{listingText}</FieldDescription>}
       {listError && <FieldError>{listError}</FieldError>}
       {found && <Card size="sm" role="group" aria-labelledby={id + "found-title"}>
         <CardHeader>
@@ -123,7 +129,7 @@ export function CustomProviderForm({ provider, busy, error, onSave, onRemove, on
           <Button type="button" variant="outline" size="sm" onClick={() => setFound(undefined)}>Close</Button>
         </div></CardFooter>
       </Card>}
-      <FieldDescription>Other model fields (cost, compat, thinking maps) stay as they are in the file.</FieldDescription>
+      <FieldDescription>{models.length > 0 && "Empty context and output use Pi's defaults (128,000 and 16,384 tokens). "}Other model fields (cost, compat, thinking maps) stay as they are in the file.</FieldDescription>
     </FieldSet>
     {provider && provider.otherKeys.length > 0 && <FieldDescription>Kept as they are: {provider.otherKeys.join(", ")}.</FieldDescription>}
     </FieldGroup>

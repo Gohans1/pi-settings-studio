@@ -290,6 +290,26 @@ test("a whole provider is turned off and back on with its checkbox", async ({ pa
   expect((await settings()).enabledModels).toBeUndefined();
 });
 
+test("the custom provider form says what each API is for, lists models only where it can, and labels each model column", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: "Add custom provider" }).click();
+  const form = page.getByRole("form", { name: "Add custom provider" });
+  const api = form.getByRole("combobox", { name: "API", exact: true });
+  await form.getByLabel("Base URL").fill("http://localhost:1/v1");
+  await api.click();
+  await page.getByRole("option", { name: "Anthropic Messages", exact: true }).click();
+  await expect(api).toHaveAccessibleDescription(/^Writes api: anthropic-messages\. Anthropic's API, and proxies that speak it/);
+  await expect(form.getByRole("button", { name: "List models from the endpoint" })).toBeEnabled();
+  await api.click();
+  await page.getByRole("option", { name: "Amazon Bedrock Converse", exact: true }).click();
+  await expect(form.getByRole("button", { name: "List models from the endpoint" })).toBeDisabled();
+  await expect(form).toContainText("Listing models works for OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, Google Generative AI and Mistral Conversations.");
+  await form.getByRole("button", { name: "Add model" }).click();
+  await expect(form.locator(".model-row-head")).toHaveText(["Model ID", "Display name", "Context", "Max output"].join(""));
+  await expect(form).toContainText("Empty context and output use Pi's defaults");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
 test("a custom provider the browser would refuse says why under its field and writes nothing", async ({ page }) => {
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: "Add custom provider" }).click();
@@ -310,7 +330,7 @@ test("a custom provider is added to models.json, edited without seeing its key, 
   await form.getByLabel("Provider ID").fill("lmstudio");
   await form.getByLabel("Base URL").fill("http://localhost:1234/v1");
   await form.getByRole("combobox", { name: "API", exact: true }).click();
-  await page.getByRole("option", { name: "openai-completions", exact: true }).click();
+  await page.getByRole("option", { name: "OpenAI Chat Completions", exact: true }).click();
   await form.getByLabel("API key", { exact: true }).fill("fixture-lm-key");
   await form.getByRole("button", { name: "Add model" }).click();
   await form.getByLabel("Model ID 1").fill("llama-3");
