@@ -132,6 +132,7 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
     if (!provider) throw new ConfigError(`Pi has no provider named "${providerId}".`);
     if (type === "oauth" && !provider.auth.oauth) throw new ConfigError(`${provider.name} has no sign-in. Store an API key instead.`);
     if (type === "api_key" && !provider.auth.apiKey?.login) throw new ConfigError(`${provider.name} has no key setup in Pi. Sign in instead.`);
+    job.title = type === "oauth" ? `Sign in to ${provider.name}` : `Set up ${provider.auth.apiKey!.name}`;
     // Pi's own device id (settings.json deviceId), created the way Pi creates it.
     let deviceId = (await store.read("global")).value.deviceId;
     if (typeof deviceId !== "string" || !deviceId) {

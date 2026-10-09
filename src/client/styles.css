@@ -219,10 +219,9 @@
   .budget { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2) --spacing(3); }
 
   /* Models. */
-  .key-form { display: flex; flex-wrap: wrap; align-items: end; gap: --spacing(2) --spacing(3); margin-top: --spacing(5); }
-  .key-setup { margin: --spacing(2) 0 0; }
-  .detail > .key-setup + [data-slot=card] { margin-top: --spacing(3); }
-  .detail > .remove-credential { margin-top: --spacing(4); }
+  /* A provider's ways to set up its credential, under its facts. */
+  .credential { display: grid; gap: --spacing(2); margin-top: --spacing(5); }
+  .credential p { margin: 0; }
   .model-rows { display: grid; gap: --spacing(2); }
   .model-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 6rem 6rem auto auto auto; gap: --spacing(2); align-items: center; }
   .found-models { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(1); }

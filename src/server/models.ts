@@ -74,7 +74,6 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
         id: provider.id,
         name: provider.name,
         models: runtime.getModels(provider.id).length,
-        apiKey: !!provider.auth.apiKey,
         keySetup: !!provider.auth.apiKey?.login,
         ...(provider.auth.oauth ? { oauth: { name: provider.auth.oauth.name, subscription: !!provider.auth.oauth.isSubscription } } : {}),
         auth: { configured: status.configured, ...(status.source ? { source: status.source } : {}), ...(status.label ? { label: status.label } : {}) },
@@ -110,17 +109,6 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
   return new Hono()
     .route("/custom", customProviderRoutes(store))
     .get("/providers", async c => c.json(await view()))
-    .put("/providers/:id/key", async c => {
-      const { revision, key } = z.object({ revision: z.string().min(1).max(100), key: z.string().min(1).max(10_000) }).strict().parse(await c.req.json());
-      const id = c.req.param("id");
-      await store.transform("global", revision, async auth => {
-        const provider = await knownProvider(id, credentialsOf(auth));
-        if (!provider.auth.apiKey) throw new ConfigError(`${provider.name} does not take an API key. Sign in instead.`);
-        auth[id] = { type: "api_key", key };
-        return auth;
-      }, "auth.json");
-      return c.json(await view());
-    })
     .get("/available", async c => c.json((await readyModels()).models.map((model): AvailableModel => ({ provider: model.provider, ...summary(model) }))))
     .post("/scope", async c => {
       const { patterns, default: chosen } = z.object({ patterns: z.array(z.string().max(300)).max(200), default: z.string().max(400).optional() }).strict().parse(await c.req.json());

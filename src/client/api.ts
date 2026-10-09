@@ -88,8 +88,6 @@ export const removeAgent = (scope: AgentScope, file: string, revision: string, p
 export const restoreAgent = (scope: AgentScope, file: string, project?: string) =>
   request<AgentsView>(agentUrl(scope, project, `/${encodeURIComponent(file)}/restore`), "POST", {});
 export const loadProviders = () => request<ProvidersView>("/api/models/providers");
-export const saveProviderKey = (id: string, revision: string, key: string) =>
-  request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "PUT", { revision, key });
 export const removeProviderKey = (id: string, revision: string) =>
   request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "DELETE", { revision });
 export const restoreAuth = (revision: string) => request<ProvidersView>("/api/models/auth/restore", "POST", { revision });

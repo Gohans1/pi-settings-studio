@@ -55,28 +55,47 @@ test("a select drops its options beside its field, never over it, whichever opti
   await clear(api);
 });
 
-test("API keys are stored, removed and restored without ever being shown", async ({ page }) => {
+test("an API key is set up with Pi's own question, removed and restored without ever being shown", async ({ page }) => {
   const auth = async () => JSON.parse(await readFile(join(agent, "auth.json"), "utf8"));
   await page.goto(server.url + "#models");
   await page.getByRole("searchbox", { name: "Search providers" }).fill("openai");
   await page.getByRole("button", { name: /^OpenAI\b/ }).first().click();
   const detail = page.getByRole("region", { name: "OpenAI" });
-  await detail.getByLabel("API key").fill("fixture-new-key");
-  await detail.getByRole("button", { name: "Save key" }).click();
-  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("API key saved for OpenAI");
+  // Every key goes through Pi's own setup, which asks only what that provider needs.
+  await expect(detail).not.toContainText("Needs more than a key");
+  await detail.getByRole("button", { name: "Set up OpenAI API key" }).click();
+  const job = page.getByRole("region", { name: "Set up OpenAI API key" });
+  await job.getByLabel("Enter OpenAI API key").fill("fixture-new-key");
+  await job.getByRole("button", { name: "Continue" }).click();
+  await expect(job).toContainText("Finished");
   expect((await auth()).openai).toEqual({ type: "api_key", key: "fixture-new-key" });
-  await expect(detail.getByLabel("API key")).toHaveValue("");
+  await expect(detail.getByRole("button", { name: "Replace OpenAI API key" })).toBeVisible();
   expect(await page.content()).not.toContain("fixture-");
 
   await page.getByRole("searchbox", { name: "Search providers" }).fill("anthropic");
   await page.getByRole("button", { name: /^Anthropic\b/ }).first().click();
-  await page.getByRole("region", { name: "Anthropic" }).getByRole("button", { name: "Remove credential" }).click();
+  await page.getByRole("region", { name: "Anthropic" }).getByRole("button", { name: "Remove stored key" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Removed the stored credential for Anthropic");
   expect((await auth()).anthropic).toBeUndefined();
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Restored");
   expect((await auth()).anthropic.key).toBe("fixture-secret-anthropic");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a signed-in provider offers to sign in again or sign out, in Pi's words", async ({ page }) => {
+  await writeFile(join(agent, "auth.json"), JSON.stringify({ "github-copilot": { type: "oauth", refresh: "fixture-refresh", access: "fixture-access", expires: 1 } }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("searchbox", { name: "Search providers" }).fill("copilot");
+  await page.getByRole("button", { name: /^GitHub Copilot/ }).click();
+  const detail = page.getByRole("region", { name: "GitHub Copilot" });
+  await expect(detail.getByRole("button", { name: "Sign in again to GitHub Copilot" })).toBeVisible();
+  // A key is another way in, and says that it replaces the sign-in.
+  await expect(detail.getByRole("button", { name: "Set up GitHub Copilot token" })).toBeVisible();
+  await expect(detail).toContainText("A key replaces the sign-in.");
+  await detail.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Signed out of GitHub Copilot");
+  expect(JSON.parse(await readFile(join(agent, "auth.json"), "utf8"))["github-copilot"]).toBeUndefined();
 });
 
 test("the list names its groups and says which providers are ready, and the chosen one says it too", async ({ page }) => {
@@ -303,8 +322,8 @@ test("a provider whose key comes with more fields is set up with Pi's own questi
   await page.goto(server.url + "#models");
   await page.getByRole("searchbox", { name: "Search providers" }).fill("workers");
   await page.getByRole("button", { name: /^Cloudflare Workers AI/ }).click();
-  await page.getByRole("button", { name: "Set up with Pi's questions" }).click();
-  const job = page.getByRole("region", { name: "Set up cloudflare-workers-ai" });
+  await page.getByRole("button", { name: "Set up Cloudflare API key" }).click();
+  const job = page.getByRole("region", { name: "Set up Cloudflare API key" });
   await job.getByLabel("Enter Cloudflare API key").fill("fixture-cloudflare-key");
   await job.getByRole("button", { name: "Continue" }).click();
   await job.getByLabel("Enter Cloudflare account ID").fill("acct-1");

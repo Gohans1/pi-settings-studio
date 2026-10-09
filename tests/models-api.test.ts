@@ -38,7 +38,7 @@ test("providers come from Pi's model runtime with their auth status, never a sec
   const text = await response.text();
   assert.doesNotMatch(text, /fixture-/);
   const byId = Object.fromEntries((JSON.parse(text).providers as Array<Record<string, any>>).map(provider => [provider.id, provider]));
-  assert.deepEqual([byId.anthropic.auth.configured, byId.anthropic.auth.source, byId.anthropic.stored, byId.anthropic.apiKey], [true, "stored", "api_key", true]);
+  assert.deepEqual([byId.anthropic.auth.configured, byId.anthropic.auth.source, byId.anthropic.stored, byId.anthropic.keySetup], [true, "stored", "api_key", true]);
   assert.equal(byId["github-copilot"].stored, "oauth");
   assert.deepEqual([byId.ollama.custom, byId.ollama.models, byId.ollama.auth.configured], [true, 1, true]);
   assert.equal(byId.openai.auth.configured, false);
@@ -67,19 +67,6 @@ test("each provider says what Pi calls its key, where it sends requests, whether
   });
   assert.ok(byId.openrouter.otherModels.image > 0);
   assert.equal(byId.anthropic.otherModels, undefined);
-});
-
-test("an API key is stored in auth.json without touching other credentials, and never echoed", async (t) => {
-  const { request, providers, auth } = await fixture(t);
-  const { revision } = await providers();
-  const response = await request("/api/models/providers/openai/key", { method: "PUT", headers: json, body: JSON.stringify({ revision, key: "fixture-new-key" }) });
-  assert.equal(response.status, 200);
-  assert.doesNotMatch(await response.text(), /fixture-/);
-  const saved = await auth();
-  assert.deepEqual(saved.openai, { type: "api_key", key: "fixture-new-key" });
-  assert.equal(saved.anthropic.key, "fixture-secret-anthropic");
-  assert.equal(saved["github-copilot"].type, "oauth");
-  assert.equal((await providers()).providers.find(provider => provider.id === "openai")!.auth.configured, true);
 });
 
 test("removing a stored credential is limited to known providers with a stored credential", async (t) => {
