@@ -26,3 +26,4 @@
 - [x] "Not editable here" notes in the app and in docs/parity.md.
 - [x] Skills: remove with Undo; model invocation for a whole group.
 - [x] Every component from the shadcn registry, kept as shipped and checked by @shadcn/lint.
+- [x] Tools tab: every tool a new session registers, by source, and how the model reaches it.

@@ -11,6 +11,7 @@
 | general | Remaining `settings.json` keys, raw JSON editor, drift test | config-store, app-shell |
 | models | Providers, credentials status, custom models, defaults | config-store, app-shell |
 | plugins | Packages and resource toggles | config-store, app-shell |
+| tools | Every tool a new session registers, by source, from the trusted tool inspection | local-server, app-shell, plugins |
 | sub-agents | Profiles in Pi's example subagent format | app-shell |
 | background-service | systemd user unit on port 4369 | local-server |
 

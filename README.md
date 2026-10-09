@@ -39,6 +39,7 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 - **Sub-agents**: profiles in Pi's example format.
 - **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (check for updates, update notices, install, update, remove, filters). Select an extension to inspect all registered tools and direct model declarations for the chosen project. Installed extensions are trusted and run automatically for this preview; see [Extension tools](docs/plugin-tools.md).
 - **MCP**: servers with exposure rules, OAuth and provider sign-in, Code mode, import from other clients, connection test, sign-in state, `mcp.log`.
+- **Tools**: every tool a new session starts with, grouped by Pi built-in, extension and MCP server, and whether the model sees it directly or only through codemode or tool search. Runs the same trusted inspection as Plugins; see [Extension tools](docs/plugin-tools.md).
 - **Instructions**: `AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`.
 - **System prompt**: what Pi recorded in a session.
 
