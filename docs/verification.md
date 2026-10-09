@@ -1,3 +1,27 @@
+# Verification — shadcn composition gaps, 2026-10-09
+
+Scope: the six gaps an audit against shadcn's agent skill found after the registry pass (`@shadcn/lint` cannot see them): Save buttons without a Spinner; Empty states without EmptyHeader; two Cards that were all CardContent; list panes as `ul`s instead of ItemGroups; a divider drawn with a CSS border; icons sized inside shadcn components.
+
+| Check | Result |
+|---|---|
+| `shadcn add <name> --dry-run --diff` | 27 of 27 unchanged; no component file edited |
+| `bun test` (`HOME` an empty folder) | 277 passed (43 files) |
+| `bun run typecheck` / `bun run lint` | Passed, no warnings; `@shadcn/lint` 0 findings |
+| `bun run test:e2e` (same `HOME`) | 104 passed, up from 96. New: each of the eight Save buttons shows a Spinner while its request is held (General, shortcuts, raw JSON, defaults, custom provider, MCP server, sub-agent profile, instruction file) |
+
+RED/GREEN: the eight new tests failed first on the missing spinner (the Saving… button was there and disabled), then passed. The other changes are structural and ran against the existing flows, axe included.
+
+Decisions:
+- Workbench lists take ItemGroup's own spacing: 8px between rows instead of 1px, about 7px more per row. `@shadcn/lint` refuses a gap on ItemGroup.
+- A workbench row is a `role="listitem"` element holding the Item and its Switch: a Switch cannot sit inside the Item, which is the row's button.
+- An extension's tool keeps its name and description out of ItemTitle and ItemDescription, which clamp to one and two lines.
+- The definition lists keep their CSS row rules: a Separator may not sit inside a `dl`, and shadcn's own Table draws row borders the same way.
+- Kept: icons in the app's own spans sized by styles.css (list states, file paths, the brand, the project picker), where no shadcn component offers an icon slot.
+
+Manual: main and this branch side by side on temporary agent folders (T3 preview, then `agent-browser` in its own session when the preview host disconnected), 1280×800 light and 390 px dark: Models list and Defaults with a provider warning, Skills folders with warning Badges, an MCP server's project override, Plugins. No horizontal overflow at 390 px, no page errors. The real `~/.pi` was not written.
+
+---
+
 # Verification — every component from the shadcn registry, checked by @shadcn/lint, 2026-10-08
 
 Scope: the 27 files in `components/ui` installed or reinstalled one by one with `shadcn add <name> --overwrite` from `shadcn@4.21.4`, the latest release; six are new (alert-dialog, card, spinner, toggle, toggle-group, tooltip). What they replace: `window.confirm` (Update Pi, closing a draft), an inline review box (restore), native `title` tooltips, a hand-made spinner, Buttons kept pressed by hand, the browser's validation bubble, and boxes, list rows and settings rows drawn in `styles.css`. shadcn's own linter, `@shadcn/lint` 0.2.0, runs in `bun run lint` with all six rules as errors: 55 findings, now none, with two contracts (docs-mcp `shadcn-lint`: README, Rules, Adoption, How it works; `shadcn-ui`: CLI, AlertDialog, Tooltip, Combobox; `base-ui`: Tooltip, Autocomplete, Combobox, Collapsible, Composition; shadcn's agent skill).
