@@ -63,10 +63,10 @@ test("on a narrow screen the list and the chosen item take turns, with a way bac
 
 test("the tab bar stays in view and nothing overflows sideways at any width", async ({ page }) => {
   await page.goto(server.url + "#general");
-  await expect(page.getByRole("heading", { name: "Models & thinking" })).toBeVisible();
+  await page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: /^Terminal UI/ }).click();
   for (const width of [1280, 900, 320]) {
     await page.setViewportSize({ width, height: 720 });
-    await page.getByRole("heading", { name: "Terminal UI" }).scrollIntoViewIfNeeded();
+    await page.getByRole("combobox", { name: "Mermaid diagrams" }).scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expect(page.getByRole("tablist")).toBeInViewport();
   }

@@ -1,4 +1,4 @@
-import type { Field } from "../shared/settings";
+import type { DefaultText, Field } from "../shared/settings";
 import { Button } from "./components/ui/button";
 import { Field as FieldRow, FieldContent, FieldDescription, FieldError, FieldLabel } from "./components/ui/field";
 import { Input } from "./components/ui/input";
@@ -22,20 +22,20 @@ const fixes: Record<Field["kind"], string> = {
   tools: "Remove control characters from the tool names in the file.",
 };
 
-/** Pi's default in words: switches read on/off, lists one per line. */
-function shown(value: unknown): string {
-  if (typeof value === "boolean") return value ? "on" : "off";
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.join(", ");
-  return JSON.stringify(value);
-}
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
-export function SettingField({ field, value, inherited, overridden, invalid, scope = "global", disabled = false, project, onChange, onReset }: {
+/**
+ * One setting: its control and, under it, where its value comes from. Globally a value is Pi's default or
+ * custom, and only a custom one offers "Use default"; in a project it is inherited or set there.
+ */
+export function SettingField({ field, value, inherited, overridden, invalid, scope = "global", disabled = false, project, piDefault, isDefault, unsaved, onChange, onReset }: {
   field: Field; value: unknown; inherited?: unknown; overridden: boolean; invalid: boolean; scope?: "global" | "project"; disabled?: boolean; project?: string;
+  /** Pi's real default in words; isDefault: the value Pi ends up with is that default. */
+  piDefault: DefaultText; isDefault: boolean; unsaved: boolean;
   onChange: (value: unknown) => void; onReset: () => void;
 }) {
   const id = "setting-" + field.key;
-  const described = [id + "-help", invalid ? id + "-error" : ""].filter(Boolean).join(" ");
+  const described = [id + "-help", id + "-state", invalid ? id + "-error" : ""].filter(Boolean).join(" ");
   const common = { id, disabled, "aria-describedby": described, "aria-invalid": invalid || undefined };
   let control;
   if (field.kind === "boolean") {
@@ -54,21 +54,25 @@ export function SettingField({ field, value, inherited, overridden, invalid, sco
     control = <ModelMapField kind={field.kind} label={field.label} value={value} disabled={disabled} onChange={onChange} />;
   } else if (field.kind === "lines") {
     control = <Textarea {...common} rows={3} value={Array.isArray(value) ? value.join("\n") : ""} spellCheck={false}
-      placeholder={Array.isArray(field.defaultValue) ? field.defaultValue.join("\n") : "Empty"} onChange={e => onChange(e.target.value.split("\n"))} />;
+      placeholder={Array.isArray(field.defaultValue) ? field.defaultValue.join("\n") : sentence(piDefault.value)} onChange={e => onChange(e.target.value.split("\n"))} />;
   } else {
     control = <Input {...common} type={field.kind === "number" ? "number" : "text"}
       min={field.kind === "number" ? 0 : undefined} step={field.kind === "number" ? 1 : undefined}
       inputMode={field.kind === "number" ? "numeric" : undefined}
       value={typeof value === "number" && Number.isNaN(value) ? "" : String(value ?? "")}
-      placeholder={field.defaultValue === undefined ? "Pi's default" : String(field.defaultValue)}
+      placeholder={field.defaultValue === undefined ? sentence(piDefault.value) : String(field.defaultValue)}
       autoComplete="off" spellCheck={false}
       // An emptied number field means Pi's default, as its help text says.
       onChange={e => field.kind === "number" && e.target.value === "" && !e.target.validity.badInput ? onReset() : onChange(field.kind === "number" ? e.target.valueAsNumber : e.target.value)} />;
   }
-  // Rows at Pi's default stay quiet; the line appears when the value is set, inherited or not editable here.
+  // The control shows the value; the words name it only where the control is empty.
+  const empty = field.kind !== "tools" && (value === undefined || value === "" ||
+    (typeof value === "object" && value !== null && !Array.isArray(value) && !Object.keys(value).length));
+  const fallback = empty && <>: <span className="state-value">{piDefault.value}</span>{piDefault.note && <> · {piDefault.note}</>}</>;
+  const reset = disabled ? undefined : scope === "project" ? (overridden ? "Use inherited" : undefined) : isDefault ? undefined : "Use default";
   const source = disabled ? "Global only: Pi ignores it in a project"
-    : overridden ? (scope === "project" ? "Set in this project" : `Set in settings.json${field.defaultValue === undefined ? "" : ` · Pi's default is ${shown(field.defaultValue)}`}`)
-    : scope === "project" ? "Inherited" : "";
+    : scope === "project" ? (overridden ? "Set in this project" : <>Inherited{fallback}</>)
+    : isDefault ? <>Default{fallback}</> : <>Custom · Pi's default is <span className="state-value">{piDefault.value}</span></>;
   // A shadcn settings row: label and help beside the control, stacked when the group is narrow; the startup
   // tools checklist takes the whole row.
   return <FieldRow orientation={field.kind === "tools" ? "vertical" : "responsive"} id={"row-" + field.key} data-invalid={invalid || undefined}>
@@ -79,9 +83,11 @@ export function SettingField({ field, value, inherited, overridden, invalid, sco
     </FieldContent>
     <div className="setting-control @md/field-group:shrink-0 @md/field-group:basis-[min(22rem,45%)]">
       {control}
-      {source && <div className="field-meta"><span data-set={overridden && !disabled}>{source}</span>
-        {overridden && !disabled && <Button type="button" variant="ghost" size="xs" onClick={onReset} aria-label={`${scope === "project" ? "Use inherited" : "Use default"} for ${field.label}`}>{scope === "project" ? "Use inherited" : "Use default"}</Button>}
-      </div>}
+      <div className="field-meta" id={id + "-state"} data-custom={!!reset || undefined}>
+        {unsaved && <span className="setting-unsaved"><span className="nav-dot" aria-hidden="true" />Unsaved</span>}
+        <span>{source}</span>
+        {reset && <Button type="button" variant="ghost" size="xs" onClick={onReset} aria-label={`${reset} for ${field.label}`}>{reset}</Button>}
+      </div>
       {invalid && <FieldError id={id + "-error"}>{fixes[field.kind]}</FieldError>}
     </div>
   </FieldRow>;

@@ -24,10 +24,19 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+/** The OAuth settings Disclosure in a new MCP server's form. */
+async function oauthDisclosure(page: import("@playwright/test").Page) {
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: "Add server", exact: true }).click();
+  // OAuth applies to servers reached by URL.
+  await page.getByRole("combobox", { name: "Transport" }).click();
+  await page.getByRole("option", { name: "URL (streamable HTTP)" }).click();
+  const trigger = page.getByRole("button", { name: "OAuth settings" });
+  return { trigger, panel: page.locator("[data-slot=collapsible]", { has: trigger }).locator("[data-slot=collapsible-content]") };
+}
+
 test("a disclosure opens at once, as shadcn's Collapsible ships, and settles after quick clicks", async ({ page }) => {
-  await page.goto(server.url);
-  const trigger = page.getByRole("button", { name: "Not editable here" });
-  const panel = page.locator(".not-here [data-slot=collapsible-content]");
+  const { trigger, panel } = await oauthDisclosure(page);
   await trigger.click();
   await expect(panel).toBeVisible();
   await expect(panel).toHaveCSS("transition-duration", "0s");
@@ -43,14 +52,13 @@ test("a disclosure opens at once, as shadcn's Collapsible ships, and settles aft
 });
 
 test("keyboard disclosure and escape stay instant even after using the pointer", async ({ page }) => {
-  await page.goto(server.url);
-  const trigger = page.getByRole("button", { name: "Not editable here" });
+  const { trigger, panel } = await oauthDisclosure(page);
   await trigger.click();
   await trigger.press("Enter");
   await trigger.press("Enter");
-  const panel = page.locator(".not-here [data-slot=collapsible-content]");
   await expect(panel).toBeVisible();
   expect(await panel.evaluate(element => element.getAnimations().length)).toBe(0);
+  await page.getByRole("tab", { name: "General" }).click();
   await page.getByRole("button", { name: "File", exact: true }).focus();
   await page.keyboard.press("Enter");
   const menu = page.getByRole("menu");
