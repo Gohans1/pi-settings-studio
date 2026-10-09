@@ -1,6 +1,6 @@
 # Pi Settings Studio
 
-A local, settings-only GUI for Pi core configuration, used next to T3Code. Inspired by the settings panel of [pi-web](https://github.com/agegr/pi-web), without chat. Personal tool, not published.
+A local, settings-only GUI for Pi core configuration. Inspired by the settings panel of [pi-web](https://github.com/agegr/pi-web), without chat. Personal tool, not published.
 
 Scope, decisions and boundaries: [SPEC.md](SPEC.md). Coverage: [docs/parity.md](docs/parity.md). Progress: [tasks/todo.md](tasks/todo.md).
 
@@ -43,7 +43,7 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 - **Instructions**: `AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`.
 - **System prompt**: what Pi recorded in a session.
 
-The project picker adds each project's `.pi` files and trust. Changes apply to new T3Code threads, or after `/reload`.
+The project picker adds each project's `.pi` files and trust. Changes apply to new Pi sessions, or after `/reload`.
 
 Buttons that run something use the `pi` command on `PATH` (or `~/.local/bin/pi`) with `PI_CODING_AGENT_DIR` set to the app's agent directory.
 

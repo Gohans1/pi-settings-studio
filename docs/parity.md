@@ -13,12 +13,12 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 | `auth.json` | Done | n/a | API keys (write-only); Pi's own key setup for providers that need more than a key (Cloudflare account and gateway IDs, Bedrock profile, Vertex project and location); provider OAuth sign-in through Pi's runtime; `pi auth check`. Providers that extensions register (llama.cpp included) are not listed in Models; extension execution is confined to the tool inspector (Plugins and Tools) |
 | `models.json` | Done | n/a | Custom providers and models, model list from the endpoint, raw JSON with keys masked (refused when Pi rejects the file) |
 | Defaults (`settings.json`) | Done | Done | Any provider and model can be typed, with Pi's catalog as suggestions and a warning when the catalog this app reads does not have it; Enabled models as a list matched as Pi matches it (ported, compared with Pi), with why a pattern selects nothing; a default outside a non-empty scope is added to it on save, as Pi does |
-| `keybindings.json` | Done | n/a | Every terminal action (no effect in T3Code) |
+| `keybindings.json` | Done | n/a | Every terminal action |
 | `AGENTS.md` / `CLAUDE.md` (context files) | Done | Done | Pi's candidate order, parent-folder files listed read-only |
 | `SYSTEM.md`, `APPEND_SYSTEM.md` | Done | Done | |
 | `extensions/`, `skills/`, `prompts/`, `themes/` | Done | Done | Switches, create, edit (a skill's whole folder); extra folders added to and removed from the settings paths; a skill Pi skips for a duplicate name is marked, with the winner (Pi's own `loadSkills`); the model invocation of a skill or a whole group (all or none, Undo); remove a user or project skill, kept in `.pi-settings-backup/skills` of the agent folder for Undo; package files, built-ins and symbolic links read-only |
 | Packages | Done | Done | Install, update, remove through `pi`; resource filters; on-demand update checks via Pi’s public `checkForAvailableUpdates`, per-package badges and last-check timestamp. No automatic polling; Pi silently skips pins/local paths/failed lookups, so an empty result is not a guarantee that everything is current |
-| Trust (`trust.json`) | n/a | Done | Pi's ProjectTrustStore; says whether T3Code loads `.pi` |
+| Trust (`trust.json`) | n/a | Done | Pi's ProjectTrustStore; says whether Pi loads `.pi` |
 | Sub-agent profiles (`agents/`) | Done | Done | Pi's example extension format |
 | Sessions | System prompt view | | Read-only; a custom `sessionDir` is followed (absolute paths for discovery, relative ones per known project) |
 | Pi itself | Version, Update Pi | | Version read from the installed package, `pi update --self` on click |
@@ -32,16 +32,16 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 | Skills | Switches, details, file editor, new skills, remove with Undo, model invocation per skill or group; install/update of skills comes from packages |
 | Plugins | Done, plus prompt, theme and extension editors; automatic runtime tool catalogue and direct model-declaration preview, scoped by the project picker ([details](plugin-tools.md)) |
 | Agents (sub-agents) | Done in Pi's example format, without pi-web-only fields (thinking, extensions…), which are kept as they are |
-| System prompt | From the session files T3Code writes, not a live chat |
+| System prompt | From the session files Pi writes, not a live chat |
 | General: chat width, Enter to send, notifications, language, PowerShell | Excluded on purpose (chat product or Windows-only) |
 
 ## Not possible in this app
 
 Listed in the app too (General, "Not editable here"):
 
-- Environment variables (`PI_*`, provider keys) of the process T3Code starts Pi in; Check credential sees this app's environment only.
+- Environment variables (`PI_*`, provider keys) of the process Pi starts in; Check credential sees this app's environment only.
 - Providers and models that extensions or packages register (claude-bridge, llama.cpp…): Models does not load extensions; the Plugins tool inspector does not export their provider catalogues. Their names can still be typed as defaults and patterns, with a warning.
 - Command-line options of a run (`--model`, `--tools`, `--session-dir`, `--no-mcp`…).
 - Live state of running threads; files apply after `/reload` or in a new thread.
-- Sessions and chat history (T3Code), files inside installed packages, third-party extension settings, T3Code's own settings.
+- Sessions and chat history, files inside installed packages, third-party extension settings.
 - Showing stored keys and tokens: write-only by design.
