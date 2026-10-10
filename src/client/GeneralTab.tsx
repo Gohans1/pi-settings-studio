@@ -54,7 +54,7 @@ export function GeneralTab({ project }: { project?: string }) {
   const linked = sections.find(section => section.id === location.hash.split("/")[1])?.id;
   const [pane, setPane] = useState<string>(linked ?? sections[0].id);
   const [open, setOpen] = useState(!!linked);
-  useEffect(() => { loadAvailableModels().then(found => setModels(modelSuggestions(found))).catch(() => setModels([])); }, []);
+  useEffect(() => { loadAvailableModels(project).then(found => setModels(modelSuggestions(found))).catch(() => setModels([])); }, [project]);
   useEffect(() => { loadPi().then(found => setPi(found.installed)).catch(() => setPi(undefined)); }, []);
   const title = useRef<HTMLHeadingElement>(null);
   const inFile = (key: string) => !!view && (Object.hasOwn(view.values, key) || view.invalid.includes(key));

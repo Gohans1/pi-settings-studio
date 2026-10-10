@@ -9,7 +9,7 @@ export type Suggestion = { value: string; label?: string; group?: string };
 type Group = { value: string; items: Suggestion[] };
 
 /** Pi's providers by ID: the set-up ones, then `named` (names Enabled models gives that no provider has), then the others. */
-export function providerSuggestions(providers: ProviderView[], named: string[] = []): Suggestion[] {
+export function providerSuggestions(providers: (Pick<ProviderView, "id" | "name"> & { auth: { configured: boolean } })[], named: string[] = []): Suggestion[] {
   const of = (ready: boolean) => providers.filter(provider => provider.auth.configured === ready)
     .map(provider => ({ value: provider.id, label: provider.name, group: ready ? "Set up" : "Not set up" }));
   return [...of(true), ...named.map(value => ({ value, group: "Named in Enabled models" })), ...of(false)];
@@ -38,19 +38,20 @@ export function SuggestInput({ value, suggestions, onChange, ...input }: {
     return list;
   }, []);
   const listed = suggestions.length > 0;
-  // Without suggestions it stays a plain field: the warnings under it say what the catalog lacks.
+  // Without suggestions it stays a plain field: the warnings under it say what the catalog lacks. Asked to open
+  // before they arrive, it opens when they do, while the field still has focus.
   return <Autocomplete.Root items={groups} value={value} open={open && listed} openOnInputClick itemToStringValue={(item: Suggestion) => item.value}
     filter={browsing ? null : (item: Suggestion, query: string) => contains(item.value, query) || (!!item.label && contains(item.label, query))}
-    onOpenChange={(next, details) => { setOpen(next && listed); setBrowsing(next && details.reason !== "input-change"); }}
+    onOpenChange={(next, details) => { setOpen(next); setBrowsing(next && details.reason !== "input-change"); }}
     onValueChange={(next, details) => { if (details.reason === "input-change") setBrowsing(false); onChange(next); }}>
     <InputGroup className="w-full">
-      <Autocomplete.Input render={<InputGroupInput />} {...input} spellCheck={false} />
+      <Autocomplete.Input render={<InputGroupInput />} {...input} spellCheck={false} onBlur={() => setOpen(false)} />
       {listed && <InputGroupAddon align="inline-end">
         <InputGroupButton size="icon-xs" variant="ghost" render={<ComboboxTrigger />} aria-label="Show suggestions" />
       </InputGroupAddon>}
     </InputGroup>
     <ComboboxContent>
-      <ComboboxEmpty>Not in the catalog this app reads; kept as typed.</ComboboxEmpty>
+      <ComboboxEmpty>Nothing listed matches; kept as typed.</ComboboxEmpty>
       <ComboboxList>{(group: Group) => <ComboboxGroup key={group.value} items={group.items}>
         {group.value && <ComboboxLabel>{group.value}</ComboboxLabel>}
         <ComboboxCollection>{(item: Suggestion) => <ComboboxItem key={item.value} value={item}>

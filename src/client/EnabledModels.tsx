@@ -16,7 +16,7 @@ import { IconButton } from "./Workbench";
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 const misses = {
   "no-credential": "No credential for this provider here, so Pi skips it",
-  "unknown-provider": "Not in the catalog this app reads; an extension may provide it",
+  "unknown-provider": "Pi has no provider by this name here, in its catalog or from an enabled extension",
   "no-match": "No model matches",
 };
 const refOf = (model: AvailableModel) => `${model.provider}/${model.id}`;
@@ -27,7 +27,7 @@ const refOf = (model: AvailableModel) => `${model.provider}/${model.id}`;
  * selects is turned off (shared/enabled-models.ts).
  */
 export function EnabledModels({ patterns, scope, available, providers, inherited, onChange }: {
-  patterns: string[]; scope?: ModelScopeView; available: AvailableModel[]; providers: ProviderView[]; inherited?: string[];
+  patterns: string[]; scope?: ModelScopeView; available: AvailableModel[]; providers: Pick<ProviderView, "id" | "name">[]; inherited?: string[];
   onChange: (patterns: string[]) => void;
 }) {
   const id = useId();

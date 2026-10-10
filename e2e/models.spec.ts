@@ -6,6 +6,16 @@ import { join, resolve } from "node:path";
 import { startServer, type RunningServer } from "../src/server/server.ts";
 
 let root: string, agent: string, server: RunningServer;
+const fixtureModel = (id: string, name: string, reasoning: boolean) =>
+  `{ id: "${id}", name: "${name}", reasoning: ${reasoning}, input: ["text"], cost: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0 }, contextWindow: 100000, maxTokens: 8000 }`;
+// Providers as an extension such as pi-claude-bridge registers them: one Pi has a key for, one that needs a sign-in.
+const BRIDGE = `export default function (pi) {
+  pi.registerProvider("bridge", { name: "Bridge Fixture", baseUrl: "http://localhost:9/v1", apiKey: "not-used", api: "openai-completions",
+    models: [${fixtureModel("bridge-large", "Bridge Large", true)}, ${fixtureModel("bridge-small", "Bridge Small", false)}] });
+  pi.registerProvider("needs-login", { name: "Needs Login", baseUrl: "http://localhost:9/v1", api: "openai-completions",
+    oauth: { name: "Fixture SSO", async login() { throw new Error("not here"); }, async refreshToken(credentials) { return credentials; }, getApiKey(credentials) { return credentials.access; } },
+    models: [${fixtureModel("locked", "Locked", false)}] });
+}`;
 test.beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "pi-settings-models-browser-"));
   agent = join(root, "agent");
@@ -463,7 +473,7 @@ test("a provider Pi's catalog does not list, such as one from an extension, is t
   const panel = page.getByRole("region", { name: "Defaults" });
   await panel.getByLabel("Default provider").fill("claude-bridge");
   await panel.getByLabel("Default model").fill("opus");
-  await expect(panel.getByLabel("Default provider")).toHaveAccessibleDescription(/not in the catalog this app reads/);
+  await expect(panel.getByLabel("Default provider")).toHaveAccessibleDescription(/^claude-bridge is not a provider Pi has here: neither its catalog nor an enabled extension has one by that name\./);
   await panel.getByRole("button", { name: "Save defaults" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
   const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
@@ -494,10 +504,42 @@ test("the default provider is picked from a list like a select, set-up providers
   await expect(list.getByRole("option", { name: /^Amazon Bedrock\b/ })).toBeVisible();
   await expect(list.getByRole("option", { name: /^Anthropic\b/ })).toHaveCount(0);
   await provider.fill("claude-bridge");
-  await expect(page.getByText("Not in the catalog this app reads; kept as typed.")).toBeVisible();
+  await expect(page.getByText("Nothing listed matches; kept as typed.")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(list).toBeHidden();
   await expect(provider).toHaveValue("claude-bridge");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a provider an extension registers is chosen like any other, with its models and the levels they offer", async ({ page }) => {
+  await mkdir(join(agent, "extensions"), { recursive: true });
+  await writeFile(join(agent, "extensions", "bridge.ts"), BRIDGE);
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const provider = panel.getByRole("combobox", { name: "Default provider" });
+  await provider.click();
+  const list = page.getByRole("listbox");
+  // Pi has its key, so it is set up; the other waits for a sign-in.
+  await expect(list.getByRole("group", { name: "Not set up" }).getByRole("option", { name: /^Needs Login\s*needs-login$/ })).toBeVisible();
+  await list.getByRole("group", { name: "Set up" }).getByRole("option", { name: /^Bridge Fixture\s*bridge$/ }).click();
+  await expect(provider).toHaveValue("bridge");
+  await expect(provider).toHaveAccessibleDescription("");
+  const model = panel.getByRole("combobox", { name: "Default model" });
+  await model.click();
+  await expect(list.getByRole("option")).toHaveText([/^Bridge Large\s*bridge-large$/, /^Bridge Small\s*bridge-small$/]);
+  await list.getByRole("option", { name: /^Bridge Large/ }).click();
+  await expect(panel.getByRole("combobox", { name: "Thinking level" })).toHaveAccessibleDescription(/^Bridge Large offers /);
+  // Enabled models list its models under its name, and a pattern for them counts them.
+  const enabled = panel.getByRole("group", { name: "Enabled models" });
+  await expect(enabled.getByRole("checkbox", { name: "All Bridge Fixture models" })).toBeVisible();
+  await enabled.getByLabel("Model or pattern").fill("bridge/*");
+  await enabled.getByLabel("Model or pattern").press("Enter");
+  await expect(enabled.getByRole("listitem").filter({ hasText: "bridge/*" })).toContainText("2 models");
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  expect([settings.defaultProvider, settings.defaultModel, settings.enabledModels]).toEqual(["bridge", "bridge-large", ["bridge/*"]]);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
@@ -519,6 +561,8 @@ test("an enabled model pattern can be picked from the models that have a credent
   await page.getByRole("button", { name: /^Defaults/ }).click();
   const enabled = page.getByRole("region", { name: "Defaults" }).getByRole("group", { name: "Enabled models" });
   const pattern = enabled.getByRole("combobox", { name: "Model or pattern" });
+  // The suggestions are the checklist's models: once it shows, they are there.
+  await expect(enabled.getByRole("checkbox", { name: "All Anthropic models" })).toBeVisible();
   await pattern.fill("haiku-4-5");
   await pattern.press("ArrowDown");
   // Enter on a suggestion fills it in; Enter again adds it.
