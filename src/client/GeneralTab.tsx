@@ -66,12 +66,6 @@ export function GeneralTab({ project }: { project?: string }) {
     }).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [scope, target]);
-  useEffect(() => {
-    if (!changes.length) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [changes.length]);
 
   async function save() {
     if (!view) return;

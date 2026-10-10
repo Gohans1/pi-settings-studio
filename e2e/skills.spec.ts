@@ -248,3 +248,16 @@ test("Skill commands is set in the Skills tab, and General no longer lists it", 
   await page.getByRole("searchbox", { name: "Search settings" }).fill("enableSkillCommands");
   await expect(page.getByText("No settings match")).toBeVisible();
 });
+
+test("an unsaved change to skill commands asks before the page is left, as General does", async ({ page }) => {
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^Skill commands/ }).click();
+  await page.getByRole("region", { name: "Skill commands" }).getByRole("switch", { name: "Skill commands" }).click();
+  await expect(page.getByRole("region", { name: "Unsaved changes" })).toBeVisible();
+  const asked = page.waitForEvent("dialog");
+  await page.close({ runBeforeUnload: true });
+  const dialog = await asked;
+  expect(dialog.type()).toBe("beforeunload");
+  await dialog.accept();
+});
+

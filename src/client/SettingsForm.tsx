@@ -40,6 +40,13 @@ export function useSettingDraft(view: SettingsView | undefined, { project, model
     const edit = draft[key];
     return edit ? ("value" in edit ? edit.value : undefined) : view?.values[key];
   };
+  // Leaving the page would drop the draft: the browser asks first.
+  useEffect(() => {
+    if (!changes.length) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [changes.length]);
 
   function change(key: string, value: unknown) {
     onEdit?.();
