@@ -93,6 +93,15 @@ test("code mode's declaration says which tools its description lists and which t
   await expect(pane(page).locator("pre")).toContainText('"parameters"');
 });
 
+test("on a wide screen a part's text stops at 60rem", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 900 });
+  await page.goto(server.url + "#context");
+  await chooseProject(page);
+  await part(page, /^Instructions \(AGENTS\.md\)/).click();
+  await expect(pane(page).locator("pre")).toContainText("Project rules.");
+  expect((await pane(page).locator("pre").boundingBox())!.width).toBeLessThanOrEqual(960);
+});
+
 test("a recorded session keeps its first request apart from what Pi changed later", async ({ page }) => {
   await page.goto(server.url + "#context");
   await chooseProject(page);

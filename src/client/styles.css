@@ -40,13 +40,10 @@
   /* Ready: the mark beside a provider that has a credential. An icon colour, like --warning. */
   --success: light-dark(var(--flexoki-green-600), var(--flexoki-green-400));
   --radius: .375rem;
-  /* A frame's corner is its inset row's corner plus the inset, so nested corners stay concentric. */
-  --radius-frame: calc(var(--radius-md) + --spacing(2));
-  /* Layout: the app chrome; reading and list widths. */
+  /* Layout: the app chrome, the gutter and the list's width. */
   --topbar-height: --spacing(12);
   --tabbar-height: --spacing(11);
   --gutter: --spacing(8);
-  --page-width: 80rem;
   --list-width: 20rem;
 }
 /* More contrast on request: hairlines and secondary text take the next stronger role. */
@@ -126,7 +123,6 @@
     mask-image: linear-gradient(to right, transparent, black --spacing(5), black calc(100% - --spacing(5)), transparent); }
 
   main { overflow: auto; display: flex; flex-direction: column; padding: --spacing(6) var(--gutter); outline: none; }
-  main > * { width: 100%; max-width: var(--page-width); margin-inline: auto; }
   @media (prefers-reduced-motion: no-preference) { main { scroll-behavior: smooth; } }
 
   /* Page header: what this page edits, in which file, and the page's own actions. */
@@ -146,14 +142,14 @@
   @media (prefers-reduced-motion: no-preference) { .loading { animation: appear 160ms var(--ease-out) 300ms backwards; } }
   .actions { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2); }
 
-  /* Workbench: a list and the chosen item's details, side by side; each pane scrolls on its own. */
-  .workbench { flex: 1 1 0; min-height: 28rem; display: grid; grid-template-columns: var(--list-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); border: 1px solid var(--border); border-radius: var(--radius-frame); overflow: hidden; }
-  /* Each pane scrolls in a shadcn ScrollArea that fills it. */
-  .workbench-list { min-height: 0; background: var(--sidebar); border-inline-end: 1px solid var(--border); }
-  .workbench-detail { min-height: 0; }
+  /* Workbench: the list stays down the window's left edge under the tabs and scrolls on its own; the page beside it
+     scrolls with main. Fixed, not sticky: the page's header comes before the list yet sits beside it, as shadcn's
+     Sidebar sits under a site header (block sidebar-16). main draws the column, so it is there while a tab loads
+     and the page never moves sideways when the list arrives. */
+  main { padding-inline-start: calc(var(--list-width) + var(--gutter)); }
+  main::before, .workbench-list { position: fixed; inset-block: calc(var(--topbar-height) + var(--tabbar-height)) 0; inset-inline-start: 0; width: var(--list-width); }
+  main::before { content: ""; background: var(--sidebar); border-inline-end: 1px solid var(--border); }
   .workbench-list-content { padding: --spacing(2) --spacing(2) --spacing(4); }
-  .workbench-detail-content { padding: --spacing(5) --spacing(7) 0; }
-  .workbench-detail-content > :last-child { padding-bottom: --spacing(7); }
   .list-search { position: sticky; top: calc(--spacing(2) * -1); z-index: 1; margin: calc(--spacing(2) * -1) calc(--spacing(2) * -1) 0; padding: --spacing(2); background: var(--sidebar); }
   .list-count { margin: 0; padding: --spacing(2) --spacing(2) 0; padding-inline-start: --spacing(2.5); color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
   /* A group's name labels its rows instead of competing with them: at the rows' size and colour it read as one more row. */
@@ -208,7 +204,9 @@
   .resource-editor, .instruction, .raw-editor { display: grid; gap: --spacing(3); }
   :is(.resource-editor, .instruction, .raw-editor) h2 { margin: 0; }
   .resource-editor .file-list { display: flex; flex-wrap: wrap; gap: --spacing(1); }
-  .raw-editor { max-width: 60rem; }
+  /* The page runs to the window's edge, so what reads across stops at 60rem: rows of label and control, file text
+     and its editors. Lists run on. */
+  :is(.settings-group, .detail > [data-slot=field-group], .save-bar, .raw-editor, .instruction, .resource-editor, .prompt-preview) { max-width: 60rem; }
 
   /* A server's tools from the last connection test, each with its exposure. */
   .server-tools { display: grid; gap: --spacing(2); margin-top: --spacing(6); }
@@ -361,7 +359,8 @@
   /* The value Pi uses, named where the control cannot show it. */
   .state-value { color: var(--foreground); font-weight: var(--font-weight-medium); overflow-wrap: anywhere; }
   .setting-unsaved { display: inline-flex; align-items: center; gap: --spacing(1.5); color: var(--primary); font-weight: var(--font-weight-medium); }
-  .save-bar { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); margin-top: --spacing(4); padding: --spacing(3) 0; background: var(--background); border-top: 1px solid var(--border); }
+  /* Its actions follow the count, as a form's save row starts with them: a confirmation in the corner never covers Save. */
+  .save-bar { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(3); margin-top: --spacing(4); padding: --spacing(3) 0; background: var(--background); border-top: 1px solid var(--border); }
   .save-bar p { margin: 0; font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; }
   @media (prefers-reduced-motion: no-preference) { .save-bar { transition: translate 200ms var(--ease-out), opacity 200ms var(--ease-out); @starting-style { translate: 0 --spacing(3); opacity: 0; } } }
   .pi-panel { display: flex; flex-wrap: wrap; align-items: center; gap: --spacing(2) --spacing(3); margin-bottom: --spacing(6); }
@@ -386,11 +385,12 @@
 /* Containers past the width their two columns need stack: the list, then the chosen item with a way back. */
 @media (width < 56rem) {
   :root { --gutter: --spacing(5); }
-  .workbench { display: block; flex: none; min-height: 0; border: 0; overflow: visible; }
-  .workbench-list, .workbench-detail { background: none; border: 0; }
-  .workbench-list-content, .workbench-detail-content { padding: 0; }
-  /* The page scrolls here, not the pane: the ScrollArea gives up its boxes, so sticky save rows follow the page. */
-  .workbench :is([data-slot=scroll-area], [data-slot=scroll-area-viewport]) { display: contents; }
+  main { padding-inline-start: var(--gutter); }
+  main::before { content: none; }
+  .workbench-list { position: static; width: auto; }
+  .workbench-list-content { padding: 0; }
+  /* The page scrolls the list here too: its ScrollArea gives up its boxes. */
+  .workbench-list :is([data-slot=scroll-area], [data-slot=scroll-area-viewport]) { display: contents; }
   .workbench[data-open] .workbench-list, .workbench:not([data-open]) .workbench-detail { display: none; }
   .list-search { position: static; margin: 0 0 --spacing(2); padding: 0; }
 }

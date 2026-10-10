@@ -33,6 +33,13 @@ test("while an instruction file saves, Save file shows a spinner", async ({ page
   await page.unrouteAll({ behavior: "wait" });
 });
 
+test("on a wide screen a file's editor stops at 60rem", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 900 });
+  await page.goto(server.url + "#instructions");
+  await page.getByRole("button", { name: /^Instructions/ }).first().click();
+  expect((await page.getByLabel("Contents of AGENTS.md").boundingBox())!.width).toBeLessThanOrEqual(960);
+});
+
 test("instruction files are edited, created and removed with undo", async ({ page }) => {
   await page.goto(server.url + "#instructions");
   await page.getByRole("button", { name: /^Instructions/ }).first().click();

@@ -9,8 +9,8 @@ import { ScrollArea } from "./components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 
 /**
- * A list and the chosen item's details. Wide screens show both panes, each scrolling on its own;
- * narrow ones show one at a time (styles.css), with a way back to the list.
+ * A list and the chosen item's details. Wide screens keep the list beside the page, scrolling on its own while the
+ * page scrolls the details; narrow ones show one at a time (styles.css), with a way back to the list.
  */
 export function Workbench({ list, detail, open, onBack, backLabel }: {
   list: ReactNode; detail: ReactNode; open: boolean; onBack: () => void; backLabel: string;
@@ -29,10 +29,10 @@ export function Workbench({ list, detail, open, onBack, backLabel }: {
   }, [open]);
   return <div ref={frame} className="workbench" data-open={open || undefined}>
     <div className="workbench-list"><ScrollArea className="h-full"><div className="workbench-list-content">{list}</div></ScrollArea></div>
-    <div className="workbench-detail"><ScrollArea className="h-full"><div className="workbench-detail-content">
+    <div className="workbench-detail">
       {open && <Button ref={back} variant="ghost" size="sm" className="mb-3 -ms-2 min-[56rem]:hidden" onClick={onBack}><ChevronLeft aria-hidden="true" data-icon="inline-start" />{backLabel}</Button>}
       {detail}
-    </div></ScrollArea></div>
+    </div>
   </div>;
 }
 
@@ -45,12 +45,19 @@ export function Workbench({ list, detail, open, onBack, backLabel }: {
 export function ListItem({ selected, onSelect, icon: Icon, name, state, tone, quiet = false }: {
   selected: boolean; onSelect: () => void; icon?: LucideIcon; name: ReactNode; state?: ReactNode; tone?: "refused" | "shadowed" | "ready"; quiet?: boolean;
 }) {
-  return <Item size="xs" render={<button type="button" aria-pressed={selected} onClick={onSelect} />}
+  return <Item size="xs" render={<button type="button" aria-pressed={selected} onClick={event => { onSelect(); showDetail(event.currentTarget); }} />}
     className={cn("flex-nowrap text-start hover:bg-muted aria-pressed:bg-selected", quiet && "text-muted-foreground hover:text-foreground focus-visible:text-foreground aria-pressed:text-foreground")}>
     {Icon && <ItemMedia variant="icon"><Icon aria-hidden="true" /></ItemMedia>}
     <ItemContent className="min-w-0"><ItemTitle className="w-full font-normal group-aria-pressed/item:font-medium">{name}</ItemTitle></ItemContent>
     {state !== undefined && <span className="item-state" data-state={tone}>{state}</span>}
   </Item>;
+}
+
+/** The page scrolls the details, so a newly chosen item would open where the last one was read to: show its top. */
+function showDetail(row: HTMLElement) {
+  const detail = row.closest(".workbench")?.querySelector(".workbench-detail");
+  const page = row.closest("main");
+  if (detail && page && detail.getBoundingClientRect().top < page.getBoundingClientRect().top) detail.scrollIntoView({ block: "start", behavior: "instant" });
 }
 
 /** An icon-only button: its label is its accessible name, and a tooltip shows it. */

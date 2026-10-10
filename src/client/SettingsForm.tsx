@@ -82,7 +82,7 @@ export function useSettingDraft(view: SettingsView | undefined, { project, model
   return { changes, invalidKeys, unsaved, valueOf, rows, discard: () => setDraft({}) };
 }
 
-/** Unsaved edits: a bar that stays at the bottom of the pane, with Discard and Save. */
+/** Unsaved edits: a bar that stays at the bottom of the window, with Discard and Save. */
 export function SaveBar({ count, busy, onDiscard, onSave }: { count: number; busy: boolean; onDiscard: () => void; onSave: () => void }) {
   return <div className="save-bar" role="region" aria-label="Unsaved changes">
     <p>{count} unsaved {count === 1 ? "change" : "changes"}</p>

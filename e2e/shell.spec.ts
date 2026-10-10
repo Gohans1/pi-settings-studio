@@ -19,13 +19,13 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
-test("scroll areas hide the native scrollbar, and the strict CSP blocks nothing on the page", async ({ page }) => {
+test("the list's scroll area hides the native scrollbar, and the strict CSP blocks nothing on the page", async ({ page }) => {
   const blocked: string[] = [];
   page.on("console", message => { if (message.text().includes("Content Security Policy")) blocked.push(message.text()); });
   await page.goto(server.url + "#mcp");
   await page.getByRole("button", { name: /^docs/ }).click();
   const viewports = page.locator("[data-slot=scroll-area-viewport]");
-  await expect(viewports).toHaveCount(2);
+  await expect(viewports).toHaveCount(1);
   for (const viewport of await viewports.all()) await expect(viewport).toHaveCSS("scrollbar-width", "none");
   expect(blocked).toEqual([]);
 });
@@ -87,6 +87,32 @@ test("on a narrow screen the list and the chosen item take turns, with a way bac
   await page.getByRole("button", { name: "All servers" }).click();
   await expect(page.getByRole("button", { name: /^search/ })).toBeVisible();
   await expect(page.getByRole("region", { name: "docs" })).toBeHidden();
+});
+
+test("on a wide screen the list runs down the window's left edge, and the page beside it out to the right", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 720 });
+  await page.goto(server.url + "#mcp");
+  const tabs = (await page.locator(".tabbar").boundingBox())!;
+  const list = (await page.locator(".workbench-list").boundingBox())!;
+  expect([list.x, list.y, list.y + list.height]).toEqual([0, tabs.y + tabs.height, 720]);
+  const header = (await page.locator(".page-header").boundingBox())!;
+  expect(header.x).toBeGreaterThanOrEqual(list.width);
+  // A centred 80rem page stopped at 1600px.
+  expect(header.x + header.width).toBeGreaterThan(1800);
+});
+
+test("reading down an item scrolls the page, not the list, and the next item shows from its top", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.goto(server.url + "#general");
+  const groups = page.getByRole("region", { name: "Setting groups" });
+  await groups.getByRole("button", { name: /^Terminal UI/ }).click();
+  const list = page.locator(".workbench-list");
+  const before = await list.boundingBox();
+  await page.getByRole("combobox", { name: "Mermaid diagrams" }).scrollIntoViewIfNeeded();
+  expect(await page.locator("main").evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+  expect(await list.boundingBox()).toEqual(before);
+  await groups.getByRole("button", { name: /^Network & retries/ }).click();
+  await expect(page.getByRole("heading", { name: "Network & retries", level: 2 })).toBeInViewport();
 });
 
 test("the tab bar stays in view and nothing overflows sideways at any width", async ({ page }) => {
