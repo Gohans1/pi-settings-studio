@@ -53,6 +53,16 @@ test("Tools opens on what the model sees, grouped by source, beside every source
   expect(errors).toEqual([]);
 });
 
+test("a source's name reads as a label over its tools: smaller than their names, in another colour", async ({ page }) => {
+  await page.goto(server.url + "#tools");
+  await row(page, /^What the model sees/).click();
+  const look = (element: Element) => { const { fontSize, color } = getComputedStyle(element); return { size: parseFloat(fontSize), color }; };
+  const source = await pane(page).getByRole("heading", { name: /^tools\.ts/ }).evaluate(look);
+  const tool = await pane(page).getByText("visible_tool", { exact: true }).evaluate(look);
+  expect(source.size).toBeLessThan(tool.size);
+  expect(source.color).not.toBe(tool.color);
+});
+
 test("what the model doesn't see keeps on-demand tools apart from off ones, which stay folded", async ({ page }) => {
   await page.goto(server.url + "#tools");
   await row(page, /^What the model doesn't see/).click();

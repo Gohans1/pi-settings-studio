@@ -305,10 +305,9 @@
   .tools-note { margin: --spacing(2) 0 --spacing(3); max-width: 72ch; color: var(--muted-foreground); font-size: var(--text-small); text-wrap: pretty; }
   .reach-part { margin-top: --spacing(8); }
   .reach-part-title { margin: 0; padding-top: --spacing(4); border-top: 1px solid var(--border); }
-  .source-group-title { display: flex; align-items: center; margin: --spacing(6) 0 --spacing(2); font-size: var(--text-small); font-weight: var(--font-weight-semibold); }
+  /* A source's name labels its tools, as a list group's name labels its rows. */
+  .source-group-title { display: flex; align-items: center; margin: --spacing(6) 0 --spacing(2); color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-semibold); line-height: var(--leading-tight); }
   .source-group:first-of-type > .source-group-title, .tools-note + .source-group > .source-group-title { margin-top: --spacing(3); }
-  .source-group-title .source-tag { color: var(--foreground); font-size: var(--text-small); font-weight: var(--font-weight-semibold); }
-  .source-group-title .source-tag svg { width: --spacing(4); height: --spacing(4); color: var(--muted-foreground); }
   .source-tag { display: inline-flex; align-items: center; gap: --spacing(1.5); min-width: 0; color: var(--muted-foreground); font-size: var(--text-caption); overflow-wrap: anywhere; }
   .source-tag svg { flex: none; width: --spacing(3.5); height: --spacing(3.5); }
   .source-tally { display: flex; flex-wrap: wrap; gap: --spacing(1) --spacing(4); margin: 0 0 --spacing(4); color: var(--muted-foreground); font-size: var(--text-small); font-variant-numeric: tabular-nums; }
