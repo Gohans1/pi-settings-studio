@@ -325,9 +325,9 @@
   .tool-row-trigger:hover { background: var(--muted); }
   .tool-row-trigger:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
   .tool-row-text { display: grid; gap: --spacing(0.5); min-width: 0; }
-  .tool-row-name { font-family: var(--font-mono); font-size: var(--text-small); font-weight: var(--font-weight-medium); line-height: var(--leading-snug); overflow-wrap: anywhere; }
+  .tool-row-name { font-family: var(--font-mono); font-size: var(--text-small); font-weight: var(--font-weight-normal); line-height: var(--leading-snug); overflow-wrap: anywhere; }
   .tool-row-summary { overflow: hidden; color: var(--muted-foreground); font-size: var(--text-small); text-overflow: ellipsis; white-space: nowrap; }
-  .tool-row:is([data-reach=off], [data-reach=hidden]) .tool-row-name { color: var(--muted-foreground); font-weight: var(--font-weight-normal); }
+  .tool-row:is([data-reach=off], [data-reach=hidden]) .tool-row-name { color: var(--muted-foreground); }
   .tool-row-chevron { width: --spacing(4); height: --spacing(4); color: var(--muted-foreground); transition: rotate 160ms var(--ease-out); }
   .tool-row-trigger[data-panel-open] .tool-row-chevron { rotate: 90deg; }
   .tool-row-detail { padding: 0 --spacing(2) --spacing(4); }

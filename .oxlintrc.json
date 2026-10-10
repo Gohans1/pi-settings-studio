@@ -24,6 +24,13 @@
               "layout",
               "color"
             ]
+          },
+          {
+            "pattern": "^ItemTitle$",
+            "allow": [
+              "layout",
+              "font-weight"
+            ]
           }
         ]
       }

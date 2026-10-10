@@ -1,3 +1,25 @@
+# Verification — a list's rows are regular weight, the chosen one medium, 2026-10-10
+
+Scope: with group names drawn as 12px labels, rows kept Item's medium weight (500), which Segoe UI on Windows draws near semibold, so on the desktop a list read as bold rows over a faint label. shadcn's `SidebarMenuButton` (registry, base-nova: `text-sm`, `data-active:font-medium`) and Primer's ActionList `.ItemLabel` (`--base-text-weight-normal`) keep rows regular and mark only the chosen one.
+
+- `ListItem`'s name is `font-normal`, `font-medium` while its Item is pressed (chosen). `.oxlintrc.json` gains a contract that lets `ItemTitle` take a font weight; without it `@shadcn/lint` refuses both classes.
+- Tools' tool names under a source are regular weight; off tools still recede to the muted colour.
+- DESIGN.md › Components, Lists and Tool rows say so; the `ListItem` comment too.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | 2 browser tests (MCP's `docs` and `search` rows 400, `docs` 500 once chosen; `visible_tool` 400 under its source) failed at 500, then passed |
+| `bun test` | 380 passed (51 files) |
+| `bun run typecheck` / `bun run lint` | Passed; with the previous `.oxlintrc.json` lint reports `font-normal` and `group-aria-pressed/item:font-medium` on `<ItemTitle>` |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 165 passed |
+
+Manual (agent-browser at 1280px and 390px, dark, this branch on port 4370 with the real agent folder, `PI_OFFLINE=1`): Context for pi-settings-studio reads "System prompt" 600, "Base prompt" (chosen) 500, "Tool list" and "Rules" 400; Tools › Core tools shows `read` to `write` at regular weight under the On demand label. Console clean.
+
+Not changed: other lists of Items with a description and actions (packages, folders, a server's tools, model patterns) keep Item's medium title, which sets it apart from the description under it.
+
+---
+
 # Verification — every tab checked for levels that read alike, 2026-10-10
 
 Scope: after the list group labels, every tab at 1280×900 and 390×844 (dark; Tools also light) with an item chosen, and a census of the size, weight, colour and family of every visible text per tab. Three more places read alike:
