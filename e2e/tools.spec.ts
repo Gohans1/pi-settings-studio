@@ -63,6 +63,12 @@ test("a source's name reads as a label over its tools: smaller than their names,
   expect(source.color).not.toBe(tool.color);
 });
 
+test("tool names under a source are regular weight, as a list's rows are", async ({ page }) => {
+  await page.goto(server.url + "#tools");
+  await row(page, /^What the model sees/).click();
+  expect(await pane(page).getByText("visible_tool", { exact: true }).evaluate(element => getComputedStyle(element).fontWeight)).toBe("400");
+});
+
 test("what the model doesn't see keeps on-demand tools apart from off ones, which stay folded", async ({ page }) => {
   await page.goto(server.url + "#tools");
   await row(page, /^What the model doesn't see/).click();

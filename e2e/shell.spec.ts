@@ -59,6 +59,15 @@ test("a list group's name reads as a label: smaller than its rows, in another co
   expect(group.textTransform).toBe("none");
 });
 
+test("a list's rows are regular weight, and the chosen row is medium", async ({ page }) => {
+  await page.goto(server.url + "#mcp");
+  const weight = (name: RegExp) => page.getByRole("button", { name }).locator("[data-slot=item-title]").evaluate(element => getComputedStyle(element).fontWeight);
+  expect(await weight(/^docs/)).toBe("400");
+  await page.getByRole("button", { name: /^docs/ }).click();
+  expect(await weight(/^docs/)).toBe("500");
+  expect(await weight(/^search/)).toBe("400");
+});
+
 test("a section heading in a detail reads above the settings under it, larger than their labels", async ({ page }) => {
   await page.goto(server.url + "#general");
   await page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: /^Sessions & context/ }).click();
