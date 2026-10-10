@@ -1,3 +1,21 @@
+# Verification — a list group's name reads as a label, 2026-10-10
+
+Scope: on a phone, Context's group names (System prompt, Tool declarations) could not be told from the rows under them: both were 14px in the body colour, the name semibold and the row medium (`ItemTitle`). Every workbench list shares `.list-header h2`. shadcn's `SidebarGroupLabel` (registry, base-nova: `text-xs font-medium text-sidebar-foreground/70`) and Primer's ActionList `GroupHeading` (`--text-body-size-small`, 0.75rem, semibold, `--fgColor-muted`, no text-transform) draw a group's name as a smaller, muted label in sentence case above 14px rows.
+
+- `.list-header h2` takes the caption size and the muted colour. DESIGN.md › Lists and › Typography say so; two comments that called rows regular weight are fixed.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | 1 browser test (MCP's Global over its `docs` row: smaller, another colour, not in capitals) failed at 14px against 14px, then passed |
+| `bun test` | 379 passed (51 files) |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 161 passed |
+
+Manual (agent-browser at 390px, dark, this branch on port 4370 with the real agent folder, `PI_OFFLINE=1`): Context for pi-settings-studio shows "System prompt" at 12px, 600, rgb(159, 157, 150) above "Base prompt" at 14px, 500, rgb(206, 205, 195). Console clean.
+
+---
+
 # Verification — a recorded first request counts what the model got, 2026-10-10
 
 Scope: on a phone, Context › Recorded session listed 90 declarations under Tool declarations and said Pi recorded ≈ 35.4k tokens for a code mode only session whose model got ≈ 9.8k; the caveat sat in a note above the list, gone after one scroll. Pi records every declared tool and hides the direct ones from requests (`prepareCodemodeLoadout`), and the session file does not record which. The prompt's tool list does: Pi names each declared tool with a snippet that it did not hide, and its own tools always have one (`create*ToolDefinition`, public).

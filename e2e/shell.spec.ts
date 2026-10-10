@@ -49,6 +49,16 @@ test("a saved change is confirmed until dismissed, and dismissing changes no fil
   expect(await readFile(file, "utf8")).toBe(saved);
 });
 
+test("a list group's name reads as a label: smaller than its rows, in another colour, as written", async ({ page }) => {
+  await page.goto(server.url + "#mcp");
+  const look = (element: Element) => { const { fontSize, color, textTransform } = getComputedStyle(element); return { size: parseFloat(fontSize), color, textTransform }; };
+  const group = await page.getByRole("heading", { name: "Global", exact: true }).evaluate(look);
+  const row = await page.getByRole("button", { name: /^docs/ }).locator("[data-slot=item-title]").evaluate(look);
+  expect(group.size).toBeLessThan(row.size);
+  expect(group.color).not.toBe(row.color);
+  expect(group.textTransform).toBe("none");
+});
+
 test("on a narrow screen the list and the chosen item take turns, with a way back", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(server.url + "#mcp");

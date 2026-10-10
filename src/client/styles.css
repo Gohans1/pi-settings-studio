@@ -155,10 +155,10 @@
   .workbench-detail-content > :last-child { padding-bottom: --spacing(7); }
   .list-search { position: sticky; top: calc(--spacing(2) * -1); z-index: 1; margin: calc(--spacing(2) * -1) calc(--spacing(2) * -1) 0; padding: --spacing(2); background: var(--sidebar); }
   .list-count { margin: 0; padding: --spacing(2) --spacing(2) 0; padding-inline-start: --spacing(2.5); color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
-  /* A group's name leads its rows: body size, semibold, the body colour; rows are regular weight (ListItem). */
+  /* A group's name labels its rows instead of competing with them: at the rows' size and colour it read as one more row. */
   .item-group { margin-top: --spacing(5); }
   .list-header { display: flex; align-items: center; gap: --spacing(2); min-height: --spacing(8); padding-inline: --spacing(2.5) --spacing(2); }
-  .list-header h2 { margin: 0; margin-inline-end: auto; font-size: var(--text-body); font-weight: var(--font-weight-semibold); line-height: var(--leading-tight); overflow-wrap: anywhere; text-wrap: wrap; }
+  .list-header h2 { margin: 0; margin-inline-end: auto; color: var(--muted-foreground); font-size: var(--text-caption); font-weight: var(--font-weight-semibold); line-height: var(--leading-tight); overflow-wrap: anywhere; text-wrap: wrap; }
   .list-header > span { color: var(--muted-foreground); font-size: var(--text-caption); font-variant-numeric: tabular-nums; white-space: nowrap; }
   /* A row is its Item, then the switch that turns it on or off. */
   .list-row { display: flex; align-items: center; gap: --spacing(2); }
