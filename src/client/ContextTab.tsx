@@ -68,7 +68,7 @@ function SectionDetail({ part, from }: { part: PromptPart; from?: ReactNode }) {
 }
 
 /** A tool declaration as the model reads it; code mode's also says which tools its description carries. */
-function DeclarationDetail({ part, catalog }: { part: PromptPart; catalog?: Catalog }) {
+function DeclarationDetail({ part, catalog, leftOut = false }: { part: PromptPart; catalog?: Catalog; leftOut?: boolean }) {
   const tool = catalog?.tools.find(entry => entry.name === part.name);
   const source = tool && catalog!.byKey.get(tool.sourceKey);
   const codemode = part.name === "codemode";
@@ -77,7 +77,9 @@ function DeclarationDetail({ part, catalog }: { part: PromptPart; catalog?: Cata
   return <div className="detail">
     <header className="detail-header"><h2 translate="no">{part.name}</h2>
       {source && <div className="actions"><a className={buttonVariants({ variant: "outline", size: "sm" })} href={"#" + source.tab}>Change in {TAB_NAMES[source.tab]}</a></div>}</header>
-    <p className="tools-note">A tool declaration: its name, description and parameters, as the model reads them with every request.</p>
+    <p className="tools-note">{leftOut
+      ? "Recorded, but left out of every request: with code mode set to only, Pi hides direct tools from the model, which reaches them through code mode. The prompt's tool list, which does not name it, says so."
+      : "A tool declaration: its name, description and parameters, as the model reads them with every request."}</p>
     <dl className="detail-list">
       <div><dt>Size</dt><dd>{size(part)}</dd></div>
       {source && <div><dt>From</dt><dd>{source.title}{source.detail ? ` · ${source.detail}` : ""}</dd></div>}
@@ -115,8 +117,8 @@ function ChangeDetail({ change }: { change: PromptChange }) {
   </div>;
 }
 
-/** The prompt and declaration groups, shared by a new session and a recorded one. */
-function promptGroups(parts: { content?: PromptPart; sections: PromptPart[]; declarations: PromptPart[] }, from: (part: PromptPart) => ReactNode, catalog?: Catalog): Group[] {
+/** The prompt and declaration groups, shared by a new session and a recorded one, whose left-out declarations follow. */
+function promptGroups(parts: { content?: PromptPart; sections: PromptPart[]; declarations: PromptPart[]; leftOut?: PromptPart[] }, from: (part: PromptPart) => ReactNode, catalog?: Catalog): Group[] {
   const prompt = [...(parts.content ? [parts.content] : []), ...parts.sections];
   return [
     { title: "System prompt", state: tokens(sum(prompt)), entries: prompt.map(part => ({
@@ -124,6 +126,9 @@ function promptGroups(parts: { content?: PromptPart; sections: PromptPart[]; dec
     })) },
     { title: "Tool declarations", state: tokens(sum(parts.declarations)), entries: parts.declarations.map(part => ({
       key: `tool:${part.name}`, name: <span translate="no">{part.name}</span>, state: tokens(part.tokens), detail: () => <DeclarationDetail part={part} catalog={catalog} />,
+    })) },
+    { title: "Left out of requests", state: tokens(sum(parts.leftOut ?? [])), entries: (parts.leftOut ?? []).map(part => ({
+      key: `left-out:${part.name}`, name: <span translate="no">{part.name}</span>, state: tokens(part.tokens), detail: () => <DeclarationDetail part={part} leftOut />,
     })) },
   ];
 }
@@ -214,10 +219,14 @@ function RecordedSession({ project, modes }: { project: string; modes: ReactNode
         {!prompt ? !error && sessionId && <div className="loading" aria-busy="true"><Spinner />Reading the session…</div>
           : !start ? <Alert role="note"><AlertDescription>This session has no recorded system prompt. Sessions record it on their first request.</AlertDescription></Alert>
           : <>
-            <div className="tools-overview"><p>Pi recorded <strong>≈ {tokens(start.tokens)}</strong> for the session's first request,
-              {prompt.changes.length ? <> then changed it {count(prompt.changes.length, "time", "times")}.</> : " and did not change it after that."}</p></div>
-            {start.declarations.some(part => part.name === "codemode") && <Alert role="note"><TriangleAlert aria-hidden="true" /><AlertDescription>
-              Pi records every tool it declares. With code mode set to only, it leaves its direct tools out of each request, and the session file does not say which. Next session shows what Pi sends.
+            <div className="tools-overview">
+              <p>The model got <strong>≈ {tokens(start.tokens)}</strong> with the session's first request: <strong>{tokens(sum([...(start.content ? [start.content] : []), ...start.sections]))}</strong> of system prompt
+                and <strong>{tokens(sum(start.declarations))}</strong> in {count(start.declarations.length, "tool declaration", "tool declarations")}.
+                {start.leftOut.length > 0 && <> Pi also recorded {count(start.leftOut.length, "declaration", "declarations")} (≈ {tokens(sum(start.leftOut))}) that code mode only left out of every request.</>}</p>
+              <p>{prompt.changes.length ? `Pi changed it ${count(prompt.changes.length, "time", "times")} after that.` : "Pi did not change it after that."}</p>
+            </div>
+            {start.leftOutUnknown && <Alert role="note"><TriangleAlert aria-hidden="true" /><AlertDescription>
+              Code mode was on, and this prompt has no tool list, so it cannot tell whether Pi left declarations out of requests, as code mode only does. Some declarations below may not have reached the model.
             </AlertDescription></Alert>}
             <Parts groups={[...promptGroups(start, () => undefined), { title: "Later changes", state: String(prompt.changes.length), entries: prompt.changes.map((change, index) => ({
               key: `change:${index}`, name: time(change.at), state: changeSummary(change), detail: () => <ChangeDetail change={change} />,
