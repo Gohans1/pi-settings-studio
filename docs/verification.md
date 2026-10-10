@@ -1,3 +1,21 @@
+# Verification — an MCP server's tools list when it is opened, 2026-10-10
+
+Scope: MCP listed a server's tools for per-tool exposure only after Test connections (`pi mcp list`), while opening Tools already starts the same servers through the tool inspection. Opening a server now reads that inspection with `useCached` under the key Tools uses, so one result serves both tabs. Each MCP tool in the inspection carries `mcpTool`, its name on the server: `toolExposure` rules match that name, and Pi's tool name keeps only `[A-Za-z0-9_]` (Pi 1.1.0 `dist/extensions/mcp/tools.js`, `createMcpToolName`); the probe reads it from Pi's `<server>/<tool>` label. Saves that may change which tools servers offer (switches, add, edit, remove, undo, import, raw JSON) ask again; exposure changes do not. Test connections stays as the diagnostic. The comment that made running servers explicit, and the browser test that required a connection test first, are replaced. AGENTS.md now states the rule: a view loads what it shows when it opens.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | 1 new API test failed (`mcpTool` undefined), then passed; 3 new browser tests failed (no tool list, "Test connections to list"), then passed |
+| `bun test` | 353 passed (49 files), 1 new |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 148 passed: 3 new, 1 replaced. MCP specs whose fixtures name `npx` commands and remote URLs answer `/api/tools` with no tools, so opening a server never runs them |
+
+Manual (T3 preview, a temporary agent folder with an `echo` server and an `off-echo` server turned off): before, opening `echo` showed "Test connections to list this server's tools" and no tools; after, it lists `echo` with "Inherit: Code mode" with no click. `off-echo` says "Turn the server on to list its tools."; turning it on shows "Checking for changes…", then its `echo` tool. Console clean. The real `~/.pi` was not written.
+
+Not changed: a server that is off has no tools to list, since Pi does not start it. With a project chosen, a global server that the project replaces with its own shows the project server's tools. `mcpTool` depends on Pi's label format; `tests/tools-api.test.ts` fails if a Pi update changes it.
+
+---
+
 # Verification — Code mode in startup tools is a state with a link to MCP › Code mode, 2026-10-10
 
 Scope: General › Startup tools had a `codemode` checkbox that wrote the same `defaultTools` entry as MCP › Code mode's "When Code mode is on". Unticked read as off, but Pi turns `codemode` on when an MCP server with codemode exposure connects (pi.dev docs: MCP, Control tool exposure), and the checkbox did not say that `codemode.mode` (built-in tools direct or only from scripts) lives in MCP › Code mode. Android's settings guidelines (source.android.com: Settings design guidelines) keep a setting shown in two places on one screen with entry points from the others. The row now states Always on or Automatic, with the change note the other rows have, and links to `#mcp/codemode`; the MCP tab opens on Code mode from that hash, as General and Models do for theirs, and keeps it chosen when the project changes.
