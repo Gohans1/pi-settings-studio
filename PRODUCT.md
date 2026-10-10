@@ -11,7 +11,7 @@ React, TypeScript, Vite, shadcn/ui (Base UI), Tailwind CSS 4 for the UI. Hono on
 One developer who uses Pi and prefers a GUI over editing JSON or running CLI commands.
 
 ## Product Purpose
-Change Pi core configuration from a browser tab: MCP servers, system prompt inspection, skills, core settings, models, packages and sub-agent profiles. Native Pi files stay authoritative.
+Change Pi core configuration from a browser tab: MCP servers, what a session puts in front of the model (context), skills, core settings, models, packages and sub-agent profiles. Native Pi files stay authoritative.
 
 ## Operating Context
 Runs in WSL beside Pi, always on at `http://localhost:4369`, opened from a bookmark in the Windows browser. A saved file is not proof that a running Pi session uses it.

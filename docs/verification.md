@@ -1,3 +1,26 @@
+# Verification — Context replaces System prompt: what a session puts in front of the model, 2026-10-10
+
+Scope: System prompt listed 90 tools for a session whose model was given one. It replayed every system message to the end, so tools `tool_search` loaded mid-session looked as if they came with the first request (session `11-20-22`: 92 at the start, 8 `docs_mcp_server` tools later), and it showed what Pi recorded, while with `codemode.mode: "only"` Pi leaves its direct tools out of every request (`hiddenDeclarations`, Pi 1.1.0 `dist/extensions/codemode/tool.js`, `agent-session.js` `_installHiddenDeclarationsProjection`): the prompt's own `<tools>` section named `codemode` alone. What the model gets was spread over Tools, Instructions, Skills, MCP and System prompt, in characters or counts, never tokens. Claude Code's `/context` answers the same question in one place, by category, with each part's source (code.claude.com/docs/en/debug-your-config, /context-window).
+
+- Context (`ContextTab.tsx`) answers it per project. Next session: the tool inspection now also builds the first request's system message as Pi does when a turn starts (skills and context files loaded, Pi's built-in `before_agent_start` handlers run, Pi's `buildSystemPromptState`, declarations minus hidden ones), each part with Pi's `estimateTokens`, its file and the tab that changes it. Code mode's declaration names the tools its description lists and the ones scripts find. Extensions' own turn-start handlers are named, not run. Recorded session: the first request as recorded, then each later change; with code mode in it, a note that the file records declarations Pi leaves out of requests.
+- `#system-prompt` opens Context. The Tools overview counts one tool as "1 tool".
+
+| Check | Result |
+|---|---|
+| RED/GREEN | 3 session API tests (no `start`/`changes`), 6 tool API tests (no `context`), 5 unit tests (no `prompt-parts.ts`), 6 browser tests (no Context tab) and 1 Tools overview test ("1 tools") failed, then passed |
+| `bun test` | 373 passed (51 files) |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 159 passed: `context.spec.ts` replaces `system-prompt.spec.ts` |
+
+Manual (agent-browser, this branch on port 4370 with the real agent folder, `PI_OFFLINE=1`): pi-settings-studio's next session is ≈ 9.3k tokens: 6.3k of prompt and one 3k declaration, `codemode`, whose description lists 9 tools (`read`, `bash`, `edit`, `write` among them) while scripts find 16 more. Against the newest recorded session, six of eight sections matched byte for byte; `docs` names the app's copy of Pi's docs, and T3 Code's sessions list the same skills in name order (see docs/plugin-tools.md). Recorded session `11:36` shows "8 tools added" as a later change. Light at 1440px, dark at 390px; console clean. Screenshots: `docs/evidence/context-desktop.png`, `context-mobile-dark.png`. The real `~/.pi` was not written.
+
+Review against Vercel's Web Interface Guidelines (fetched today): list states now use tabular figures, as DESIGN.md asks of counts, and tool and extension names in Context are `translate="no"`; `context.spec.ts` and `tools.spec.ts` passed again (22).
+
+Not changed: an extension's `before_agent_start` handlers and a request's `context` handlers are not run, and tools a host adds (T3 Code's) are not seen. A recorded session cannot say which declarations were hidden.
+
+---
+
 # Verification — update checks in the background, a newer Pi, and each MCP server's state on open, 2026-10-10
 
 Scope: three reads still waited for a click. Package updates were found only by Check for updates and forgotten on restart; Update Pi did not say whether a newer Pi existed; MCP did not say which servers connected without Test connections. Leaders do these on their own: VS Code checks extension updates when the window loads, then every 12 hours (microsoft/vscode `extensionsWorkbenchService.ts`, issue #158022); update-notifier checks in the background once a day, persists the result and skips in CI and tests (sindresorhus/update-notifier README); `claude mcp list` prints each server's health (code.claude.com/docs/en/mcp); Pi itself checks for a new Pi and package updates at startup unless `PI_OFFLINE` (Pi 1.1.0 `interactive-mode.js`).

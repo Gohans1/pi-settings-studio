@@ -3,9 +3,10 @@ import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { Hono } from "hono";
 import { buildSessionContext, migrateSessionEntries, parseSessionEntries, ProjectTrustStore, SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
-import { contentText, getCurrentSystemMessage, getSystemMessageText, type Message } from "@earendil-works/pi-ai";
+import { contentText, getCurrentSystemMessage, getSystemMessageText, type Message, type SystemMessage } from "@earendil-works/pi-ai";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions.ts";
 import { isRecord } from "./mcp-config.ts";
+import { declarationPart, sectionPart, tokensOf } from "./prompt-parts.ts";
 
 type SessionInfo = Awaited<ReturnType<typeof SessionManager.listAll>>[number];
 /** What the app reads of a session; Pi's listing also carries every message's text. */
@@ -73,11 +74,21 @@ async function systemPrompt(path: string, id: string, cwd: string): Promise<Syst
   migrateSessionEntries(entries);
   const context = buildSessionContext(entries.filter(entry => entry.type !== "session") as SessionEntry[]);
   const message = getCurrentSystemMessage(context.messages as Message[]);
+  // The first system message is the prompt of the first request; each later one changes it.
+  const [first, ...later] = (context.messages as Message[]).filter((entry): entry is SystemMessage => entry.role === "system");
+  const content = first && contentText(first.content);
+  const sections = Object.entries(first?.sections ?? {}).flatMap(([name, text]) => typeof text === "string" ? [sectionPart(name, text)] : []);
   return {
     id, cwd,
-    sections: Object.entries(message?.sections ?? {}).flatMap(([name, text]) => typeof text === "string" ? [{ name, text }] : []),
-    content: message ? contentText(message.content) : "",
-    tools: (message?.toolsAdded ?? []).map(tool => ({ name: tool.name, description: tool.description })),
+    ...(first ? { start: {
+      at: first.timestamp, ...(content ? { content: sectionPart("content", content) } : {}), sections,
+      declarations: (first.toolsAdded ?? []).map(declarationPart), tokens: tokensOf(first),
+    } } : {}),
+    changes: later.map(change => ({
+      at: change.timestamp, ...(contentText(change.content) ? { content: contentText(change.content) } : {}),
+      sections: Object.entries(change.sections ?? {}).map(([name, text]) => ({ name, text })),
+      added: (change.toolsAdded ?? []).map(declarationPart), removed: (change.toolsRemoved ?? []).map(tool => tool.name),
+    })),
     text: message ? getSystemMessageText(message) : "",
   };
 }
