@@ -49,7 +49,9 @@ export function buildCatalog(view: ToolsView): Catalog {
   });
   for (const { source, status } of view.idleSources) {
     const base = describe(source);
-    if (!byKey.has(base.key)) byKey.set(base.key, { ...base, status, tools: [], counts: zero() });
+    // An extension that is turned off, built-in or not, is switched back on in Plugins.
+    const tab = status === "off" && source.kind === "extension" ? "plugins" : base.tab;
+    if (!byKey.has(base.key)) byKey.set(base.key, { ...base, tab, status, tools: [], counts: zero() });
   }
   // By family, sources with tools before those without, then Pi's load order. Servers register as they
   // connect, which differs between inspections, so they go by name.

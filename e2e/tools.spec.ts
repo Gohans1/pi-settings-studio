@@ -153,3 +153,11 @@ test("a failed inspection says the list may be incomplete, and Refresh tools ret
   await expect(pane(page).getByRole("region", { name: "tools.ts" })).toContainText("visible_tool");
   await expect(page.getByText("Could not verify all tools")).toHaveCount(0);
 });
+
+test("a built-in extension that is turned off says to turn it on in Plugins, where it is switched", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProjectTrust: "always", extensions: ["-extensions/todo.ts", "-builtin:llama.cpp"] }));
+  await page.goto(server.url + "#tools");
+  await expect(row(page, /^llama\.cpp/)).toContainText("Off");
+  await row(page, /^llama\.cpp/).click();
+  await expect(pane(page).getByRole("link", { name: "Turn on in Plugins" })).toHaveAttribute("href", "#plugins");
+});
