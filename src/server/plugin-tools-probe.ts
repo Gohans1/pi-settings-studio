@@ -93,11 +93,16 @@ async function inspect(input: ToolProbeInput): Promise<PluginToolsView | Session
     // The active declaration may have a description rewritten by prepareLoadout (e.g. codemode).
     const described = (name: string, visibility: string, description: string) => visibility !== "model" ? description
       : session.agent.state.tools.find(candidate => candidate.name === name)?.description ?? description;
+    // toolExposure names a server's tool as the server does; Pi's tool name keeps only [A-Za-z0-9_]. Pi 1.1.0
+    // labels each server tool `<server>/<tool>` (dist/extensions/mcp/tools.js createMcpToolDefinition), and server
+    // names have no "/". tests/tools-api.test.ts checks this against Pi.
+    const mcpTool = (name: string) => session.getToolDefinition(name)?.label.split(/\/(.*)/s)[1];
     if (path === undefined) {
       const tools: SessionTools["tools"] = registered.map(tool => {
         const visibility = reach(tool.name, tool.exposure);
+        const server = tool.sourceInfo.path === "builtin:mcp" && tool.namespace?.name.startsWith("mcp__") ? mcpTool(tool.name) : undefined;
         return { name: tool.name, description: described(tool.name, visibility, tool.description), exposure: tool.exposure, visibility,
-          path: tool.sourceInfo.path, ...(tool.namespace ? { namespace: tool.namespace.name } : {}) };
+          path: tool.sourceInfo.path, ...(tool.namespace ? { namespace: tool.namespace.name } : {}), ...(server ? { mcpTool: server } : {}) };
       });
       return { checkedAt: new Date().toISOString(), complete: issues.length === 0, issues, tools };
     }
