@@ -33,13 +33,13 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 
 ## Tabs
 
-- **General**: every documented `settings.json` key, raw JSON, keyboard shortcuts, the installed Pi version with Update Pi, and what cannot be edited here.
-- **Models**: every provider of Pi's model runtime with its models (limits, image input, thinking levels, price), sign-in and key setup through Pi's own login, credential check, defaults with the thinking levels each model offers and enabled models as a checklist, custom providers and changes to a shipped provider in `models.json`, with model lists from their endpoint.
-- **Skills**: switches, whether the model may load a skill (one, or a whole group from its menu), a file editor for each skill folder, new skills, Remove with Undo.
+- **General**: the `settings.json` keys no other tab owns, raw JSON, keyboard shortcuts, the installed Pi version with Update Pi, and what cannot be edited here.
+- **Models**: every provider of Pi's model runtime with its models (limits, image input, thinking levels, price), sign-in and key setup through Pi's own login, credential check, defaults with the thinking levels each model offers, enabled models as a checklist, prompt caching and thinking budgets, custom providers and changes to a shipped provider in `models.json`, with model lists from their endpoint.
+- **Skills**: switches, whether the model may load a skill (one, or a whole group from its menu), a file editor for each skill folder, new skills, Remove with Undo, skill commands.
 - **Sub-agents**: profiles in Pi's example format.
-- **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (check for updates, update notices, install, update, remove, filters). Select an extension to inspect all registered tools and direct model declarations for the chosen project. Installed extensions are trusted and run automatically for this preview; see [Extension tools](docs/plugin-tools.md).
+- **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (check for updates, update notices, install, update, remove, filters, the npm command). Select an extension to inspect all registered tools and direct model declarations for the chosen project. Installed extensions are trusted and run automatically for this preview; see [Extension tools](docs/plugin-tools.md).
 - **MCP**: servers with exposure rules, OAuth and provider sign-in, Code mode, import from other clients, connection test, sign-in state, `mcp.log`.
-- **Tools**: what the model sees and doesn't see in a new session, and every source it comes from (built into Pi, extensions, MCP servers), off ones included, with search. Runs the same trusted inspection as Plugins; see [Extension tools](docs/plugin-tools.md).
+- **Tools**: what the model sees and doesn't see in a new session, and every source it comes from (built into Pi, extensions, MCP servers), off ones included, with search. Startup tools turns Pi's own tools on or off. Runs the same trusted inspection as Plugins; see [Extension tools](docs/plugin-tools.md).
 - **Instructions**: `AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`.
 - **System prompt**: what Pi recorded in a session.
 

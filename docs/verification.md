@@ -1,3 +1,22 @@
+# Verification — each settings.json key edited in the one tab that owns it, 2026-10-10
+
+Scope: General repeated four tabs. Its Tools group held only Startup tools, while the Tools tab said "Read-only" and sent the reader to General to change Pi's own tools; its Models & thinking group and Models › Defaults linked back and forth; Skill commands sat in Messages & interaction and the npm command in "Shell & packages". SPEC.md already gave General only the keys no other tab owns. Each key now lives in its owner, with General's own rows (`SettingsForm.tsx`: the draft, rows and save bar moved out of `GeneralTab.tsx` unchanged): Startup tools pinned in Tools (`#tools/startup`, followed also from links inside the tab, and a save refreshes the views), prompt caching and thinking budgets under Models › Defaults and saved with Save defaults, Skill commands pinned in Skills, the npm command at the end of Plugins › Packages. General lists seven groups: Messages & interaction, Sessions & context, Shell, Images, Updates, Network, Terminal UI. Found on the way: a turned-off built-in extension (llama.cpp, tool search) said "Turn on in General", which has no such switch; it now says Plugins.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | 9 new browser tests failed first (missing field, pane or entry; General still listing the group; the link to General), then passed. Tests that used General's moved groups now use the groups that stay |
+| `bun test` | 352 passed (49 files) |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 149 passed; axe on the Tools, Skills and Plugins pages and the Defaults form passes |
+| Impeccable detector | No findings on the changed components |
+
+Manual (T3 preview, a temporary agent folder; the real `~/.pi` was not written): at 1440×900 General lists its seven groups; Skills › Skill commands, Plugins › Packages with the npm command below a hairline, and Models › Defaults with the rows under the defaults and Save defaults sticky. At 390 px in dark, `#tools/startup` opens the checklist in place of the list with "All views", the save bar sticky and no horizontal scroll. With `defaultTools: "read"` (not a list) the inspection still completes, so Startup tools stays reachable to repair it, as MCP › Code mode's error now says.
+
+Not changed: Startup tools appears once the tool inspection has answered; a single-setting pane repeats its setting's name as its heading.
+
+---
+
 # Verification — Code mode in startup tools is a state with a link to MCP › Code mode, 2026-10-10
 
 Scope: General › Startup tools had a `codemode` checkbox that wrote the same `defaultTools` entry as MCP › Code mode's "When Code mode is on". Unticked read as off, but Pi turns `codemode` on when an MCP server with codemode exposure connects (pi.dev docs: MCP, Control tool exposure), and the checkbox did not say that `codemode.mode` (built-in tools direct or only from scripts) lives in MCP › Code mode. Android's settings guidelines (source.android.com: Settings design guidelines) keep a setting shown in two places on one screen with entry points from the others. The row now states Always on or Automatic, with the change note the other rows have, and links to `#mcp/codemode`; the MCP tab opens on Code mode from that hash, as General and Models do for theirs, and keeps it chosen when the project changes.
