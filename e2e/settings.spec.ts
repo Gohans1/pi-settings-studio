@@ -307,26 +307,26 @@ test("on a narrow screen the list comes first, then one group with a way back", 
 });
 
 test("emptying a number field returns it to Pi's default", async ({ page }) => {
-  await open(page, "Models & thinking");
-  const budget = page.getByLabel("Thinking budget: minimal", { exact: true });
-  await expect(budget).toHaveValue("1024");
-  await budget.fill("500");
+  await open(page, "Network & retries");
+  const attempts = page.getByLabel("Retry attempts", { exact: true });
+  await expect(attempts).toHaveValue("3");
+  await attempts.fill("5");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
-  expect(JSON.parse(await readFile(file, "utf8")).thinkingBudgets).toEqual({ minimal: 500 });
-  await budget.fill("");
+  expect(JSON.parse(await readFile(file, "utf8")).retry).toEqual({ maxRetries: 5 });
+  await attempts.fill("");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
-  expect(JSON.parse(await readFile(file, "utf8")).thinkingBudgets?.minimal).toBeUndefined();
-  await expect(budget).toHaveValue("1024");
+  expect(JSON.parse(await readFile(file, "utf8")).retry?.maxRetries).toBeUndefined();
+  await expect(attempts).toHaveValue("3");
 });
 
 test("the list counts the settings each group changes from Pi's default and marks unsaved edits", async ({ page }) => {
   const groups = page.getByRole("region", { name: "Setting groups" });
   await expect(groups.getByRole("button", { name: /^Shell & packages.*1 custom/ })).toBeVisible();
-  await open(page, "Models & thinking");
-  await page.getByRole("switch", { name: "Cache notices" }).click();
-  await expect(groups.getByRole("button", { name: /^Models & thinking.*unsaved/ })).toBeVisible();
+  await open(page, "Sessions & context");
+  await page.getByRole("switch", { name: "Automatic compaction" }).click();
+  await expect(groups.getByRole("button", { name: /^Sessions & context.*unsaved/ })).toBeVisible();
 });
 
 test("slash moves to the search field unless the reader is typing", async ({ page }) => {
@@ -373,15 +373,15 @@ test("the Code mode link in startup tools opens MCP › Code mode", async ({ pag
 
 test("the list opens on everyday groups, with the terminal-only ones last", async ({ page }) => {
   const groups = page.getByRole("region", { name: "Setting groups" });
-  await expect(groups.getByRole("button")).toHaveText([/^Pi/, /^Tools/, /^Messages & interaction/, /^Models & thinking/, /^Sessions & context/, /^Shell & packages/,
+  await expect(groups.getByRole("button")).toHaveText([/^Pi/, /^Tools/, /^Messages & interaction/, /^Sessions & context/, /^Shell & packages/,
     /^Images/, /^Updates, telemetry & warnings/, /^Network & retries/, /^Terminal UI/, /^Keyboard shortcuts/, /^Not editable here/]);
 });
 
 test("a group's advanced settings follow its everyday ones under their own heading", async ({ page }) => {
-  await open(page, "Models & thinking");
-  const models = page.getByRole("region", { name: "Models & thinking" });
-  await expect(models.getByRole("switch", { name: "Cache notices" })).toBeVisible();
-  await expect(models.getByRole("region", { name: "Advanced" }).getByLabel("Thinking budget: minimal", { exact: true })).toBeVisible();
+  await open(page, "Network & retries");
+  const network = page.getByRole("region", { name: "Network & retries" });
+  await expect(network.getByRole("switch", { name: "Automatic retry" })).toBeVisible();
+  await expect(network.getByRole("region", { name: "Advanced" }).getByLabel("HTTP idle timeout (ms)", { exact: true })).toBeVisible();
 });
 
 test("a setting at Pi's default says so and shows the value Pi uses, with nothing to reset", async ({ page }) => {
@@ -408,17 +408,17 @@ test("choosing Pi's default takes the key out of the file, and a default already
 });
 
 test("search reaches advanced settings without opening their group", async ({ page }) => {
-  await page.getByRole("searchbox", { name: "Search settings" }).fill("budget");
-  await expect(page.getByLabel("Thinking budget: minimal", { exact: true })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search settings" }).fill("httpIdle");
+  await expect(page.getByLabel("HTTP idle timeout (ms)", { exact: true })).toBeVisible();
 });
 
 test("save shows a value Pi would refuse, even from another group", async ({ page }) => {
-  await open(page, "Models & thinking");
-  const budget = page.getByLabel("Thinking budget: minimal", { exact: true });
-  await budget.fill("-1");
-  await open(page, "Tools");
-  await expect(budget).toBeHidden();
+  await open(page, "Network & retries");
+  const attempts = page.getByLabel("Retry attempts", { exact: true });
+  await attempts.fill("-1");
+  await open(page, "Images");
+  await expect(attempts).toBeHidden();
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(budget).toBeFocused();
-  expect(JSON.parse(await readFile(file, "utf8")).thinkingBudgets).toBeUndefined();
+  await expect(attempts).toBeFocused();
+  expect(JSON.parse(await readFile(file, "utf8")).retry).toBeUndefined();
 });

@@ -8,7 +8,6 @@ import { DEFAULT_TOOLS, effectiveTools } from "./tools";
 export const sections = [
   { id: "tools", title: "Tools" },
   { id: "interaction", title: "Messages & interaction" },
-  { id: "models", title: "Models & thinking", see: { text: "Default provider and model, thinking levels and Enabled models are set in", label: "Models → Defaults", href: "#models/defaults" } },
   { id: "context", title: "Sessions & context" },
   { id: "shell", title: "Shell & packages" },
   { id: "images", title: "Images" },
@@ -16,8 +15,9 @@ export const sections = [
   { id: "network", title: "Network & retries" },
   { id: "terminal", title: "Terminal UI", note: "Only affects Pi in a terminal." },
 ] as const;
-// "modelDefaults" fields are edited in the Models tab; General does not list that section.
-export type SectionId = typeof sections[number]["id"] | "modelDefaults";
+// Keys another tab edits, which General does not list: Models › Defaults has its own controls for
+// "modelDefaults" and shows "models" as rows below them.
+export type SectionId = typeof sections[number]["id"] | "modelDefaults" | "models";
 
 export type Option = { label: string; value: string | number | boolean };
 /** Pi's default in words, and what it depends on. */

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
-import { BellRing, Brain, ChevronDown, CircleAlert, FileJson, History, Image, Info, Keyboard, Lock, MessagesSquare, Monitor, Network, RotateCcw,
+import { BellRing, ChevronDown, CircleAlert, FileJson, History, Image, Info, Keyboard, Lock, MessagesSquare, Monitor, Network, RotateCcw,
   SearchX, SquareTerminal, Wrench, type LucideIcon } from "lucide-react";
 import { fields, isPiDefault, sections, type SettingsView } from "../shared/settings";
 import { loadAvailableModels, loadPi, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
@@ -25,7 +25,7 @@ import { Spinner } from "./components/ui/spinner";
 
 // Entries pinned around the groups: the installed Pi above them; shortcuts and what is not editable below.
 const PI = "pi", KEYBINDINGS = "keybindings", ELSEWHERE = "elsewhere";
-const icons: Record<string, LucideIcon> = { tools: Wrench, interaction: MessagesSquare, models: Brain, context: History, shell: SquareTerminal,
+const icons: Record<string, LucideIcon> = { tools: Wrench, interaction: MessagesSquare, context: History, shell: SquareTerminal,
   images: Image, updates: BellRing, network: Network, terminal: Monitor };
 const fieldOf = (key: string) => fields.find(field => field.key === key)!;
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -110,7 +110,7 @@ export function GeneralTab({ project }: { project?: string }) {
   }
 
   const needle = query.trim().toLowerCase();
-  const results = fields.filter(field => field.section !== "modelDefaults" && (!needle || (field.label + " " + field.key + " " + field.help).toLowerCase().includes(needle)));
+  const results = fields.filter(field => sections.some(section => section.id === field.section) && (!needle || (field.label + " " + field.key + " " + field.help).toLowerCase().includes(needle)));
   const groups = sections.filter(section => results.some(field => field.section === section.id));
   // Pi, the shortcuts and what is not editable here belong to the global page, and step aside for a search.
   const pinned = scope === "global" && !needle;
@@ -162,7 +162,6 @@ export function GeneralTab({ project }: { project?: string }) {
           : `${count(own.length, "setting", "settings")} · ${scope === "project" ? (differ ? `${differ} set in this project` : "all inherited") : (differ ? `${differ} custom` : "all at Pi's default")}`}</p>
       </div></header>
       {"note" in group && <Alert role="note"><AlertDescription>{group.note}</AlertDescription></Alert>}
-      {"see" in group && <Alert role="note"><AlertDescription>{group.see.text} <a href={group.see.href}>{group.see.label}</a>.</AlertDescription></Alert>}
       {everyday.length > 0 && rows(everyday)}
       {advanced.length > 0 && <section className="settings-part" data-first={!everyday.length || undefined} aria-labelledby="advanced-title">
         <header><h3 id="advanced-title">Advanced</h3><p className="muted">Tuning most people never change.</p></header>

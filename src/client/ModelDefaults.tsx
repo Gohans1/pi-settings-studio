@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { CircleAlert, TriangleAlert } from "lucide-react";
 import type { AvailableModel, ExtensionProvidersView, ModelScopeView, ModelSummary, ProviderView } from "../shared/models";
-import type { SettingsChange, SettingsView } from "../shared/settings";
+import { fields, type SettingsChange, type SettingsView } from "../shared/settings";
 import { clampLevel } from "../shared/thinking";
 import { checkModelScope, loadAvailableModels, loadExtensionProviders, loadModels, loadSettings, saveSettings } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
@@ -13,7 +13,10 @@ import { ScopeChoice } from "./ScopeChoice";
 import { EnabledModels } from "./EnabledModels";
 import { levelOptions, ModelMapField } from "./ModelMapField";
 import { modelSuggestions, providerSuggestions, SuggestInput } from "./SuggestInput";
+import { focusSetting, useSettingDraft } from "./SettingsForm";
 
+/** Prompt caching and thinking budgets: rows below the defaults, saved with them. */
+const tuningFields = fields.filter(field => field.section === "models");
 const hasGlob = (text: string) => /[*?[]/.test(text);
 
 /** A value Pi may not accept: a note under its field, which describes the field. The Alert sizes its icon. */
@@ -43,9 +46,11 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
   const [modelScope, setModelScope] = useState<ModelScopeView>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const tuning = useSettingDraft(view, { project });
 
   function fill(next: SettingsView) {
     setView(next);
+    tuning.discard();
     setProvider(String(next.values.defaultProvider ?? ""));
     setModel(String(next.values.defaultModel ?? ""));
     setThinking(String(next.values.defaultThinkingLevel ?? ""));
@@ -99,6 +104,8 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!view) return;
+    // Pi would refuse the file: take the reader to the first value to fix, and write nothing.
+    if (tuning.invalidKeys.length) { focusSetting(tuning.invalidKeys[0]!); return; }
     const ref = `${provider.trim()}/${model.trim()}`;
     const patterns = addToScope && !enabled.some(pattern => pattern.toLowerCase() === ref.toLowerCase()) ? [...enabled, ref] : enabled;
     const wanted: Record<string, unknown> = {
@@ -108,7 +115,7 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
     };
     const changes: SettingsChange[] = Object.entries(wanted).flatMap(([key, value]): SettingsChange[] =>
       value === undefined ? (Object.hasOwn(view.values, key) ? [{ key, remove: true }] : [])
-        : JSON.stringify(value) === JSON.stringify(view.values[key]) ? [] : [{ key, value }]);
+        : JSON.stringify(value) === JSON.stringify(view.values[key]) ? [] : [{ key, value }]).concat(tuning.changes);
     if (!changes.length) { onSaved("Defaults are unchanged."); return; }
     setBusy(true); setError("");
     try {
@@ -130,7 +137,7 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
       <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p></header>
     {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global defaults" disabled={busy} onChange={setScopeChoice} />}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <form onSubmit={event => void save(event)} className="server-form">
+    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <form noValidate onSubmit={event => void save(event)} className="server-form">
       <FieldGroup>
       <Field><FieldLabel htmlFor="default-provider">Default provider</FieldLabel>
         <SuggestInput id="default-provider" value={provider} placeholder={String(inherited("defaultProvider") ?? "Automatic")}
@@ -154,9 +161,14 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
         <ModelMapField kind="thinkingMap" label="Thinking level per model" value={perModel} suggestions={modelSuggestions(available)}
           levels={ref => known(ref)?.thinkingLevels} onChange={setPerModel} />
         <FieldDescription>{scope === "project" && !perModel && inherited("modelThinkingLevels") ? "None here, so the global ones apply. " : ""}
-          Overrides the level above for these models. <a href="#general/models">Thinking budgets and prompt caching</a> are in General.</FieldDescription></Field>
+          Overrides the level above for these models.</FieldDescription></Field>
       <EnabledModels patterns={enabled} scope={modelScope} available={available} providers={listed} inherited={inheritedEnabled} onChange={setEnabled} />
       </FieldGroup>
+      <section className="settings-part" aria-labelledby="tuning-title">
+        <header><h3 id="tuning-title">Prompt caching and thinking budgets</h3>
+          <p className="muted">Cache notices and warming, and the tokens each thinking level may use on models that think within a budget.</p></header>
+        {tuning.rows(tuningFields)}
+      </section>
       <div className="form-actions"><Button type="submit" disabled={busy}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save defaults"}</Button></div>
     </form>}
   </section>;
