@@ -15,6 +15,8 @@ Scope: System prompt listed 90 tools for a session whose model was given one. It
 
 Manual (agent-browser, this branch on port 4370 with the real agent folder, `PI_OFFLINE=1`): pi-settings-studio's next session is ≈ 9.3k tokens: 6.3k of prompt and one 3k declaration, `codemode`, whose description lists 9 tools (`read`, `bash`, `edit`, `write` among them) while scripts find 16 more. Against the newest recorded session, six of eight sections matched byte for byte; `docs` names the app's copy of Pi's docs, and T3 Code's sessions list the same skills in name order (see docs/plugin-tools.md). Recorded session `11:36` shows "8 tools added" as a later change. Light at 1440px, dark at 390px; console clean. Screenshots: `docs/evidence/context-desktop.png`, `context-mobile-dark.png`. The real `~/.pi` was not written.
 
+Review against Vercel's Web Interface Guidelines (fetched today): list states now use tabular figures, as DESIGN.md asks of counts, and tool and extension names in Context are `translate="no"`; `context.spec.ts` and `tools.spec.ts` passed again (22).
+
 Not changed: an extension's `before_agent_start` handlers and a request's `context` handlers are not run, and tools a host adds (T3 Code's) are not seen. A recorded session cannot say which declarations were hidden.
 
 ---

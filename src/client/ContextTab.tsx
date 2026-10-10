@@ -26,7 +26,7 @@ const sum = (parts: PromptPart[]) => parts.reduce((total, part) => total + part.
 const time = (at: number) => new Date(at).toLocaleTimeString();
 
 /** One row of the parts list and what the detail pane shows for it. */
-type Entry = { key: string; name: string; state: string; detail: () => ReactNode };
+type Entry = { key: string; name: ReactNode; state: string; detail: () => ReactNode };
 type Group = { title: string; state: string; entries: Entry[] };
 
 /** The parts of a prompt in Pi's order, by group, beside the chosen part. */
@@ -123,7 +123,7 @@ function promptGroups(parts: { content?: PromptPart; sections: PromptPart[]; dec
       key: `section:${part.name}`, name: sectionInfo(part.name).label, state: tokens(part.tokens), detail: () => <SectionDetail part={part} from={from(part)} />,
     })) },
     { title: "Tool declarations", state: tokens(sum(parts.declarations)), entries: parts.declarations.map(part => ({
-      key: `tool:${part.name}`, name: part.name, state: tokens(part.tokens), detail: () => <DeclarationDetail part={part} catalog={catalog} />,
+      key: `tool:${part.name}`, name: <span translate="no">{part.name}</span>, state: tokens(part.tokens), detail: () => <DeclarationDetail part={part} catalog={catalog} />,
     })) },
   ];
 }
@@ -166,7 +166,7 @@ function NextSession({ project, modes }: { project: string; modes: ReactNode }) 
       {view.context.unrun.length > 0 && <Alert role="note"><TriangleAlert aria-hidden="true" /><AlertDescription>
         <p>Not run in this preview: these extensions can change the prompt when a turn starts, so a session's first request may differ.</p>
         <ul className="name-list" aria-label="Extensions not run">{view.context.unrun.map((source, index) => <li key={index}>
-          {source.kind === "extension" ? <>{source.name}{source.group ? <span className="muted"> · {source.group}</span> : null}</> : source.kind === "mcp" ? source.server : "Pi"}</li>)}</ul>
+          {source.kind === "extension" ? <><span translate="no">{source.name}</span>{source.group ? <span className="muted"> · {source.group}</span> : null}</> : source.kind === "mcp" ? source.server : "Pi"}</li>)}</ul>
       </AlertDescription></Alert>}
       <Parts groups={promptGroups(view.context, filesOf(view.context), catalog)} />
       <p className="tools-footnote">A preview of Pi started in this folder, from global and project settings, the project trusted for it. Checked {new Date(view.checkedAt).toLocaleTimeString()}.

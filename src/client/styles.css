@@ -163,7 +163,7 @@
   /* A row is its Item, then the switch that turns it on or off. */
   .list-row { display: flex; align-items: center; gap: --spacing(2); }
   .list-row:has(> [data-slot=switch]) { padding-inline-end: --spacing(2); }
-  .item-state { margin-inline-start: auto; font-size: var(--text-caption); color: var(--muted-foreground); white-space: nowrap; }
+  .item-state { margin-inline-start: auto; font-size: var(--text-caption); color: var(--muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .item-state[data-state=refused] { color: var(--destructive); }
   .item-state:has(svg) { display: inline-flex; align-items: center; gap: --spacing(1); }
   .item-state svg { width: --spacing(3.5); height: --spacing(3.5); }
