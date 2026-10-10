@@ -23,7 +23,8 @@
   --muted-foreground: light-dark(var(--flexoki-base-700), var(--flexoki-base-400));
   --accent: light-dark(var(--flexoki-base-100), var(--flexoki-base-900));
   --accent-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
-  --popover: light-dark(var(--flexoki-paper), var(--flexoki-base-900));
+  /* Floating layers: the page in light, bg-2 in dark (shadcn lifts them to its card colour), so ui shows on them. */
+  --popover: light-dark(var(--flexoki-paper), var(--flexoki-base-950));
   --popover-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
   --border: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
   --input: light-dark(var(--flexoki-base-500), var(--flexoki-base-600));

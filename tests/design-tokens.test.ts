@@ -113,6 +113,20 @@ describe("colour system", () => {
       expect(contrast(hex("--primary-foreground", scheme), hovered)).toBeGreaterThanOrEqual(4.5);
     });
   }
+
+  // shadcn marks the hovered or keyboard-highlighted row of a menu, select or combobox with --accent alone, and a
+  // hovered ghost button (a toast's close among them) and an AlertDialog's footer with --muted. Where one matches the
+  // surface under it, the pointer and the keyboard leave no trace. Every colour is a Flexoki step, so differing is
+  // at least one step.
+  const highlights: [string, string][] = [
+    ["--accent", "--popover"],
+    ["--muted", "--background"], ["--muted", "--sidebar"], ["--muted", "--card"], ["--muted", "--popover"],
+  ];
+  for (const scheme of ["light", "dark"] as const) {
+    test.each(highlights)(`${scheme}: %s stands out from %s`, (highlight, surface) => {
+      expect(hex(highlight, scheme)).not.toBe(hex(surface, scheme));
+    });
+  }
 });
 
 describe("typography", () => {
