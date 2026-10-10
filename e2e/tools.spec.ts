@@ -53,6 +53,20 @@ test("Tools opens on what the model sees, grouped by source, beside every source
   expect(errors).toEqual([]);
 });
 
+test("a tab opens at its top, even one that shows its last result at once", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 480 });
+  await page.goto(server.url + "#tools");
+  await expect(row(page, /^What the model sees/)).toBeVisible();
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: /^Terminal UI/ }).click();
+  await expect(page.getByRole("heading", { name: "Terminal UI", level: 2 })).toBeVisible();
+  await page.locator("main").evaluate(element => element.scrollTo({ top: 900, behavior: "instant" }));
+  expect(await page.locator("main").evaluate(element => element.scrollTop)).toBe(900);
+  await page.getByRole("tab", { name: "Tools" }).click();
+  await expect(row(page, /^What the model sees/)).toBeVisible();
+  expect(await page.locator("main").evaluate(element => element.scrollTop)).toBe(0);
+});
+
 test("a source's name reads as a label over its tools: smaller than their names, in another colour", async ({ page }) => {
   await page.goto(server.url + "#tools");
   await row(page, /^What the model sees/).click();

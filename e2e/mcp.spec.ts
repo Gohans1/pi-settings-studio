@@ -112,15 +112,29 @@ test("while a server saves, Save server shows a spinner", async ({ page }) => {
   await page.unrouteAll({ behavior: "wait" });
 });
 
-test("a long form in the detail pane keeps its save row in view on a wide screen", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
+test("on a wide screen too the page scrolls a long form, and its save row stays in view", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
   await page.goto(server.url + "#mcp");
   await page.getByRole("button", { name: "Add server", exact: true }).click();
   const form = page.getByRole("form", { name: "Add MCP server" });
   await expect(form.getByRole("button", { name: "Save server" })).toBeInViewport();
   await form.getByLabel("Timeout (seconds)").scrollIntoViewIfNeeded();
   await expect(form.getByRole("button", { name: "Save server" })).toBeInViewport();
-  expect(await page.locator("main").evaluate(element => element.scrollTop)).toBe(0);
+  expect(await page.locator("main").evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+});
+
+test("on a wide screen the list keeps its column while the tab loads, so the page stays put when the list arrives", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/**", route => held.then(() => route.fallback()));
+  await page.goto(server.url + "#mcp");
+  await expect(page.getByText("Reading MCP settings…")).toBeVisible();
+  const header = page.locator(".page-header");
+  const loading = (await header.boundingBox())!.x;
+  release();
+  await expect(page.getByRole("button", { name: /^docs/ })).toBeVisible();
+  expect((await header.boundingBox())!.x).toBe(loading);
 });
 
 test("on a narrow screen the page scrolls the form, and its save row stays in view", async ({ page }) => {

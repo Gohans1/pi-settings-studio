@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { Bot, Boxes, FileText, Layers, Puzzle, ScrollText, Server, SlidersHorizontal, Wrench } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Badge } from "./components/ui/badge";
@@ -79,6 +79,8 @@ export function App() {
     // On a narrow screen the chosen tab may sit past the edge of the scrolling tab bar.
     document.querySelector("[role=tab][aria-selected=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [active]);
+  // main scrolls every tab, and a tab that shows its last result at once would open where the last one was read to.
+  useLayoutEffect(() => { document.getElementById("main")?.scrollTo({ top: 0, behavior: "instant" }); }, [active]);
   useEffect(() => {
     // "/" moves to the page's search field, unless the reader is typing or in a menu.
     const onKey = (event: KeyboardEvent) => {

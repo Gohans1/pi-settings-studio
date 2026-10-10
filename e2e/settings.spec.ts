@@ -291,6 +291,14 @@ test("unsaved changes keep their save action in view while scrolling", async ({ 
   await expect(page.getByRole("switch", { name: "Hide thinking" })).not.toBeChecked();
 });
 
+test("on a wide screen a setting's control stays near its label", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 900 });
+  const label = (await page.getByText("Steering delivery", { exact: true }).boundingBox())!;
+  const control = (await page.getByRole("combobox", { name: "Steering delivery" }).boundingBox())!;
+  // Rows stop at 60rem.
+  expect(control.x + control.width - label.x).toBeLessThanOrEqual(960);
+});
+
 test("choosing a group shows its settings beside the list", async ({ page }) => {
   const groups = page.getByRole("region", { name: "Setting groups" });
   await expect(groups.getByRole("button", { name: /^Messages & interaction/ })).toHaveAttribute("aria-pressed", "true");

@@ -1,3 +1,30 @@
+# Verification — the workbench list runs down the window's edge, and the page scrolls as one, 2026-10-10
+
+Scope: the framed split view sat in a centred 80rem box under the page header, at least 28rem tall, inside `main`, which scrolls too: three scrollers, one inside another, and at 1376×640 every tab's page scrolled 22–166px before either pane did. The list now runs down the window's left edge and the page beside it is the one scroller (B, drawn in the thread).
+
+- The list is fixed down the window's left edge under the tabs and scrolls on its own in its ScrollArea, as shadcn's Sidebar sits under a site header (registry block sidebar-16: `top-(--header-height) h-[calc(100svh-var(--header-height))]`). `main` draws the column (`main::before`), so it is there while a tab loads and the page does not move sideways when the list arrives.
+- The detail has no ScrollArea: `main` scrolls it with the page header, out to the window's right edge. `--page-width` and `--radius-frame` are gone.
+- Choosing an item while the page is scrolled shows the item from its top (`showDetail` in `ListItem`); a tab opens at its top (`App`, before paint).
+- With nothing capping the page, rows of label and control, the save bar, file text and its editors stop at 60rem, beside the JSON editor's existing 60rem; lists run to the edge.
+- The save bar's actions follow its count, as a form's save row starts with them. The bar now reaches the window's bottom edge, where a kept confirmation toast covered Save (found by the startup tools test in tools.spec.ts).
+- Below 56rem nothing changes: the panes take turns and the page scrolls.
+- DESIGN.md › Overview, Layout, Shapes, Forms, General and Context say so.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | Each failed on the old code, then passed: list geometry at 1920×720 (x 0, from the tabs to the bottom; page header past 1600px); one scroll area on MCP (2 before); a long MCP form scrolls the page on a wide screen with Save in view; the list's column while MCP loads (page header x 32, then 352); Network & retries shown from its top after reading down Terminal UI; a cached Tools tab opens at 0 at 390×480 (651 before); setting rows, the AGENTS.md editor and a Context part's text at most 960px at 1920 (1536 before). Two first passed by chance (short content clamps the scroll) and were changed until they failed for the reason they name. |
+| `bun test` | 380 passed (51 files) |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 172 passed |
+| `impeccable detect` | No findings in styles.css, Workbench.tsx, App.tsx |
+
+Manual (agent-browser at 1376×640, 1920×1080 and 390×844, dark, MCP also light; this branch on port 4370 with the real agent folder, `PI_OFFLINE=1`): Tools › What the model doesn't see scrolls the page 913px while the list stays; choosing Core tools then lands its heading under the tabs; on 390px, General scrolled 900px, then Tools opens at 0; at 1920 General's rows end at 1312px and the save bar reads "1 unsaved change, Discard, Save" from the left. Console clean, nothing overflows sideways.
+
+Not changed: the page description and the Tools summary keep their 72ch measure, so they still wrap on a wide screen. Between about 56rem and 66rem of window width a kept toast can still cover the save bar's Save; below 40rem the full-width toast covers the bar, as before.
+
+---
+
 # Verification — a list's rows are regular weight, the chosen one medium, 2026-10-10
 
 Scope: with group names drawn as 12px labels, rows kept Item's medium weight (500), which Segoe UI on Windows draws near semibold, so on the desktop a list read as bold rows over a faint label. shadcn's `SidebarMenuButton` (registry, base-nova: `text-sm`, `data-active:font-medium`) and Primer's ActionList `.ItemLabel` (`--base-text-weight-normal`) keep rows regular and mark only the chosen one.
