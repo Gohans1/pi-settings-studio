@@ -31,6 +31,8 @@ loginctl enable-linger "$USER"   # start with WSL, without opening a terminal
 
 Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && systemctl --user restart pi-settings-studio`.
 
+To open it from a phone on your tailnet, run `tailscale serve --bg --https=4369 http://127.0.0.1:4369`, then start the service with `--allow-origin https://<machine>.<tailnet>.ts.net:4369` (a systemd drop-in keeps that out of the repo). The app has no login, so anyone on that tailnet who reaches it can change settings.
+
 ## Tabs
 
 - **General**: the `settings.json` keys no other tab owns, raw JSON, keyboard shortcuts, the installed Pi version with Update Pi and a newer Pi on npm when there is one, and what cannot be edited here.

@@ -30,6 +30,8 @@ Out of scope: configuration that belongs to individual third-party extensions.
 ## Local HTTP boundary
 Bun serves `127.0.0.1:4369` (configurable) and runs in the background. No login. Exact Host and Origin allowlist, Fetch Metadata cross-site rejection, JSON content type for mutations, request body limit, strict CSP, no CORS. This blocks browser-originated attacks (CSRF, DNS rebinding). Processes running as the same user are out of scope: they can already edit the files.
 
+The allowlist also takes origins given with `--allow-origin` (repeatable, each an origin only). The installed service uses it for the `tailscale serve` address on port 4369, so a phone on the tailnet can open the app. Anyone on that tailnet who reaches the address can read and change settings, and the app has no login.
+
 ## UI
 Horizontal tab bar like pi-web, English, light/dark from the OS, shadcn (Base UI) components. Switches save immediately. Forms save on Save, without a review step. Failed saves keep the draft. Keyboard and narrow-screen support. Tabs that are not implemented are hidden, not faked.
 

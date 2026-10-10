@@ -21,6 +21,21 @@ Not changed: an extension's `before_agent_start` handlers and a request's `conte
 
 ---
 
+# Verification — the app over the tailnet, 2026-10-10
+
+Scope: a phone on the tailnet opens the app. Before, only `127.0.0.1` and `localhost` passed the Host and Origin allowlist.
+
+- `--allow-origin URL` (repeatable) in `cli.ts` and `startServer({ allowedOrigins })`. `parseAllowedOrigin` keeps only an http or https origin with no path. Nothing is allowed by default.
+- The installed service has a drop-in at `~/.config/systemd/user/pi-settings-studio.service.d/tailnet.conf` (outside the repo) with `--allow-origin https://anphat-1.taild3d41b.ts.net:4369`. `tailscale serve --bg --https=4369 http://127.0.0.1:4369` serves it on the tailnet only. The existing 443 route to 127.0.0.1:3773 was not changed.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | `tests/server.test.ts` failed with "Export named 'parseAllowedOrigin' not found", then passed (3 of 3) |
+| `bun test` | 361 passed (50 files): 2 new |
+| `bun run typecheck` / `bun run lint` / `bun run build` | Passed |
+| `bun run test:e2e` | Run 1: 153 passed, 1 failed (`package-updates.spec.ts:44`, a strict-mode locator that matched 2 status elements; it passed alone 2 of 2). Run 2: 153 passed, 1 failed (`motion.spec.ts:73`, the flake recorded below) |
+| Live, from this machine on `https://anphat-1.taild3d41b.ts.net:4369` | GET 200; POST from its own origin 415 (origin accepted, nothing written); POST from `https://evil.example` 403; localhost 200; the 443 route 200. The phone itself was not tested |
+
 # Verification — update checks in the background, a newer Pi, and each MCP server's state on open, 2026-10-10
 
 Scope: three reads still waited for a click. Package updates were found only by Check for updates and forgotten on restart; Update Pi did not say whether a newer Pi existed; MCP did not say which servers connected without Test connections. Leaders do these on their own: VS Code checks extension updates when the window loads, then every 12 hours (microsoft/vscode `extensionsWorkbenchService.ts`, issue #158022); update-notifier checks in the background once a day, persists the result and skips in CI and tests (sindresorhus/update-notifier README); `claude mcp list` prints each server's health (code.claude.com/docs/en/mcp); Pi itself checks for a new Pi and package updates at startup unless `PI_OFFLINE` (Pi 1.1.0 `interactive-mode.js`).
