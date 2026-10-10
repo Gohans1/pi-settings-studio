@@ -1,3 +1,24 @@
+# Verification — a recorded first request counts what the model got, 2026-10-10
+
+Scope: on a phone, Context › Recorded session listed 90 declarations under Tool declarations and said Pi recorded ≈ 35.4k tokens for a code mode only session whose model got ≈ 9.8k; the caveat sat in a note above the list, gone after one scroll. Pi records every declared tool and hides the direct ones from requests (`prepareCodemodeLoadout`), and the session file does not record which. The prompt's tool list does: Pi names each declared tool with a snippet that it did not hide, and its own tools always have one (`create*ToolDefinition`, public).
+
+- `sessions.ts` splits the first request's declarations: with code mode declared and a Pi tool missing from the tool list, those the list does not name are `leftOut`, and `tokens` counts the prompt and the rest. With code mode and no list of Pi's tools (SYSTEM.md, or none declared), `leftOutUnknown`.
+- Context says "The model got ≈ …", lists left-out declarations in their own group outside every total, each detail saying why, and warns when it cannot tell.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | 4 session API tests failed (no `PI_OWN_TOOLS`, `leftOut`, `leftOutUnknown`), then passed; one checks Pi's own tools against Pi's public definitions, so a Pi update that drops a snippet fails it. 3 browser tests failed (no "The model got", no "cannot tell", `read` gone), then passed |
+| `bun test` | 379 passed (51 files) |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 160 passed |
+
+Manual (agent-browser at 390px, dark, this branch on port 4370 with the real agent folder, `PI_OFFLINE=1`): the newest pi-settings-studio session reads "The model got ≈ 9.8k tokens … 6.3k tokens of system prompt and 3.4k tokens in 1 tool declaration. Pi also recorded 89 declarations (≈ 25.6k tokens) that code mode only left out of every request." Tool declarations holds `codemode` alone; `read` under Left out of requests explains why. The same numbers as a count straight from the session file. Console clean. The real `~/.pi` was not written.
+
+Not changed: later changes list the tools they add as recorded (a reload that re-declares direct tools under code mode only is not split). An extension's model-only tool without a snippet would be counted as left out.
+
+---
+
 # Verification — Context replaces System prompt: what a session puts in front of the model, 2026-10-10
 
 Scope: System prompt listed 90 tools for a session whose model was given one. It replayed every system message to the end, so tools `tool_search` loaded mid-session looked as if they came with the first request (session `11-20-22`: 92 at the start, 8 `docs_mcp_server` tools later), and it showed what Pi recorded, while with `codemode.mode: "only"` Pi leaves its direct tools out of every request (`hiddenDeclarations`, Pi 1.1.0 `dist/extensions/codemode/tool.js`, `agent-session.js` `_installHiddenDeclarationsProjection`): the prompt's own `<tools>` section named `codemode` alone. What the model gets was spread over Tools, Instructions, Skills, MCP and System prompt, in characters or counts, never tokens. Claude Code's `/context` answers the same question in one place, by category, with each part's source (code.claude.com/docs/en/debug-your-config, /context-window).
