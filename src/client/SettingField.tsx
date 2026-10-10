@@ -89,7 +89,7 @@ export function SettingField({ field, value, inherited, overridden, invalid, sco
       <div className="field-meta" id={id + "-state"} data-custom={!!reset || undefined}>
         {unsaved && <span className="setting-unsaved"><span className="nav-dot" aria-hidden="true" />Unsaved</span>}
         <span>{source}</span>
-        {reset && <Button type="button" variant="ghost" size="xs" onClick={onReset} aria-label={`${reset} for ${field.label}`}>{reset}</Button>}
+        {reset && <Button type="button" variant="outline" size="xs" onClick={onReset} aria-label={`${reset} for ${field.label}`}>{reset}</Button>}
       </div>
       {invalid && <FieldError id={id + "-error"}>{fixes[field.kind]}</FieldError>}
     </div>

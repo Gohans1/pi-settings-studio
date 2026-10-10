@@ -39,8 +39,7 @@ export function Workbench({ list, detail, open, onBack, backLabel }: {
 /**
  * A row of a workbench list: an Item that chooses what the detail pane shows. Its state reads after the
  * name ("off", "Tool search"); a tone marks a state Pi refuses or skips, or one that is ready to use.
- * Names are regular weight, so the group headers above them lead; a quiet row (nothing set up yet)
- * recedes until it is hovered or chosen.
+ * A quiet row (nothing set up yet) recedes until it is hovered or chosen.
  */
 export function ListItem({ selected, onSelect, icon: Icon, name, state, tone, quiet = false }: {
   selected: boolean; onSelect: () => void; icon?: LucideIcon; name: ReactNode; state?: ReactNode; tone?: "refused" | "shadowed" | "ready"; quiet?: boolean;

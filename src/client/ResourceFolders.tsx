@@ -85,7 +85,7 @@ export function ResourceFolders({ type, project, level = 3, onChanged }: {
               {warnings.length > 0 && <div className="flex flex-wrap gap-1">{warnings.map(text => <Badge key={text} variant="outline">
                 <TriangleAlert aria-hidden="true" data-icon="inline-start" className="text-warning" />{text}</Badge>)}</div>}
             </ItemContent>
-            <ItemActions><Button variant="ghost" size="xs" disabled={busy} aria-label={`Remove ${entry.entry}`} onClick={() => void change("DELETE", entry.scope, entry.entry)}>Remove</Button></ItemActions>
+            <ItemActions><Button variant="destructive" size="xs" disabled={busy} aria-label={`Remove ${entry.entry}`} onClick={() => void change("DELETE", entry.scope, entry.entry)}>Remove</Button></ItemActions>
           </Item></Fragment>;
         })}</ItemGroup> : <p className="muted">None. Pi only uses the folders above{type === "skills" ? " and packages" : ""}.</p>}
       </div>

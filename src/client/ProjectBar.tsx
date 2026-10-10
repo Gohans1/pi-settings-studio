@@ -54,7 +54,7 @@ export function TrustPanel({ project, trust, onChange }: { project: string; trus
     <AlertDescription>{why}. If Pi cannot ask for trust, project settings, MCP servers and resources stay unused until the project is trusted.</AlertDescription>
     <div className="actions col-start-2 mt-2">
       <Button size="sm" disabled={busy} onClick={() => void decide(true)}>Trust this project</Button>
-      {trust.decision !== undefined && trust.savedFor === project && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void decide(null)}>Forget the decision</Button>}
+      {trust.decision !== undefined && trust.savedFor === project && <Button size="sm" variant="outline" disabled={busy} onClick={() => void decide(null)}>Forget the decision</Button>}
     </div>
     {error && <FieldError className="col-start-2 mt-2">{error}</FieldError>}
   </Alert>;

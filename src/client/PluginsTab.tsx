@@ -163,7 +163,7 @@ export function PluginsTab({ project }: { project?: string }) {
       <Button variant="outline" size="sm" disabled={checking || job.running || !view.packages.length} onClick={() => void checkUpdates()}>
         {/* The region's status line announces the check; the spinner only shows it. */}
         {checking && <Spinner data-icon="inline-start" aria-hidden="true" />}Check for updates</Button>
-      <Button variant="ghost" size="sm" disabled={job.running || checking || !view.packages.length} onClick={() => void job.start({ action: "packages-update", ...(project ? { project } : {}) })}>Update all</Button></div>
+      <Button variant="outline" size="sm" disabled={job.running || checking || !view.packages.length} onClick={() => void job.start({ action: "packages-update", ...(project ? { project } : {}) })}>Update all</Button></div>
     <div className="my-4 flex flex-col gap-2">
       <p role="status" aria-live="polite" className="m-0">{checking ? "Checking for package updates…"
         : !lastCheck ? "Not checked yet. Check for updates to find newer packages."
@@ -182,8 +182,8 @@ export function PluginsTab({ project }: { project?: string }) {
       </ItemContent>
       {lastCheck?.updates.some(update => update.source === pkg.source && update.scope === pkg.scope) && <Badge variant="secondary"><ArrowUp aria-hidden="true" data-icon="inline-start" />Update available</Badge>}
       <ItemActions>
-        <Button variant="ghost" size="xs" disabled={busy} aria-label={`Filters for ${pkg.source}`} onClick={() => setFiltering(pkg.scope + pkg.source)}>Filters</Button>
-        <Button variant="ghost" size="xs" disabled={job.running || checking} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Update</Button>
+        <Button variant="outline" size="xs" disabled={busy} aria-label={`Filters for ${pkg.source}`} onClick={() => setFiltering(pkg.scope + pkg.source)}>Filters</Button>
+        <Button variant="outline" size="xs" disabled={job.running || checking} aria-label={`Update package ${pkg.source}`} onClick={() => void job.start({ action: "package-update", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Update</Button>
         <Button variant="destructive" size="xs" disabled={job.running || checking} aria-label={`Remove package ${pkg.source}`} onClick={() => void job.start({ action: "package-remove", source: pkg.source, ...(pkg.scope === "project" ? { project } : {}) })}>Remove</Button>
       </ItemActions>
       {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}

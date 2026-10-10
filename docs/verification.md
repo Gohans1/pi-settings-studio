@@ -1,3 +1,43 @@
+# Verification — every tab checked for levels that read alike, 2026-10-10
+
+Scope: after the list group labels, every tab at 1280×900 and 390×844 (dark; Tools also light) with an item chosen, and a census of the size, weight, colour and family of every visible text per tab. Three more places read alike:
+
+- Every h3 was body size (14px semibold) beside 14px medium labels and row names: Advanced in General, Models in a provider, In settings.json in Packages. h3 takes a 16px title step (`--text-title`).
+- In Tools, a source's name (13px semibold) sat over 13px tool names and under a 14px part heading. It takes the list group label: caption size, semibold, muted.
+- Ghost buttons with only a word looked like the text beside them until hovered, and a touch screen never hovers: Use default beside "Pi's default is ask", Disable beside "Default", Filters and Update beside Remove. They are outline; a folder's Remove is destructive like every other Remove. Ghost stays for icon buttons and buttons an icon leads.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | The scale test failed without a title step; a browser test (Advanced larger than Session directory's label) failed at 14px against 14px; a browser test (`tools.ts` smaller than `visible_tool` and in another colour) failed at 13px against 13px; a source test listed the 11 ghost buttons with words. Each then passed |
+| `bun test` | 380 passed (51 files). Once, while the suite ran beside the browser checks, tools-api's "a change to what Pi reads … inspects again" hit its 5 s timeout; alone it passed twice |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 163 passed |
+
+Manual (agent-browser, this branch on port 4370 with the real agent folder, `PI_OFFLINE=1`): at 390px dark, Advanced and Models read above their rows; Tools › What the model doesn't see goes On demand (16px) › Core tools (12px, muted) › `read` (13px mono); Disable, Filters, Update, Update all and Use as default show borders, and Use default has a 1px border. Console clean.
+
+Not changed: a group's switch in the Skills and Plugins lists looks like its rows' switches; ghost buttons an icon leads (View mcp.log, a Disclosure, the way back) stay ghost.
+
+---
+
+# Verification — a list group's name reads as a label, 2026-10-10
+
+Scope: on a phone, Context's group names (System prompt, Tool declarations) could not be told from the rows under them: both were 14px in the body colour, the name semibold and the row medium (`ItemTitle`). Every workbench list shares `.list-header h2`. shadcn's `SidebarGroupLabel` (registry, base-nova: `text-xs font-medium text-sidebar-foreground/70`) and Primer's ActionList `GroupHeading` (`--text-body-size-small`, 0.75rem, semibold, `--fgColor-muted`, no text-transform) draw a group's name as a smaller, muted label in sentence case above 14px rows.
+
+- `.list-header h2` takes the caption size and the muted colour. DESIGN.md › Lists and › Typography say so; two comments that called rows regular weight are fixed.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | 1 browser test (MCP's Global over its `docs` row: smaller, another colour, not in capitals) failed at 14px against 14px, then passed |
+| `bun test` | 379 passed (51 files) |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 161 passed |
+
+Manual (agent-browser at 390px, dark, this branch on port 4370 with the real agent folder, `PI_OFFLINE=1`): Context for pi-settings-studio shows "System prompt" at 12px, 600, rgb(159, 157, 150) above "Base prompt" at 14px, 500, rgb(206, 205, 195). Console clean.
+
+---
+
 # Verification — a recorded first request counts what the model got, 2026-10-10
 
 Scope: on a phone, Context › Recorded session listed 90 declarations under Tool declarations and said Pi recorded ≈ 35.4k tokens for a code mode only session whose model got ≈ 9.8k; the caveat sat in a note above the list, gone after one scroll. Pi records every declared tool and hides the direct ones from requests (`prepareCodemodeLoadout`), and the session file does not record which. The prompt's tool list does: Pi names each declared tool with a snippet that it did not hide, and its own tools always have one (`create*ToolDefinition`, public).
