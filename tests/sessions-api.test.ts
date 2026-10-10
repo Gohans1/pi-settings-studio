@@ -2,7 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { appendFile, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import {
+  createBashToolDefinition, createEditToolDefinition, createFindToolDefinition, createGrepToolDefinition,
+  createLsToolDefinition, createPowerShellToolDefinition, createReadToolDefinition, createWriteToolDefinition,
+} from "@earendil-works/pi-coding-agent";
+import { PI_OWN_TOOLS } from "../src/server/sessions.ts";
 import { ConfigStore } from "../src/server/store.ts";
 import { createApp } from "../src/server/app.ts";
 
@@ -87,6 +92,52 @@ test("each part of the first request carries Pi's estimate of its tokens, about 
   assert.equal(start.declarations[0].tokens, Math.ceil(JSON.stringify([{ name: "read", description: "Read files", parameters: {} }]).length / 4));
   // The whole first request, as Pi estimates one system message.
   assert.equal(start.tokens, Math.ceil(("You are Pi." + "Rule one." + JSON.stringify([{ name: "read", description: "Read files", parameters: {} }, { name: "write", description: "Write files", parameters: {} }])).length / 4));
+});
+
+const declaration = (name: string) => ({ name, description: "Purpose of " + name, parameters: {} });
+const toolList = (...names: string[]) => `<tools>\n${names.map(name => `- ${name}: Does ${name}`).join("\n")}\n\nIn addition to the tools above, you may have access to other custom tools depending on the project.\n</tools>`;
+/** A session in project A whose first system message has these sections and declarations. */
+async function firstRequest(request: Awaited<ReturnType<typeof fixture>>, sections: Record<string, string>, names: string[]) {
+  await writeFile(join(dirname(request.fileA), "c_cccc.jsonl"), lines(
+    { type: "session", version: 3, id: "cccc", timestamp: at(5), cwd: "/tmp/proj-a" },
+    { type: "message", id: "g1", parentId: null, timestamp: at(6), message: { role: "system", content: "", timestamp: Date.parse(at(6)), sections, toolsAdded: names.map(declaration) } },
+  ));
+  return (await (await request("/api/sessions/cccc/system-prompt")).json()).start;
+}
+
+test("with code mode only, the declarations the prompt's tool list leaves out are apart, and the first request counts only what was sent", async (t) => {
+  const request = await fixture(t);
+  const sections = { preamble: "You are Pi.", tools: toolList("codemode") };
+  const start = await firstRequest(request, sections, ["read", "bash", "codemode", "mcp__t3-code__open"]);
+  assert.deepEqual(start.declarations.map(({ name }: { name: string }) => name), ["codemode"]);
+  assert.deepEqual(start.leftOut.map(({ name }: { name: string }) => name), ["read", "bash", "mcp__t3-code__open"]);
+  assert.equal(start.tokens, Math.ceil(("You are Pi." + sections.tools + JSON.stringify([declaration("codemode")])).length / 4));
+  assert.equal(start.leftOutUnknown, undefined);
+});
+
+test("with code mode on, every declaration was sent", async (t) => {
+  const request = await fixture(t);
+  const start = await firstRequest(request, { preamble: "You are Pi.", tools: toolList("read", "codemode") }, ["read", "codemode", "mcp__t3-code__open"]);
+  assert.deepEqual(start.declarations.map(({ name }: { name: string }) => name), ["read", "codemode", "mcp__t3-code__open"]);
+  assert.deepEqual([start.leftOut, start.leftOutUnknown], [[], undefined]);
+});
+
+test("a prompt with code mode but no tool list of Pi's own tools cannot tell what was left out, and says so", async (t) => {
+  const request = await fixture(t);
+  // SYSTEM.md replaces Pi's base prompt, tool list included.
+  const start = await firstRequest(request, { preamble: "Custom prompt." }, ["read", "codemode"]);
+  assert.deepEqual(start.declarations.map(({ name }: { name: string }) => name), ["read", "codemode"]);
+  assert.deepEqual([start.leftOut, start.leftOutUnknown], [[], true]);
+  // Without code mode, nothing hides a declaration.
+  const plain = (await (await request("/api/sessions/aaaa/system-prompt")).json()).start;
+  assert.deepEqual([plain.leftOut, plain.leftOutUnknown], [[], undefined]);
+});
+
+test("Pi's own tools always carry a one-line snippet, so the prompt's tool list names each one Pi sends", () => {
+  const definitions = [createReadToolDefinition, createBashToolDefinition, createEditToolDefinition, createWriteToolDefinition,
+    createGrepToolDefinition, createFindToolDefinition, createLsToolDefinition, createPowerShellToolDefinition].map(create => create("/tmp"));
+  assert.deepEqual(definitions.map(definition => definition.name).sort(), [...PI_OWN_TOOLS].sort());
+  for (const definition of definitions) assert.ok(definition.promptSnippet, `${definition.name} has no snippet`);
 });
 
 test("a session without a recorded prompt returns an empty prompt; unknown ids are 404", async (t) => {

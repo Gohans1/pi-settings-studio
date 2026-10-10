@@ -37,9 +37,16 @@ test.beforeEach(async ({ context }) => {
   await writeFile(join(agent, "sessions", "--project--", "a_aaaa.jsonl"), lines(
     { type: "session", version: 3, id: "aaaa", timestamp: a.timestamp, cwd: project },
     { type: "message", id: "e1", parentId: null, timestamp: a.timestamp, message: { role: "system", content: "", timestamp: a.ms,
-      sections: { preamble: "You are Pi.", rules: "<rules>\nRule one.\n</rules>" }, toolsAdded: [declaration("read"), declaration("codemode")] } },
+      sections: { preamble: "You are Pi.", tools: "<tools>\n- codemode: Run JavaScript\n</tools>", rules: "<rules>\nRule one.\n</rules>" }, toolsAdded: [declaration("read"), declaration("codemode")] } },
     { type: "message", id: "e2", parentId: "e1", timestamp: b.timestamp, message: { role: "user", content: "Fix the login bug", timestamp: b.ms } },
     { type: "message", id: "e3", parentId: "e2", timestamp: c.timestamp, message: { role: "system", content: "", timestamp: c.ms, toolsAdded: [declaration("docs_search")] } },
+  ));
+  // An older session whose SYSTEM.md replaced Pi's prompt, tool list included.
+  await writeFile(join(agent, "sessions", "--project--", "o_oooo.jsonl"), lines(
+    { type: "session", version: 3, id: "oooo", timestamp: at(0).timestamp, cwd: project },
+    { type: "message", id: "o1", parentId: null, timestamp: at(0).timestamp, message: { role: "system", content: "", timestamp: at(0).ms,
+      sections: { preamble: "Custom prompt." }, toolsAdded: [declaration("read"), declaration("codemode")] } },
+    { type: "message", id: "o2", parentId: "o1", timestamp: at(0).timestamp, message: { role: "user", content: "Older session", timestamp: at(0).ms } },
   ));
   server = await startServer({ agentDir: agent, projectDir: project, port: 0, staticDir: resolve("dist/client") });
 });
@@ -91,15 +98,30 @@ test("a recorded session keeps its first request apart from what Pi changed late
   await chooseProject(page);
   await page.getByRole("button", { name: "Recorded session" }).click();
   await expect(page.getByLabel("Session", { exact: true })).toContainText("Fix the login bug");
-  await expect(page.getByRole("note").filter({ hasText: "code mode" })).toContainText("does not say which");
-  await expect(part(page, /^read/)).toBeVisible();
+  // Code mode only: the prompt's tool list names code mode alone, so Pi left `read` out of every request.
+  await expect(page.getByText(/^The model got/)).toContainText("1 tool declaration");
+  await expect(page.getByText(/^The model got/)).toContainText("left out of every request");
+  await expect(parts(page).getByRole("region", { name: "Tool declarations" })).not.toContainText("read");
+  const leftOut = parts(page).getByRole("region", { name: "Left out of requests" });
+  await leftOut.getByRole("button", { name: /^read/ }).click();
+  await expect(pane(page)).toContainText("left out of every request");
   await expect(part(page, /^docs_search/)).toHaveCount(0);
   await part(page, /1 tool added/).click();
   await expect(pane(page)).toContainText("docs_search");
   await page.getByRole("button", { name: "Copy latest prompt" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Copied");
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("You are Pi.\n\n<rules>\nRule one.\n</rules>");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("You are Pi.\n\n<tools>\n- codemode: Run JavaScript\n</tools>\n\n<rules>\nRule one.\n</rules>");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a recorded session whose prompt has no tool list says it cannot tell what code mode left out", async ({ page }) => {
+  await page.goto(server.url + "#context");
+  await chooseProject(page);
+  await page.getByRole("button", { name: "Recorded session" }).click();
+  await page.getByLabel("Session", { exact: true }).click();
+  await page.getByRole("option", { name: /Older session/ }).click();
+  await expect(page.getByRole("note").filter({ hasText: "code mode" })).toContainText("cannot tell");
+  await expect(parts(page).getByRole("region", { name: "Left out of requests" })).toHaveCount(0);
 });
 
 test("returning to a recorded session shows it at once while the sessions are read again", async ({ page }) => {

@@ -23,8 +23,11 @@ export type PromptChange = {
 export type SystemPromptView = {
   id: string;
   cwd: string;
-  /** What Pi recorded for the first request: the prompt and every tool declaration. */
-  start?: { at: number; content?: PromptPart; sections: PromptPart[]; declarations: PromptPart[]; tokens: number };
+  /**
+   * The first request: its prompt, the declarations it carried, and Pi's estimate of both. `leftOut`: declarations Pi
+   * recorded but left out of requests (code mode only). `leftOutUnknown`: code mode was on and the prompt cannot tell.
+   */
+  start?: { at: number; content?: PromptPart; sections: PromptPart[]; declarations: PromptPart[]; leftOut: PromptPart[]; leftOutUnknown?: true; tokens: number };
   changes: PromptChange[];
   /** The prompt after every change, as Pi renders it: content, then the sections. */
   text: string;

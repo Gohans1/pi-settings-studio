@@ -69,6 +69,27 @@ export async function listSessions(agentDir: string, projects: string[] = []) {
   return unique.sort((a, b) => b.modified.getTime() - a.modified.getTime());
 }
 
+/** Pi's own tools, which always carry a one-line snippet (tests/sessions-api.test.ts checks it against Pi). */
+export const PI_OWN_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls", "powershell"];
+
+/**
+ * Which recorded declarations the first request carried. Pi records every declared tool, but code mode only hides
+ * the direct ones from requests (Pi 1.1.0 dist/extensions/codemode/tool.js prepareCodemodeLoadout), and the session
+ * file does not say so. The prompt's tool list does: it names each declared tool with a snippet that Pi did not hide
+ * (dist/core/system-prompt.js). So a declared Pi tool missing from the list means code mode hid declarations, and
+ * then every declaration the list does not name was left out.
+ */
+function sentOf(first: SystemMessage) {
+  const declared = first.toolsAdded ?? [];
+  const codemode = declared.some(tool => tool.name === "codemode");
+  const list = first.sections?.tools;
+  const named = new Set(typeof list === "string" ? [...list.matchAll(/^- ([^:\n]+): /gm)].map(match => match[1]!) : []);
+  const own = declared.filter(tool => PI_OWN_TOOLS.includes(tool.name));
+  if (!codemode || typeof list !== "string" || !own.length) return { sent: declared, leftOut: [], unknown: codemode };
+  if (own.every(tool => named.has(tool.name))) return { sent: declared, leftOut: [], unknown: false };
+  return { sent: declared.filter(tool => named.has(tool.name)), leftOut: declared.filter(tool => !named.has(tool.name)), unknown: false };
+}
+
 async function systemPrompt(path: string, id: string, cwd: string): Promise<SystemPromptView> {
   const entries = parseSessionEntries(await readFile(path, "utf8"));
   migrateSessionEntries(entries);
@@ -78,11 +99,13 @@ async function systemPrompt(path: string, id: string, cwd: string): Promise<Syst
   const [first, ...later] = (context.messages as Message[]).filter((entry): entry is SystemMessage => entry.role === "system");
   const content = first && contentText(first.content);
   const sections = Object.entries(first?.sections ?? {}).flatMap(([name, text]) => typeof text === "string" ? [sectionPart(name, text)] : []);
+  const split = first && sentOf(first);
   return {
     id, cwd,
     ...(first ? { start: {
       at: first.timestamp, ...(content ? { content: sectionPart("content", content) } : {}), sections,
-      declarations: (first.toolsAdded ?? []).map(declarationPart), tokens: tokensOf(first),
+      declarations: split!.sent.map(declarationPart), leftOut: split!.leftOut.map(declarationPart), ...(split!.unknown ? { leftOutUnknown: true as const } : {}),
+      tokens: tokensOf({ content: first.content, sections: first.sections, toolsAdded: split!.sent }),
     } } : {}),
     changes: later.map(change => ({
       at: change.timestamp, ...(contentText(change.content) ? { content: contentText(change.content) } : {}),
