@@ -1,3 +1,21 @@
+# Verification — Code mode in startup tools is a state with a link to MCP › Code mode, 2026-10-10
+
+Scope: General › Startup tools had a `codemode` checkbox that wrote the same `defaultTools` entry as MCP › Code mode's "When Code mode is on". Unticked read as off, but Pi turns `codemode` on when an MCP server with codemode exposure connects (pi.dev docs: MCP, Control tool exposure), and the checkbox did not say that `codemode.mode` (built-in tools direct or only from scripts) lives in MCP › Code mode. Android's settings guidelines (source.android.com: Settings design guidelines) keep a setting shown in two places on one screen with entry points from the others. The row now states Always on or Automatic, with the change note the other rows have, and links to `#mcp/codemode`; the MCP tab opens on Code mode from that hash, as General and Models do for theirs, and keeps it chosen when the project changes.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | 2 new browser tests failed (a `codemode` checkbox: expected 0, received 1; no link), then passed |
+| `bun test` | 352 passed (49 files), unchanged |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 146 passed (2 new); axe on `#row-defaultTools` passes |
+
+Manual (T3 preview, a temporary agent folder with `defaultTools: ["+tool_search"]` and `codemode.mode: "only"`): at 1280×800 the row shows Automatic and the link, its icon in line with the checkboxes; the link opens MCP › Code mode with Automatic and In scripts chosen; at 390 px the link opens the panel in place of the list, with no horizontal scroll. Console clean. The real `~/.pi` was not written.
+
+Not changed: the row does not know about `-builtin:codemode` in `extensions` (MCP › Code mode says so); in a project the link opens Code mode on the global scope.
+
+---
+
 # Verification — hovered and highlighted rows in dark menus, selects and comboboxes, 2026-10-10
 
 Scope: in dark, `--popover`, `--accent` and `--muted` were all Flexoki's base-900, so the row Base UI highlights under the pointer or the arrow keys in every Select, DropdownMenu and Combobox drew nothing (`--accent` alone marks it), nor did a toast's ghost close button on hover or an AlertDialog's footer (`--muted`). Base UI did its part: the row had `data-highlighted` and focus (docs-mcp `base-ui`: Select, `highlightItemOnHover` defaults to true). Dark `--popover` moves to bg-2 (base-950), the card colour, as shadcn's default dark theme puts floating layers on its card colour with `--accent` one step above (docs-mcp `shadcn-ui`: Theming). Light is unchanged. Moving `--accent` to ui-2 instead would have left `--muted` on popovers and given hover the chosen row's colour.
