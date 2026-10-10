@@ -111,7 +111,7 @@ test("a save sounds when its answer arrives, whether it lands or fails", async (
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify({ error: "The file changed in another session." }) });
   });
   await page.goto(server.url);
-  await group(page, "Shell & packages");
+  await group(page, "Shell");
   await page.getByLabel("Shell command prefix", { exact: true }).fill("saved");
   await page.getByRole("region", { name: "Unsaved changes" }).getByRole("button", { name: "Save", exact: true }).click();
   const tapped = await settled(page);

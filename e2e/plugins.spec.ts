@@ -113,3 +113,23 @@ test("extra folders of prompt templates are added from the Plugins tab", async (
   await expect(page.getByRole("button", { name: /^triage/ })).toBeVisible();
   expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).prompts).toEqual([shared]);
 });
+
+test("the npm command is set in Packages, one entry per line, and General no longer lists it", async ({ page }) => {
+  await page.goto(server.url + "#plugins");
+  await page.getByRole("button", { name: /^Packages/ }).click();
+  const pane = page.getByRole("region", { name: "Packages" });
+  const npm = pane.getByLabel("npm command", { exact: true });
+  await expect(npm).toHaveValue("npm");
+  await npm.fill("bun");
+  await npm.press("End");
+  await npm.press("Enter");
+  await expect(npm).toHaveValue("bun\n");
+  await npm.pressSequentially("x");
+  await pane.getByRole("region", { name: "Unsaved changes" }).getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to settings.json");
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).npmCommand).toEqual(["bun", "x"]);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("searchbox", { name: "Search settings" }).fill("npmCommand");
+  await expect(page.getByText("No settings match")).toBeVisible();
+});

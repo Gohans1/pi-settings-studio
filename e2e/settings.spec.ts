@@ -34,7 +34,7 @@ test("while the settings load, a spinner says so", async ({ page }) => {
 });
 
 test("save writes native files directly, preserves unknown values, and survives reload", async ({ page }) => {
-  await open(page, "Shell & packages");
+  await open(page, "Shell");
   await page.getByLabel("Shell command prefix", { exact: true }).fill("new-model");
   expect(JSON.parse(await readFile(file, "utf8")).shellCommandPrefix).toBe("fixture-prefix");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -43,12 +43,12 @@ test("save writes native files directly, preserves unknown values, and survives 
   expect(saved.shellCommandPrefix).toBe("new-model");
   expect(saved.extensionSecret).toBe("fixture-not-real");
   await page.reload();
-  await open(page, "Shell & packages");
+  await open(page, "Shell");
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("new-model");
 });
 
 test("while the settings save, Save shows a spinner", async ({ page }) => {
-  await open(page, "Shell & packages");
+  await open(page, "Shell");
   await page.getByLabel("Shell command prefix", { exact: true }).fill("held");
   let release!: () => void;
   const held = new Promise<void>(resolve => { release = resolve; });
@@ -63,7 +63,7 @@ test("while the settings save, Save shows a spinner", async ({ page }) => {
 });
 
 test("stale saves retain the draft and never overwrite a concurrent update", async ({ page }) => {
-  await open(page, "Shell & packages");
+  await open(page, "Shell");
   await page.getByLabel("Shell command prefix", { exact: true }).fill("my-draft");
   await writeFile(file, '{"shellCommandPrefix":"other-session","unknown":42}');
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -73,13 +73,13 @@ test("stale saves retain the draft and never overwrite a concurrent update", asy
 });
 
 test("search narrows the settings by label or key", async ({ page }) => {
-  await page.getByRole("searchbox", { name: "Search settings" }).fill("npmCommand");
-  await expect(page.getByLabel("npm command", { exact: true })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search settings" }).fill("shellPath");
+  await expect(page.getByRole("textbox", { name: "Shell", exact: true })).toBeVisible();
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toBeHidden();
 });
 
 test("backup restore is explicit and restores the original native document", async ({ page }) => {
-  await open(page, "Shell & packages");
+  await open(page, "Shell");
   await page.getByLabel("Shell command prefix", { exact: true }).fill("changed");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
@@ -95,24 +95,11 @@ test("backup restore is explicit and restores the original native document", asy
   expect(JSON.parse(await readFile(file, "utf8")).shellCommandPrefix).toBe("fixture-prefix");
 });
 
-test("list fields take one entry per line without losing Enter", async ({ page }) => {
-  await open(page, "Shell & packages");
-  const list = page.getByLabel("npm command", { exact: true });
-  await list.fill("bun");
-  await list.press("End");
-  await list.press("Enter");
-  await expect(list).toHaveValue("bun\n");
-  await list.pressSequentially("x");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
-  expect(JSON.parse(await readFile(file, "utf8")).npmCommand).toEqual(["bun", "x"]);
-});
-
 test("desktop and narrow layouts are accessible, keyboard usable and error-free", async ({ page }) => {
   test.slow(); // Four axe passes over the full General page.
   const errors: string[] = [];
   page.on("pageerror", e => errors.push(e.message));
-  await open(page, "Shell & packages");
+  await open(page, "Shell");
   for (const width of [1440, 768, 320]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -153,7 +140,7 @@ test("the raw JSON editor saves exactly what was typed and repairs a broken file
   await page.getByRole("button", { name: "Save JSON" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved");
   expect(await readFile(file, "utf8")).toBe('{ "shellCommandPrefix": "repaired" }');
-  await open(page, "Shell & packages");
+  await open(page, "Shell");
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("repaired");
   await page.getByRole("button", { name: "File", exact: true }).click();
   await page.getByRole("menuitem", { name: "Edit as JSON" }).click();
@@ -323,7 +310,7 @@ test("emptying a number field returns it to Pi's default", async ({ page }) => {
 
 test("the list counts the settings each group changes from Pi's default and marks unsaved edits", async ({ page }) => {
   const groups = page.getByRole("region", { name: "Setting groups" });
-  await expect(groups.getByRole("button", { name: /^Shell & packages.*1 custom/ })).toBeVisible();
+  await expect(groups.getByRole("button", { name: /^Shell.*1 custom/ })).toBeVisible();
   await open(page, "Sessions & context");
   await page.getByRole("switch", { name: "Automatic compaction" }).click();
   await expect(groups.getByRole("button", { name: /^Sessions & context.*unsaved/ })).toBeVisible();
@@ -333,7 +320,7 @@ test("slash moves to the search field unless the reader is typing", async ({ pag
   await expect(page.getByRole("heading", { name: "Tools" })).toBeVisible();
   await page.keyboard.press("/");
   await expect(page.getByRole("searchbox", { name: "Search settings" })).toBeFocused();
-  await open(page, "Shell & packages");
+  await open(page, "Shell");
   await page.getByLabel("Shell command prefix", { exact: true }).fill("a");
   await page.getByLabel("Shell command prefix", { exact: true }).press("/");
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("a/");
@@ -373,7 +360,7 @@ test("the Code mode link in startup tools opens MCP › Code mode", async ({ pag
 
 test("the list opens on everyday groups, with the terminal-only ones last", async ({ page }) => {
   const groups = page.getByRole("region", { name: "Setting groups" });
-  await expect(groups.getByRole("button")).toHaveText([/^Pi/, /^Tools/, /^Messages & interaction/, /^Sessions & context/, /^Shell & packages/,
+  await expect(groups.getByRole("button")).toHaveText([/^Pi/, /^Tools/, /^Messages & interaction/, /^Sessions & context/, /^Shell/,
     /^Images/, /^Updates, telemetry & warnings/, /^Network & retries/, /^Terminal UI/, /^Keyboard shortcuts/, /^Not editable here/]);
 });
 
@@ -385,10 +372,9 @@ test("a group's advanced settings follow its everyday ones under their own headi
 });
 
 test("a setting at Pi's default says so and shows the value Pi uses, with nothing to reset", async ({ page }) => {
-  await open(page, "Shell & packages");
+  await open(page, "Shell");
   await expect(page.locator('[id="row-shellPath"]')).toContainText(/Default: \/\S+ · found on this machine/);
-  await expect(page.locator('[id="row-npmCommand"]')).toContainText("Default");
-  await expect(page.getByRole("button", { name: "Use default for npm command" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Use default for Shell", exact: true })).toHaveCount(0);
   await expect(page.locator('[id="row-shellCommandPrefix"]')).toContainText("Custom · Pi's default is none");
 });
 

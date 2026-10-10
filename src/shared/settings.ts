@@ -1,23 +1,24 @@
 import { z } from "zod";
 import { DEFAULT_TOOLS, effectiveTools } from "./tools";
 
-// Field catalogue for the General tab, from Pi 1.1.0 docs/settings.md. tests/settings-drift.test.ts
-// fails when Pi's Settings interface gains or loses a key that has no home here.
+// Field catalogue for settings.json, from Pi 1.1.0 docs/settings.md: General's groups, and the sections other
+// tabs edit (SectionId). tests/settings-drift.test.ts fails when Pi's Settings interface gains or loses a key
+// that has no home here.
 
 // In page order: the groups people change most come first; terminal-only ones last.
 export const sections = [
   { id: "tools", title: "Tools" },
   { id: "interaction", title: "Messages & interaction" },
   { id: "context", title: "Sessions & context" },
-  { id: "shell", title: "Shell & packages" },
+  { id: "shell", title: "Shell" },
   { id: "images", title: "Images" },
   { id: "updates", title: "Updates, telemetry & warnings" },
   { id: "network", title: "Network & retries" },
   { id: "terminal", title: "Terminal UI", note: "Only affects Pi in a terminal." },
 ] as const;
 // Keys another tab edits, which General does not list: Models › Defaults has its own controls for
-// "modelDefaults" and shows "models" as rows below them; Skills shows "skills".
-export type SectionId = typeof sections[number]["id"] | "modelDefaults" | "models" | "skills";
+// "modelDefaults" and shows "models" as rows below them; Skills shows "skills", Plugins › Packages "packages".
+export type SectionId = typeof sections[number]["id"] | "modelDefaults" | "models" | "skills" | "packages";
 
 export type Option = { label: string; value: string | number | boolean };
 /** Pi's default in words, and what it depends on. */
@@ -101,9 +102,9 @@ export const fields: Field[] = [
     defaultFrom: "httpIdleTimeoutMs", defaultText: { value: "the HTTP idle timeout", note: "same as the HTTP idle timeout" }, ...number() },
   { key: "retry.provider.maxRetries", label: "Provider retry attempts", section: "network", advanced: true, help: "Provider-level retries. Keep 0 unless needed: they can delay Pi's own handling of quota errors.", defaultValue: 0, ...number() },
   { key: "retry.provider.maxRetryDelayMs", label: "Provider maximum retry delay (ms)", section: "network", advanced: true, help: "Maximum server-requested delay. 0 removes the limit.", defaultValue: 60000, ...number() },
-  // Shell & packages
+  // Shell
   { key: "shellPath", label: "Shell", section: "shell", kind: "text", help: "Custom shell executable. A leading ~ is supported. Empty means the platform default.", schema: text },
-  { key: "npmCommand", label: "npm command", section: "shell", kind: "lines", help: "Command and arguments for package lookup and installation, one per line.", defaultValue: ["npm"], schema: lines },
+  { key: "npmCommand", label: "npm command", section: "packages", kind: "lines", help: "Command and arguments for package lookup and installation, one per line.", defaultValue: ["npm"], schema: lines },
   { key: "shellCommandPrefix", label: "Shell command prefix", section: "shell", advanced: true, kind: "text", help: "Prefix prepended to every shell command.", defaultText: { value: "none" }, schema: text },
   // Images
   { key: "images.autoResize", label: "Resize images", section: "images", help: "Resize images to at most 2000×2000 pixels before sending them to a model.", defaultValue: true, ...bool },
