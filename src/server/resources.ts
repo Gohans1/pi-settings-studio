@@ -14,7 +14,8 @@ import type { ToolSource, ToolsView } from "../shared/plugin-tools.ts";
 import { isRecord, mcpNamespace, readMcpServers } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore, type DocumentName, type Scope } from "./store.ts";
 import type { ProjectRegistry } from "./projects.ts";
-import { runToolProbe, runToolsProbe } from "./plugin-tools.ts";
+import { runProvidersProbe, runToolProbe, runToolsProbe } from "./plugin-tools.ts";
+import type { ExtensionProviderSource } from "./models.ts";
 import { Inspections } from "./inspections.ts";
 import { knownSecrets, redact } from "./jobs.ts";
 
@@ -272,6 +273,30 @@ export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentD
       return { ...view, tools, idleSources };
     }), c.req.raw.signal));
   });
+}
+
+/**
+ * The providers enabled extensions register, read in a probe process and kept like tool inspections. One that
+ * fails to load is an issue and the result is kept: it fails again until its file changes, which changes the
+ * stamp. A probe that fails as a whole is an issue too, with no providers, so the catalog still answers; it is tried again next time.
+ */
+export function extensionProviderSource(store: ConfigStore, registry: ProjectRegistry, agentDir: string, inspections = new Inspections()): ExtensionProviderSource {
+  const context = resourceContext(store, registry, agentDir);
+  return async (project, signal) => {
+    const { resolved, settings, revision, projectRevision } = await context.resolve(project);
+    const projectStore = project ? registry.storeFor(project) : undefined;
+    const paths = resolved.extensions.filter(item => item.enabled).map(item => item.path);
+    const models = await store.read("global", "models.json").then(document => document.revision, () => "none");
+    const stamp = await inspectionStamp(store, projectStore, agentDir, [revision, projectRevision, models], paths);
+    return inspections.get(`providers\0${project ?? ""}`, stamp, false, run => redacted(knownSecrets(store, projectStore), async () => {
+      try {
+        return { complete: true, ...await runProvidersProbe({ agentDir, cwd: project ?? agentDir, project: !!project, paths, globalSettings: settings.global, projectSettings: settings.project }, run, 15_000) };
+      } catch (error) {
+        if (run.aborted) throw error;
+        return { complete: false, checkedAt: new Date().toISOString(), issues: [error instanceof Error ? error.message : "The extensions could not be read."], providers: [] };
+      }
+    }), signal);
+  };
 }
 
 const PLUGIN_TYPES = ["extensions", "prompts", "themes"] as const;

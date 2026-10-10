@@ -1,3 +1,26 @@
+# Verification — providers that extensions register, in Defaults, 2026-10-10
+
+Scope: the Default provider list put claude-bridge last, under 39 providers that are not set up, labelled "From Enabled models": Pi's catalog as this app reads it has no provider an extension adds, so Defaults guessed at them from `enabledModels`. Measured first on the real `~/.pi/agent` (read-only, as the Tools tab's probe already runs it): after Pi's extension loader, `claude-bridge` (pi-claude-bridge 0.9.2, 14 models, Pi's status configured, source fallback), `antigravity-acp` (4 models, not set up) and the built-in `llama.cpp` (none) are queued providers; a probe takes about 1.4 s. Pi 1.1.0 applies queued providers in `runner.js` bindCore, through `agent-session.js` to the session's ModelRuntime. Starting a session would choose a model, which may run a credential command, so the probe applies the queue itself on a runtime over a read-only copy of auth.json.
+
+| Check | Result |
+|---|---|
+| `bun test` (`HOME` an empty folder) | 342 passed (49 files), up from 337: an extension's providers listed with Pi's status and model count (not Pi's own or models.json ones), a set-up one's models available, listed with their thinking levels and counted by a pattern while one that needs a sign-in is "no-credential" and an unknown name "unknown-provider", a failing extension named with the catalog still answering, a project's extension only in that project, and no credential command run and no session started |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run test:e2e` | 143 of 144 passed; the one failure, motion.spec's pointer menu closing mid-entrance, passed 3 of 3 alone (load average 3.8; it does not open Models). New: an extension's provider chosen in Defaults (Set up, its models and their thinking levels, its checklist group, a pattern counting 2 models, saved, axe), a name only Enabled models gives listed between Set up and Not set up. Changed: the warning for a name nothing has, and the empty list's text |
+| RED/GREEN | The order test failed on "Not set up" second; the five API tests failed on 404 and a missing model, also with the server code stashed; the three Defaults tests failed on the old warning, the old empty text and a missing provider |
+
+Found:
+- The suggestion field stayed closed when asked to open before its suggestions arrived, since an open request was dropped while the list was empty; with available models now waiting for the probe, per-model thinking timed out on it. The field keeps the request and opens when they arrive, while it has focus.
+- In the real `~/.pi`, `auth.json` no longer had an Anthropic credential (changed at 06:15, before this work ran); the running service and this branch both show Anthropic as not set up.
+
+Decisions:
+- Extension providers join the suggestions, the available models, the scope and a provider's model list, but not the provider list on the left: its sign-in and key actions run Pi's login on the catalog runtime, without extensions.
+- An extension that fails to load is an issue in a kept result (it fails again until its file changes, which changes the stamp); a probe that fails as a whole gives no providers and is tried again. The warning under the field says the name cannot be checked when an extension could not be read, and that Pi has no such provider only once all were read.
+
+Manual: this branch on port 4381 over the real `~/.pi/agent`, `agent-browser` in its own session, 1280×800 dark, navigation only: claude-bridge under Set up, its 14 models in Default model, no warning, `claude-bridge/*` matching 14 models; no console errors. settings.json, auth.json and models.json kept their times.
+
+---
+
 # Verification — suggested free text in a list like the selects, 2026-10-09
 
 Scope: the five free-text fields with suggestions (Default provider and model, the Enabled models pattern, the model rows of the per-model maps in Defaults and General, an MCP server's Pi provider) leave the browser's `datalist`, whose list the browser draws outside the page and its styles, for `SuggestInput`: shadcn's Combobox, added with `shadcn add combobox` and unchanged, on Base UI's Autocomplete root. In Base UI 1.8.0 every Autocomplete part but the root is the Combobox part (`autocomplete/index.parts`), and the root is the Combobox root with `selectionMode: "none"`, so the shipped parts keep whatever is typed. A click lists every suggestion, as the selects do; typing narrows by ID or name; providers are grouped Set up, then Not set up; each suggestion shows its name beside its ID. This replaces the datalist kept in the two entries below that name it (docs-mcp `base-ui`: Autocomplete, Combobox; `shadcn-ui`: Combobox; `shadcn search`: no autocomplete in @shadcn; @coss/autocomplete brings its own input and scroll area).

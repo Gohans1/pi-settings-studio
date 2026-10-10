@@ -5,7 +5,7 @@ import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PackageUpdateCheck, PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
 import type { PluginToolsView, ToolsView } from "../shared/plugin-tools";
 import type { AgentInput, AgentsView } from "../shared/agents";
-import type { AvailableModel, CustomModel, CustomProviderInput, CustomProvidersView, ModelScopeView, ModelSummary, ProvidersView } from "../shared/models";
+import type { AvailableModel, CustomModel, CustomProviderInput, CustomProvidersView, ExtensionProvidersView, ModelScopeView, ModelSummary, ProvidersView } from "../shared/models";
 import type { ProjectView, TrustView } from "../shared/projects";
 import type { InstructionsView } from "../shared/instructions";
 import type { KeybindingsView } from "../shared/keybindings";
@@ -91,7 +91,7 @@ export const loadProviders = () => request<ProvidersView>("/api/models/providers
 export const removeProviderKey = (id: string, revision: string) =>
   request<ProvidersView>(`/api/models/providers/${encodeURIComponent(id)}/key`, "DELETE", { revision });
 export const restoreAuth = (revision: string) => request<ProvidersView>("/api/models/auth/restore", "POST", { revision });
-export const loadModels = (provider: string) => request<ModelSummary[]>(`/api/models/providers/${encodeURIComponent(provider)}/models`);
+export const loadModels = (provider: string, project?: string) => request<ModelSummary[]>(withProject(`/api/models/providers/${encodeURIComponent(provider)}/models`, project));
 export const loadInstructions = (project?: string) => request<InstructionsView>(withProject("/api/instructions", project));
 export const saveInstruction = (id: string, revision: string, text: string, project?: string) =>
   request<InstructionsView>(withProject(`/api/instructions/${id}`, project), "PUT", { revision, text });
@@ -119,9 +119,11 @@ export const answerJob = (id: string, promptId: string, value: string) => reques
 export const cancelJob = (id: string) => request<JobView>(`/api/jobs/${id}/cancel`, "POST", {});
 export const loadModelsRaw = () => request<RawSettings>("/api/models/custom/raw");
 export const saveModelsRaw = (revision: string, text: string) => request<RawSettings>("/api/models/custom/raw", "PUT", { revision, text });
-export const loadAvailableModels = () => request<AvailableModel[]>("/api/models/available");
-export const checkModelScope = (patterns: string[], model?: string) =>
-  request<ModelScopeView>("/api/models/scope", "POST", { patterns, ...(model ? { default: model } : {}) });
+/** Models of set-up providers, those extensions register included; in `project`, its extensions count too. */
+export const loadAvailableModels = (project?: string) => request<AvailableModel[]>(withProject("/api/models/available", project));
+export const loadExtensionProviders = (project?: string) => request<ExtensionProvidersView>(withProject("/api/models/extensions", project));
+export const checkModelScope = (patterns: string[], model?: string, project?: string) =>
+  request<ModelScopeView>(withProject("/api/models/scope", project), "POST", { patterns, ...(model ? { default: model } : {}) });
 export const savePackageFilters = (scope: Scope, revision: string, source: string, filters: Record<string, unknown>, project?: string) =>
   request<PluginsView>(withProject("/api/plugins/packages", project), "PUT", { scope, revision, source, filters });
 export const loadThemes = (project?: string) => request<ThemeView[]>(withProject("/api/themes", project));

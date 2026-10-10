@@ -3,11 +3,15 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { getSupportedThinkingLevels, InMemoryCredentialStore, type Api, type Credential, type CredentialInfo, type CredentialStore, type Model } from "@earendil-works/pi-ai";
-import type { AvailableModel, ModelScopeView, ModelSummary, ProvidersView, ProviderView } from "../shared/models.ts";
+import type { AvailableModel, ExtensionProvidersView, ModelScopeView, ModelSummary, ProvidersView, ProviderView } from "../shared/models.ts";
 import { resolveModelScope } from "./model-scope.ts";
 import { isRecord } from "./mcp-config.ts";
 import { ConfigError, type ConfigStore } from "./store.ts";
 import { customProviderRoutes } from "./models-json.ts";
+import type { ExtensionProviders } from "./plugin-tools-probe.ts";
+
+/** The providers that enabled extensions register in a session in `project` (or none), as the server last found them. */
+export type ExtensionProviderSource = (project?: string, signal?: AbortSignal) => Promise<ExtensionProviders>;
 
 /** auth.json as read under our lock, handed to Pi's runtime so it can never write credentials itself. */
 class ReadOnlyCredentials implements CredentialStore {
@@ -20,11 +24,11 @@ class ReadOnlyCredentials implements CredentialStore {
   async delete(): Promise<never> { throw new Error("Credentials are read-only here."); }
 }
 
-const credentialsOf = (value: Record<string, unknown>) =>
+export const credentialsOf = (value: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(value).filter(([, entry]) => isRecord(entry) && (entry.type === "api_key" || entry.type === "oauth"))) as Record<string, Credential>;
 
 /** Pi's model runtime without network access: no catalog refresh and no availability checks. */
-async function runtimeFor(agentDir: string, credentials: Record<string, Credential>) {
+export async function runtimeFor(agentDir: string, credentials: Record<string, Credential>) {
   return ModelRuntime.create({
     credentials: new ReadOnlyCredentials(credentials),
     modelsPath: join(agentDir, "models.json"),
@@ -45,7 +49,7 @@ function summary(model: Model<Api>): ModelSummary {
   };
 }
 
-export function modelRoutes(store: ConfigStore, agentDir: string) {
+export function modelRoutes(store: ConfigStore, agentDir: string, extensions: ExtensionProviderSource) {
   // The providers Pi ships do not change while it runs: a runtime without models.json lists them once.
   let shipped: Promise<Set<string>> | undefined;
   const builtIns = () => shipped ??= ModelRuntime.create({
@@ -91,13 +95,18 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
 
   /**
    * Models of providers that are set up: stored in auth.json or configured per Pi's status, which
-   * runs no credential command. Pi's own startup also counts environment keys this app cannot see.
+   * runs no credential command, and those of set-up providers that extensions register. Pi's own startup
+   * also counts environment keys this app cannot see.
    */
-  async function readyModels() {
+  async function readyModels(project?: string, signal?: AbortSignal) {
     const auth = credentialsOf((await store.read("global", "auth.json")).value);
-    const runtime = await runtimeFor(agentDir, auth);
+    const [runtime, added] = await Promise.all([runtimeFor(agentDir, auth), extensions(project, signal)]);
     const all = runtime.getProviders(), ready = all.filter(provider => auth[provider.id] || runtime.getProviderAuthStatus(provider.id).configured);
-    return { models: ready.flatMap(provider => runtime.getModels(provider.id)), providers: { all: all.map(provider => provider.id), ready: ready.map(provider => provider.id) } };
+    const readyAdded = added.providers.filter(provider => provider.configured);
+    return {
+      models: [...ready.flatMap(provider => runtime.getModels(provider.id)), ...readyAdded.flatMap(provider => provider.models)],
+      providers: { all: [...all, ...added.providers].map(provider => provider.id), ready: [...ready, ...readyAdded].map(provider => provider.id) },
+    };
   }
 
   async function knownProvider(id: string, credentials: Record<string, Credential>) {
@@ -109,10 +118,15 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
   return new Hono()
     .route("/custom", customProviderRoutes(store))
     .get("/providers", async c => c.json(await view()))
-    .get("/available", async c => c.json((await readyModels()).models.map((model): AvailableModel => ({ provider: model.provider, ...summary(model) }))))
+    .get("/available", async c => c.json((await readyModels(c.req.query("project"), c.req.raw.signal)).models.map((model): AvailableModel => ({ provider: model.provider, ...summary(model) }))))
+    .get("/extensions", async c => {
+      const { issues, providers } = await extensions(c.req.query("project"), c.req.raw.signal);
+      const view: ExtensionProvidersView = { issues, providers: providers.map(({ id, name, configured, models }) => ({ id, name, auth: { configured }, models: models.length })) };
+      return c.json(view);
+    })
     .post("/scope", async c => {
       const { patterns, default: chosen } = z.object({ patterns: z.array(z.string().max(300)).max(200), default: z.string().max(400).optional() }).strict().parse(await c.req.json());
-      const { models, providers } = await readyModels();
+      const { models, providers } = await readyModels(c.req.query("project"), c.req.raw.signal);
       const ref = (model: { provider: string; id: string }) => `${model.provider}/${model.id}`;
       const each = patterns.map(pattern => {
         const matched = resolveModelScope([pattern], models).scopedModels.map(scoped => ref(scoped.model));
@@ -130,8 +144,10 @@ export function modelRoutes(store: ConfigStore, agentDir: string) {
     .get("/providers/:id/models", async c => {
       const runtime = await runtimeFor(agentDir, credentialsOf((await store.read("global", "auth.json")).value));
       const id = c.req.param("id");
-      if (!runtime.getProvider(id)) return c.json({ error: `Pi has no provider named "${id}".` }, 404);
-      return c.json(runtime.getModels(id).map(summary));
+      if (runtime.getProvider(id)) return c.json(runtime.getModels(id).map(summary));
+      const added = (await extensions(c.req.query("project"), c.req.raw.signal)).providers.find(provider => provider.id === id);
+      if (!added) return c.json({ error: `Pi has no provider named "${id}".` }, 404);
+      return c.json(added.models.map(summary));
     })
     .post("/auth/restore", async c => {
       const { revision } = z.object({ revision: z.string().min(1).max(100) }).strict().parse(await c.req.json());
