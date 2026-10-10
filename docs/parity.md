@@ -20,7 +20,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 | Packages | Done | Done | Install, update, remove through `pi`; resource filters; update checks via Pi’s public `checkForAvailableUpdates`, in the background once a day and on request, kept across restarts, per-package badges, a count on the Plugins tab and last-check timestamp; Pi silently skips pins/local paths/failed lookups, so an empty result is not a guarantee that everything is current |
 | Trust (`trust.json`) | n/a | Done | Pi's ProjectTrustStore; says whether Pi loads `.pi` |
 | Sub-agent profiles (`agents/`) | Done | Done | Pi's example extension format |
-| Sessions | System prompt view | | Read-only; a custom `sessionDir` is followed (absolute paths for discovery, relative ones per known project) |
+| Sessions | Context › Recorded session | | Read-only; a custom `sessionDir` is followed (absolute paths for discovery, relative ones per known project) |
 | Pi itself | Version, Update Pi | | Version read from the installed package, a newer Pi from `npm view` once a day, `pi update --self` on click |
 
 ## pi-web settings panel
@@ -32,7 +32,7 @@ Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.
 | Skills | Switches, details, file editor, new skills, remove with Undo, model invocation per skill or group; install/update of skills comes from packages |
 | Plugins | Done, plus prompt, theme and extension editors; automatic runtime tool catalogue and direct model-declaration preview, scoped by the project picker ([details](plugin-tools.md)) |
 | Agents (sub-agents) | Done in Pi's example format, without pi-web-only fields (thinking, extensions…), which are kept as they are |
-| System prompt | From the session files Pi writes, not a live chat |
+| System prompt | Context: a new session's first request as Pi builds it, and a recorded session's from the files Pi writes, not a live chat |
 | General: chat width, Enter to send, notifications, language, PowerShell | Excluded on purpose (chat product or Windows-only) |
 
 ## Not possible in this app

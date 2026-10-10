@@ -19,6 +19,20 @@ Tools runs the same inspection without a selected extension, when the tab opens 
 
 The response also lists `idleSources`: extensions and MCP servers a session takes no tools from, turned off in settings or on without any. Servers come from Pi's merge of the global and project `mcp.json` (`readMcpServers`), so a project override that turns a server off counts. Only enabled extensions load, so a tool is never labelled Extension off or shadowed here. A failure keeps the tools found and says the list may be incomplete.
 
+## Context
+
+The Tools run also reports `context`: the system message of the new session's first request, which the Context tab shows. The server passes the enabled skills it resolved (as it passes extensions) and the run reads the context files Pi finds from the folder up, SYSTEM.md and APPEND_SYSTEM.md. After the MCP servers connect, it takes the session's prompt options, runs the `before_agent_start` handlers of Pi's built-in extensions on them (the MCP extension adds its `mcp_servers` section), renders them with Pi's own `buildSystemPromptState` and lists the declarations the request carries: the active tools minus Pi's hidden declarations, each as the model reads it (name, description, parameters). Every part carries Pi's `estimateTokens`, about four characters a token. Those files join the run's stamp, so an edited AGENTS.md or a new skill inspects again.
+
+An extension's own `before_agent_start` handlers belong to a real turn and may act on it, so they are not run: the result names them in `unrun` and Context says the first request may differ. In this setup that is `pi-web-access`, which may add a tool when a turn starts, and `pi-claude-bridge`, which records the prompt.
+
+What a preview of Pi cannot see, checked against the newest recorded session of this project on 2026-10-10: six of eight sections matched byte for byte (preamble, tools, rules, project_context, cwd, mcp_servers).
+
+- `docs` names the app's copy of Pi's docs, not the installed Pi's: same length give or take a path.
+- Sessions T3 Code starts list the same skills in name order; Pi 1.1.0's loader, run on the same files, keeps its resolver's order, as the preview does. How T3 reorders them was not found (its runtime is a binary).
+- A host that starts Pi can add tools of its own: T3 Code adds about 80 `mcp__t3-code__*` tools, which also change what code mode's description lists.
+- A provider can put its own instructions first: `pi-claude-bridge` sends Claude Code's preset, then the portable parts of Pi's prompt (its `src/prompt-capture.ts`).
+- `context` handlers transform each request and are not run.
+
 ## Trust and side effects
 
 The owner explicitly trusts installed extensions. Inspection loads enabled extensions plus the selected extension in a disposable Bun subprocess, with the app's environment and OS permissions. It is **not a sandbox**: extension code can access files and the network, and its own side effects are not rolled back. Configured MCP servers connect as they do at Pi startup. The app itself does not prompt a model or execute a model tool to inspect the catalogue.
@@ -34,7 +48,8 @@ The inspector uses in-memory settings/session storage and skips missing packages
 - Public runtime metadata: extension tool maps, `getAllTools`, `getActiveToolNames`, `getCallableToolNames`, and the command context's `getSystemPromptOptions().hiddenTools`.
 - Pi 1.1.0's internal `dist/extensions/index.js` supplies the CLI's exact built-in factories and replacement flags. This aggregate is not publicly exported; re-check it when updating Pi. No source is copied.
 - The built-in `/mcp` status command in RPC mode awaits pending connections. Only Pi's built-in command is invoked, not a third-party command named `mcp`.
+- Context: the command context's `getSystemPromptOptions()`, `Extension.handlers` and the public `BeforeAgentStartEvent` shape, the loader's `getSystemPromptSource()` and `getAppendSystemPromptSources()`, and `estimateTokens`. Pi 1.1.0's `dist/core/system-prompt.js` (`buildSystemPrompt`, `buildSystemPromptState`) is not exported either and is imported the same way as the built-in factories; re-check it when updating Pi.
 
 ## Verification
 
-`tests/tools-api.test.ts` and `e2e/tools.spec.ts` cover the Tools tab: sources (an MCP server name with a dash), reach, idle sources and a project override, project settings, an MCP startup failure, credential masking, the two pinned views, a source's detail, search, the 320px workbench and accessibility. `tests/plugin-tools-api.test.ts` exercises actual Pi registration, dynamic startup tools, project codemode-only mode, disabled extensions, computed names, failures, credential masking, scope validation, timeouts/cancellation and process crashes on temporary directories. `e2e/plugin-tools.spec.ts` covers automatic loading, filters, toggles, the existing project picker, keyboard/mobile use, accessibility, retry, empty results and stale responses. No installed user extension is needed by the tests.
+`tests/tools-api.test.ts` also covers the first request (sections in Pi's order, context files, skills, SYSTEM.md and APPEND_SYSTEM.md, code mode only, token estimates, inspecting again after an edit, and an extension's turn-start handler named but not run); `e2e/context.spec.ts` covers the Context tab. `tests/tools-api.test.ts` and `e2e/tools.spec.ts` cover the Tools tab: sources (an MCP server name with a dash), reach, idle sources and a project override, project settings, an MCP startup failure, credential masking, the two pinned views, a source's detail, search, the 320px workbench and accessibility. `tests/plugin-tools-api.test.ts` exercises actual Pi registration, dynamic startup tools, project codemode-only mode, disabled extensions, computed names, failures, credential masking, scope validation, timeouts/cancellation and process crashes on temporary directories. `e2e/plugin-tools.spec.ts` covers automatic loading, filters, toggles, the existing project picker, keyboard/mobile use, accessibility, retry, empty results and stale responses. No installed user extension is needed by the tests.

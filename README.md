@@ -41,7 +41,7 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 - **MCP**: servers with exposure rules, each server's state (connected, needs sign-in, failed) and tools as soon as the tab opens, OAuth and provider sign-in, Code mode, import from other clients, connection test, sign-in state, `mcp.log`.
 - **Tools**: what the model sees and doesn't see in a new session, and every source it comes from (built into Pi, extensions, MCP servers), off ones included, with search. Startup tools turns Pi's own tools on or off. Runs the same trusted inspection as Plugins; see [Extension tools](docs/plugin-tools.md).
 - **Instructions**: `AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`.
-- **System prompt**: what Pi recorded in a session.
+- **Context**: what a session puts in front of the model before the first message, part by part, each with Pi's token estimate, the file it comes from and the tab that changes it. Next session builds it with the trusted inspection Tools runs; Recorded session shows a session's first request and what Pi changed later.
 
 The project picker adds each project's `.pi` files and trust. Changes apply to new Pi sessions, or after `/reload`.
 
