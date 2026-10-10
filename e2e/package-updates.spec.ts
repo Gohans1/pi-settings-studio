@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -24,6 +24,10 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); registry?.close(); await rm(root, { recursive: true, force: true }); });
 
+/** The Packages status line that says `text`. While the settings form below it loads, its spinner is a status too. */
+const packageStatus = (page: Page, text: string) =>
+  page.getByRole("region", { name: "Packages", exact: true }).getByRole("status").filter({ hasText: text });
+
 
 test("while a check runs, its button shows a spinner and keeps its name", async ({ page }) => {
   let release!: () => void;
@@ -46,15 +50,14 @@ test("leaving Plugins while a check runs and coming back shows it still checking
   await page.goto(server.url + "#plugins");
   await page.getByRole("button", { name: /^Packages/ }).click();
   await page.getByRole("button", { name: "Check for updates" }).click();
-  const status = page.getByRole("region", { name: "Packages", exact: true }).getByRole("status");
-  await expect(status).toContainText("Checking for package updates");
+  await expect(packageStatus(page, "Checking for package updates")).toBeVisible();
   await expect.poll(() => registry.requests.length).toBeGreaterThan(0);
   await page.getByRole("tab", { name: "General" }).click();
   await page.getByRole("tab", { name: "Plugins" }).click();
   await page.getByRole("button", { name: /^Packages/ }).click();
-  await expect(status).toContainText("Checking for package updates");
+  await expect(packageStatus(page, "Checking for package updates")).toBeVisible();
   release();
-  await expect(status).toContainText("1 package update found");
+  await expect(packageStatus(page, "1 package update found")).toBeVisible();
 });
 
 test("an explicit keyboard check shows package notices, retains them on reload and replaces them on recheck", async ({ page }) => {
@@ -62,11 +65,11 @@ test("an explicit keyboard check shows package notices, retains them on reload a
   await page.goto(server.url + "#plugins");
   await page.getByRole("button", { name: /^Packages/ }).click();
   const packages = page.getByRole("region", { name: "Packages", exact: true });
-  await expect(packages.getByRole("status")).toContainText("Not checked yet");
+  await expect(packageStatus(page, "Not checked yet")).toBeVisible();
   expect(registry.requests).toEqual([]);
   const button = packages.getByRole("button", { name: "Check for updates" });
   await button.focus(); await page.keyboard.press("Enter");
-  await expect(packages.getByRole("status")).toContainText("1 package update found");
+  await expect(packageStatus(page, "1 package update found")).toBeVisible();
   await expect(packages.getByText("Update available", { exact: true })).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Packages 1 update" })).toBeVisible();
   await expect(packages).toContainText("Last checked");
@@ -80,7 +83,7 @@ test("an explicit keyboard check shows package notices, retains them on reload a
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await registry.installed(agent, "old-package", "2.0.0");
   await button.click();
-  await expect(packages.getByRole("status")).toContainText("No updates reported by Pi");
+  await expect(packageStatus(page, "No updates reported by Pi")).toBeVisible();
   await expect(packages.getByText("Update available", { exact: true })).toHaveCount(0);
   await expect(packages).toContainText("failed lookups");
 });
@@ -120,9 +123,9 @@ test("a delayed global check cannot replace a selected project's results", async
   release();
   await delivered;
   await page.unrouteAll({ behavior: "wait" });
-  await expect(page.getByRole("region", { name: "Packages", exact: true }).getByRole("status")).toContainText("Not checked yet");
+  await expect(packageStatus(page, "Not checked yet")).toBeVisible();
   await page.getByRole("button", { name: "Check for updates" }).click();
-  await expect(page.getByRole("region", { name: "Packages", exact: true }).getByRole("status")).toContainText("No updates reported by Pi");
+  await expect(packageStatus(page, "No updates reported by Pi")).toBeVisible();
   await expect(page.getByText("Update available", { exact: true })).toHaveCount(0);
 });
 
@@ -134,7 +137,7 @@ test("with update checks on, found updates show without a click, and the Plugins
     await expect(tab).toHaveAccessibleName("Plugins, 1 update");
     await tab.click();
     await page.getByRole("button", { name: /^Packages/ }).click();
-    await expect(page.getByRole("region", { name: "Packages", exact: true }).getByRole("status")).toContainText("1 package update found");
+    await expect(packageStatus(page, "1 package update found")).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   } finally { await checking.close(); }
 });

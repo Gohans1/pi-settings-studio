@@ -21,6 +21,21 @@ Not changed: an extension's `before_agent_start` handlers and a request's `conte
 
 ---
 
+# Verification — two flaky browser tests, 2026-10-10
+
+Scope: `package-updates.spec.ts:44` and `motion.spec.ts:73` failed now and then. Both were the tests, not the app.
+
+- Packages: the region holds the settings form, whose loading spinner is shadcn's `Spinner` (`role="status"`). When the form was still loading, `region.getByRole("status")` matched two elements, a strict-mode violation. Every status check in the spec now picks the status that says its text (`packageStatus`), as `plugin-tools`, `tools` and `system-prompt` already do.
+- Menu: Base UI's `useClick` reads `open` on mousedown but applies it on the next animation frame. Two raw clicks in one frame both saw the menu closed, so it stayed open. The test waits one frame between them, inside the 100ms entrance.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | A temporary spec (deleted) failed 3 of 3 with the old locator while `/api/settings/**` was held, and with two presses in one task; the new locator and a frame between presses passed 3 of 3 |
+| Stress | `package-updates.spec.ts` and `motion.spec.ts` with `--repeat-each=25`: 250 passed |
+| `bun test` | 361 passed |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run test:e2e` | 154 passed |
+
 # Verification — the app over the tailnet, 2026-10-10
 
 Scope: a phone on the tailnet opens the app. Before, only `127.0.0.1` and `localhost` passed the Host and Origin allowlist.

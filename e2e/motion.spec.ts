@@ -83,6 +83,9 @@ test("pointer menu zooms in from its trigger as shadcn ships it and can close be
   await expect(menu).toBeHidden();
   const box = (await trigger.boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  // Base UI applies a press on the next animation frame, so a second press in the same frame still sees the menu closed.
+  // One frame is well inside the 100ms entrance.
+  await page.evaluate(() => new Promise(requestAnimationFrame));
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(menu).toBeHidden();
   await trigger.click();
