@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 // Guardrails for the design system in src/client: Flexoki primitives -> semantic tokens -> components.
@@ -147,6 +147,34 @@ describe("typography", () => {
     const steps = ["display", "heading", "title", "body", "small", "caption"].map((step) => tokens.get(`--text-${step}`));
     const rem = steps.map((value) => Number(value?.match(/^([\d.]+)rem$/)?.[1]));
     expect(rem.every((size, i) => size > 0 && (i === 0 || size < (rem[i - 1] ?? 0)))).toBe(true);
+  });
+});
+
+describe("controls", () => {
+  // Each <Button …> opening tag in the app's own components and the code after it. A Button that another
+  // component renders (render={<Button … />}) takes that component's children.
+  function buttons(source: string) {
+    return [...source.matchAll(/<Button\b/g)].map((match) => {
+      let depth = 0, end = match.index;
+      while (++end < source.length) {
+        const c = source[end];
+        if (c === '"' && depth === 0) end = source.indexOf('"', end + 1);
+        else if (c === "{") depth++;
+        else if (c === "}") depth--;
+        else if (c === ">" && depth === 0) break;
+      }
+      const tag = source.slice(match.index, end + 1);
+      const rest = source.slice(end + 1);
+      return { tag, children: (tag.endsWith("/>") ? rest.slice(rest.indexOf(">") + 1) : rest).trimStart() };
+    });
+  }
+
+  test("a button with words looks like one before it is hovered: ghost is for icons", () => {
+    const dir = resolve(import.meta.dir, "../src/client");
+    const ghosts = readdirSync(dir).filter((file) => file.endsWith(".tsx")).flatMap((file) => buttons(readFileSync(resolve(dir, file), "utf8"))
+      .filter(({ tag, children }) => tag.includes('variant="ghost"') && !tag.includes('size="icon') && !/^<[A-Z]\w*\b[^>]*aria-hidden/.test(children))
+      .map(({ tag }) => `${file}: ${tag.slice(0, 60)}`));
+    expect(ghosts).toEqual([]);
   });
 });
 

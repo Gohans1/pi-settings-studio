@@ -281,7 +281,7 @@ export function McpTab({ project }: { project?: string }) {
   if (log && !form && !selected) {
     detail = <section className="detail" aria-labelledby="log-title">
       <header className="detail-header"><h2 id="log-title">mcp.log</h2>
-        <div className="actions"><Button variant="outline" onClick={showLog}>Reload</Button><Button variant="ghost" onClick={() => setLog(undefined)}>Close</Button></div></header>
+        <div className="actions"><Button variant="outline" onClick={showLog}>Reload</Button><Button variant="outline" onClick={() => setLog(undefined)}>Close</Button></div></header>
       <p className="muted">Messages servers log while Pi runs, newest last; known secrets are hidden. <code>{log.path}</code></p>
       {log.exists ? <div className="log-tail" role="group" aria-label="mcp.log contents"><ScrollArea className="flex max-h-128 flex-col"><pre>{log.text || "Empty."}</pre></ScrollArea></div> : <Empty><EmptyHeader><EmptyDescription>No server has logged anything yet.</EmptyDescription></EmptyHeader></Empty>}
     </section>;
@@ -316,7 +316,7 @@ export function McpTab({ project }: { project?: string }) {
         actions={<>
           {current.transport === "http" && !current.authProvider && !current.headers.some(name => name.toLowerCase() === "authorization") && <>
             <Button variant="outline" disabled={busy || signIn.running} onClick={() => void signIn.start({ action: "mcp-login", server: current.name, ...(scope === "project" ? { project } : {}) })}>Sign in</Button>
-            <Button variant="ghost" disabled={busy || signIn.running} onClick={() => void signIn.start({ action: "mcp-logout", server: current.name, ...(scope === "project" ? { project } : {}) })}>Sign out</Button>
+            <Button variant="outline" disabled={busy || signIn.running} onClick={() => void signIn.start({ action: "mcp-logout", server: current.name, ...(scope === "project" ? { project } : {}) })}>Sign out</Button>
           </>}
           <Button variant="outline" disabled={busy} onClick={() => { setForm({ mode: "edit", scope }); setFormError(""); }} aria-label={`Edit ${current.name}`}>Edit</Button>
           <Button variant="destructive" disabled={busy} aria-label={`Remove ${current.name}`}

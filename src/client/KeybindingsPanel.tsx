@@ -61,8 +61,8 @@ export function KeybindingsPanel({ onMessage }: { onMessage: (text: string) => v
             placeholder={keys && !keys.length ? "Disabled" : action.defaults.join(", ") || "No default"}
             onChange={e => { setTexts(old => ({ ...old, [action.id]: e.target.value })); if (!parse(e.target.value).some(key => !isValidKey(key))) set(action.id, e.target.value.trim() ? parse(e.target.value) : null); }} />
           <span className="muted">{keys === null ? "Default" : keys.length ? "Custom" : "Disabled"}</span>
-          {keys !== null && <Button variant="ghost" size="xs" aria-label={`Use default for ${action.id}`} onClick={() => { setTexts(old => ({ ...old, [action.id]: "" })); set(action.id, null); }}>Use default</Button>}
-          {!(keys && !keys.length) && <Button variant="ghost" size="xs" aria-label={`Disable ${action.id}`} onClick={() => { setTexts(old => ({ ...old, [action.id]: "" })); set(action.id, []); }}>Disable</Button>}
+          {keys !== null && <Button variant="outline" size="xs" aria-label={`Use default for ${action.id}`} onClick={() => { setTexts(old => ({ ...old, [action.id]: "" })); set(action.id, null); }}>Use default</Button>}
+          {!(keys && !keys.length) && <Button variant="outline" size="xs" aria-label={`Disable ${action.id}`} onClick={() => { setTexts(old => ({ ...old, [action.id]: "" })); set(action.id, []); }}>Disable</Button>}
           {bad && <FieldError id={`keys-${action.id}-error`} className="basis-full">"{parse(text).find(key => !isValidKey(key))}" is not a key Pi understands. Use names such as ctrl+k or shift+enter.</FieldError>}
         </div>
       </Field></Fragment>;

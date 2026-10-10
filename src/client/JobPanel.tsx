@@ -128,6 +128,6 @@ export function JobPanel({ job, error, onAnswer, onCancel, onDismiss, children }
     </div></CardContent>
     <CardFooter>{job.status === "running"
       ? <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-      : <Button variant="ghost" size="sm" onClick={onDismiss}>Dismiss</Button>}</CardFooter>
+      : <Button variant="outline" size="sm" onClick={onDismiss}>Dismiss</Button>}</CardFooter>
   </Card>;
 }
