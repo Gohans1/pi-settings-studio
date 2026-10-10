@@ -501,6 +501,19 @@ test("the default provider is picked from a list like a select, set-up providers
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("a name from Enabled models that Pi has no provider for is listed after the set-up providers, before the others", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ enabledModels: ["ghost/*"] }));
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: /^Defaults/ }).click();
+  await page.getByRole("region", { name: "Defaults" }).getByRole("combobox", { name: "Default provider" }).click();
+  const groups = page.getByRole("listbox").getByRole("group");
+  await expect(groups).toHaveCount(3);
+  await expect(groups.nth(0)).toHaveAccessibleName("Set up");
+  await expect(groups.nth(1)).toHaveAccessibleName("Named in Enabled models");
+  await expect(groups.nth(1).getByRole("option")).toHaveText(["ghost"]);
+  await expect(groups.nth(2)).toHaveAccessibleName("Not set up");
+});
+
 test("an enabled model pattern can be picked from the models that have a credential", async ({ page }) => {
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: /^Defaults/ }).click();

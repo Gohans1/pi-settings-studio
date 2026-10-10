@@ -8,9 +8,12 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "
 export type Suggestion = { value: string; label?: string; group?: string };
 type Group = { value: string; items: Suggestion[] };
 
-/** Pi's providers by ID, the set-up ones first. */
-export const providerSuggestions = (providers: ProviderView[]): Suggestion[] => [true, false].flatMap(ready => providers
-  .filter(provider => provider.auth.configured === ready).map(provider => ({ value: provider.id, label: provider.name, group: ready ? "Set up" : "Not set up" })));
+/** Pi's providers by ID: the set-up ones, then `named` (names Enabled models gives that no provider has), then the others. */
+export function providerSuggestions(providers: ProviderView[], named: string[] = []): Suggestion[] {
+  const of = (ready: boolean) => providers.filter(provider => provider.auth.configured === ready)
+    .map(provider => ({ value: provider.id, label: provider.name, group: ready ? "Set up" : "Not set up" }));
+  return [...of(true), ...named.map(value => ({ value, group: "Named in Enabled models" })), ...of(false)];
+}
 
 /** provider/modelId of the models of set-up providers, by provider. */
 export const modelSuggestions = (models: AvailableModel[]): Suggestion[] =>

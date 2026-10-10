@@ -128,12 +128,12 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
       <FieldGroup>
       <Field><FieldLabel htmlFor="default-provider">Default provider</FieldLabel>
         <SuggestInput id="default-provider" value={provider} placeholder={String(inherited("defaultProvider") ?? "Automatic")}
-          suggestions={[...providerSuggestions(providers), ...extraProviders.map(name => ({ value: name, group: "From Enabled models" }))]}
+          suggestions={providerSuggestions(providers, extraProviders)}
           aria-describedby={providerWarning ? "provider-warning" : undefined} onChange={setProvider} />
         {providerWarning && <Warning id="provider-warning">{provider.trim()} is not in the catalog this app reads. An extension or package may provide it; this app does not run them, so it cannot check the name. If Pi cannot find it, new sessions start with another available model.</Warning>}</Field>
       <Field><FieldLabel htmlFor="default-model">Default model</FieldLabel>
         <SuggestInput id="default-model" value={model} placeholder={String(inherited("defaultModel") ?? "Automatic")}
-          suggestions={[...models.map(entry => ({ value: entry.id, label: entry.name })), ...extraModels.map(id => ({ value: id, group: "From Enabled models" }))]}
+          suggestions={[...models.map(entry => ({ value: entry.id, label: entry.name })), ...extraModels.map(id => ({ value: id, group: "Named in Enabled models" }))]}
           aria-describedby={[modelWarning && "model-warning", outOfScope && "scope-warning"].filter(Boolean).join(" ") || undefined} onChange={setModel} />
         {modelWarning && <Warning id="model-warning">{catalogued!.name} has no model {model.trim()} in the catalog this app reads. Check the ID, or refresh the model catalogs. If Pi cannot find it, new sessions start with another available model.</Warning>}
         {outOfScope && <Warning id="scope-warning">Not in Enabled models, so new sessions start with {modelScope!.first} instead. {addToScope ? "Saving adds it to Enabled models, as Pi does when you save a default with Ctrl+S." : "Add it to Enabled models to start with it."}</Warning>}</Field>
