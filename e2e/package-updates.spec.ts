@@ -125,3 +125,16 @@ test("a delayed global check cannot replace a selected project's results", async
   await expect(page.getByRole("region", { name: "Packages", exact: true }).getByRole("status")).toContainText("No updates reported by Pi");
   await expect(page.getByText("Update available", { exact: true })).toHaveCount(0);
 });
+
+test("with update checks on, found updates show without a click, and the Plugins tab counts them", async ({ page }) => {
+  const checking = await startServer({ agentDir: agent, projectDir: project, port: 0, staticDir: resolve("dist/client"), checkUpdates: true });
+  try {
+    await page.goto(checking.url + "#general");
+    const tab = page.getByRole("tab", { name: /^Plugins/ });
+    await expect(tab).toHaveAccessibleName("Plugins, 1 update");
+    await tab.click();
+    await page.getByRole("button", { name: /^Packages/ }).click();
+    await expect(page.getByRole("region", { name: "Packages", exact: true }).getByRole("status")).toContainText("1 package update found");
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  } finally { await checking.close(); }
+});

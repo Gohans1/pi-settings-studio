@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { startServer, type RunningServer } from "../src/server/server.ts";
+import { packageRegistry } from "../tests/fixtures/package-registry.ts";
 
 let root: string, file: string, server: RunningServer;
 test.beforeEach(async ({ page }) => {
@@ -274,6 +275,21 @@ test("the installed Pi version is shown with an Update Pi action that asks first
   await expect(ask).toBeHidden();
   await expect(update).toBeFocused();
   await expect(pi.getByRole("region")).toHaveCount(0);
+});
+
+test("a newer Pi on npm shows beside the installed one, with no click", async ({ page }) => {
+  // The app's own update checks, against a loopback registry whose latest Pi is newer than any installed.
+  const registry = await packageRegistry(root);
+  registry.setLatest("999.0.0");
+  const agentDir = join(root, "checks");
+  await registry.configure(agentDir);
+  const checking = await startServer({ agentDir, port: 0, staticDir: resolve("dist/client"), checkUpdates: true });
+  try {
+    await page.goto(checking.url + "#general");
+    await expect(page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: /^Pi/ })).toContainText("999.0.0 available");
+    await open(page, "Pi");
+    await expect(page.getByRole("region", { name: "Pi" })).toContainText("Pi 999.0.0 available");
+  } finally { await checking.close(); registry.close(); }
 });
 
 test("unsaved changes keep their save action in view while scrolling", async ({ page }) => {

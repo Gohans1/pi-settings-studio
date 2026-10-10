@@ -87,3 +87,8 @@ export function toolExposure(server: { exposure?: string; toolExposure?: Record<
   }
   return server.exposure ?? "codemode";
 }
+
+/** One server as `pi mcp list --json` reports it: its state and its tools by their names on the server. */
+export type McpServerStatus = { name: string; enabled: boolean; state: string; tools: string[]; error?: string };
+/** Each server's state for a new session, as Claude Code's `claude mcp list` reports health. */
+export type McpStatusView = { checkedAt: string; complete: boolean; servers: McpServerStatus[]; errors: string[] };

@@ -1,3 +1,44 @@
+# Verification — update checks in the background, a newer Pi, and each MCP server's state on open, 2026-10-10
+
+Scope: three reads still waited for a click. Package updates were found only by Check for updates and forgotten on restart; Update Pi did not say whether a newer Pi existed; MCP did not say which servers connected without Test connections. Leaders do these on their own: VS Code checks extension updates when the window loads, then every 12 hours (microsoft/vscode `extensionsWorkbenchService.ts`, issue #158022); update-notifier checks in the background once a day, persists the result and skips in CI and tests (sindresorhus/update-notifier README); `claude mcp list` prints each server's health (code.claude.com/docs/en/mcp); Pi itself checks for a new Pi and package updates at startup unless `PI_OFFLINE` (Pi 1.1.0 `interactive-mode.js`).
+
+- Update checks run with `checkUpdates`, which the app turns on in `cli.ts`; tests turn it on only where they test it. Results are kept in `pi-settings-cache.json` beside Pi's files.
+- Packages: listing Plugins starts Pi's `checkForAvailableUpdates` when the last check for these settings is missing or a day old, not with `PI_OFFLINE`, not in an untrusted project, and a failed one not again within the hour. The last result stays shown while a new one runs. Package jobs forget kept results too. The Plugins tab counts the updates ("Plugins, 1 update"). The comment "listing never starts a check" is gone.
+- Pi: `/api/pi` adds `latest` from `npm view @earendil-works/pi-coding-agent version` (the user's npm config applies, as for Pi's own package checks), once a day, skipped with `PI_OFFLINE` or `PI_SKIP_VERSION_CHECK`; a slow registry holds the page at most 3 s.
+- MCP: `/api/mcp/status` runs `pi mcp list --json`, kept like a tool inspection while the MCP and credential files are unchanged. Rows show connected, needs sign-in or failed; the detail says it beside the name and why a server failed; tools are listed by their names on the server. Test connections stays as the job with Pi's full output and refreshes the report. The probe's `mcpTool`, read from Pi's internal label, is removed.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | New API tests failed (no `latest`; no export or no automatic check; 404 for `/api/mcp/status`), then passed. New browser tests failed with the old client ("Pi1.1.0"; tab named "Plugins"; row "echo-server Code mode"), then passed |
+| `bun test` | 359 passed (50 files): 7 new, 1 removed with `mcpTool` |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 150 tests: 148 passed in the full run. `mcp.spec.ts:210` passed on its own. `motion.spec.ts:73` (two clicks inside a 100 ms menu entrance) fails now and then before this change too: 1 of 10 at `591c1c7`, 2 of 10 now |
+
+Manual (T3 preview, a temporary agent folder with `echo` (a tool named `say-it.v2`), `dead` (a missing command), `off-echo` (off), an old npm package and a loopback registry whose latest is 999.0.0; the old build from a worktree at `591c1c7`, then this one): before, the list showed "Code mode" for `echo` and `dead`, the Plugins tab no count, General › Pi only "Pi 1.1.0 is installed". After, with no click: `echo` ✔ Code mode with "Connected · 1 tool" and `say-it.v2`; `dead` ✘ failed, "Failed" and "Pi could not connect: spawn definitely-not-a-command-xyz ENOENT"; "Plugins 1"; Packages "1 package update found" and Update available; Pi "1.1.0 · 999.0.0 available". After a restart the same "Last checked" time showed and no check was sent. Console clean. The real `~/.pi` was not written.
+
+Not changed: the first Pi lookup of a day can leave the Pi panel empty for up to 3 s. A server that needs sign-in is shown from Pi's report but was not exercised with a real OAuth server. Test connections still runs a second `pi mcp list` beside the kept report.
+
+---
+
+# Verification — an MCP server's tools list when it is opened, 2026-10-10
+
+Scope: MCP listed a server's tools for per-tool exposure only after Test connections (`pi mcp list`), while opening Tools already starts the same servers through the tool inspection. Opening a server now reads that inspection with `useCached` under the key Tools uses, so one result serves both tabs. Each MCP tool in the inspection carries `mcpTool`, its name on the server: `toolExposure` rules match that name, and Pi's tool name keeps only `[A-Za-z0-9_]` (Pi 1.1.0 `dist/extensions/mcp/tools.js`, `createMcpToolName`); the probe reads it from Pi's `<server>/<tool>` label. Saves that may change which tools servers offer (switches, add, edit, remove, undo, import, raw JSON) ask again; exposure changes do not. Test connections stays as the diagnostic. The comment that made running servers explicit, and the browser test that required a connection test first, are replaced. AGENTS.md now states the rule: a view loads what it shows when it opens.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | 1 new API test failed (`mcpTool` undefined), then passed; 3 new browser tests failed (no tool list, "Test connections to list"), then passed |
+| `bun test` | 353 passed (49 files), 1 new |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 148 passed: 3 new, 1 replaced. MCP specs whose fixtures name `npx` commands and remote URLs answer `/api/tools` with no tools, so opening a server never runs them |
+
+Manual (T3 preview, a temporary agent folder with an `echo` server and an `off-echo` server turned off): before, opening `echo` showed "Test connections to list this server's tools" and no tools; after, it lists `echo` with "Inherit: Code mode" with no click. `off-echo` says "Turn the server on to list its tools."; turning it on shows "Checking for changes…", then its `echo` tool. Console clean. The real `~/.pi` was not written.
+
+Not changed: a server that is off has no tools to list, since Pi does not start it. With a project chosen, a global server that the project replaces with its own shows the project server's tools. `mcpTool` depends on Pi's label format; `tests/tools-api.test.ts` fails if a Pi update changes it.
+
+---
+
 # Verification — Code mode in startup tools is a state with a link to MCP › Code mode, 2026-10-10
 
 Scope: General › Startup tools had a `codemode` checkbox that wrote the same `defaultTools` entry as MCP › Code mode's "When Code mode is on". Unticked read as off, but Pi turns `codemode` on when an MCP server with codemode exposure connects (pi.dev docs: MCP, Control tool exposure), and the checkbox did not say that `codemode.mode` (built-in tools direct or only from scripts) lives in MCP › Code mode. Android's settings guidelines (source.android.com: Settings design guidelines) keep a setting shown in two places on one screen with entry points from the others. The row now states Always on or Automatic, with the change note the other rows have, and links to `#mcp/codemode`; the MCP tab opens on Code mode from that hash, as General and Models do for theirs, and keeps it chosen when the project changes.

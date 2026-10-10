@@ -153,3 +153,49 @@ test("a failed inspection says the list may be incomplete, and Refresh tools ret
   await expect(pane(page).getByRole("region", { name: "tools.ts" })).toContainText("visible_tool");
   await expect(page.getByText("Could not verify all tools")).toHaveCount(0);
 });
+
+test("an MCP server's tools are listed as soon as it is opened, each with its own exposure", async ({ page }) => {
+  test.slow();
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: /^echo-server/ }).click();
+  const detail = page.getByRole("region", { name: "echo-server" });
+  const exposure = detail.getByRole("combobox", { name: "Exposure of echo-server/echo" });
+  await expect(exposure).toBeVisible({ timeout: 60_000 });
+  const toolExposure = async () => JSON.parse(await readFile(join(agent, "mcp.json"), "utf8")).mcpServers["echo-server"].toolExposure;
+  await exposure.click();
+  await page.getByRole("option", { name: "Direct", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("echo-server/echo now uses Direct");
+  expect(await toolExposure()).toEqual({ echo: "direct" });
+  await exposure.click();
+  await page.getByRole("option", { name: /^Inherit:/ }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("echo-server/echo follows the server again");
+  expect(await toolExposure()).toBeUndefined();
+});
+
+test("a server that is off lists its tools once it is turned on", async ({ page }) => {
+  test.slow();
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: /^off-server/ }).click();
+  const detail = page.getByRole("region", { name: "off-server" });
+  await expect(detail.getByRole("region", { name: "Tools" })).toContainText("Turn the server on to list its tools.", { timeout: 60_000 });
+  await page.getByRole("switch", { name: "Enable off-server" }).click();
+  await expect(detail.getByRole("combobox", { name: "Exposure of off-server/echo" })).toBeVisible({ timeout: 60_000 });
+});
+
+test("each MCP server says whether it connected or failed, with no click; a tool keeps its name on the server", async ({ page }) => {
+  test.slow();
+  await writeFile(join(agent, "mcp.json"), JSON.stringify({ mcpServers: {
+    "echo-server": { command: "bun", args: [ECHO, "say-it.v2"] }, dead: { command: "definitely-not-a-command-xyz" },
+  } }));
+  await page.goto(server.url + "#mcp");
+  await expect(page.getByRole("button", { name: /^echo-server/ })).toHaveAccessibleName(/connected/, { timeout: 60_000 });
+  await expect(page.getByRole("button", { name: /^dead/ })).toContainText("failed");
+  await page.getByRole("button", { name: /^dead/ }).click();
+  await expect(page.getByRole("region", { name: "dead" })).toContainText("Pi could not connect");
+  await page.getByRole("button", { name: /^echo-server/ }).click();
+  await page.getByRole("combobox", { name: "Exposure of echo-server/say-it.v2" }).click();
+  await page.getByRole("option", { name: "Direct", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("echo-server/say-it.v2 now uses Direct");
+  expect(JSON.parse(await readFile(join(agent, "mcp.json"), "utf8")).mcpServers["echo-server"].toolExposure).toEqual({ "say-it.v2": "direct" });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

@@ -1,5 +1,5 @@
 import type { SettingsView, SettingsChange } from "../shared/settings";
-import type { McpFileView, McpImportPreview, McpServerInput } from "../shared/mcp";
+import type { McpFileView, McpImportPreview, McpServerInput, McpStatusView } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PackageUpdateCheck, PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
@@ -49,6 +49,9 @@ export const removeMcpServer = (target: McpTarget, name: string, revision: strin
 export const previewMcpImport = (target: McpTarget, text: string) => request<McpImportPreview>(mcpUrl(target, "/import/preview"), "POST", { text });
 export const importMcp = (target: McpTarget, revision: string, text: string, names: string[]) =>
   request<McpFileView>(mcpUrl(target, "/import"), "POST", { revision, text, names });
+/** Each server's state and tools from `pi mcp list`, kept by the server while the MCP files are unchanged; `fresh` asks again. */
+export const loadMcpStatus = (project?: string, signal?: AbortSignal, fresh = false) =>
+  request<McpStatusView>(withProject("/api/mcp/status", project), "POST", fresh ? { fresh } : {}, signal);
 export const loadMcpLog = (project?: string) => request<{ path: string; exists: boolean; text: string }>(withProject("/api/mcp/log", project));
 export const loadMcpRaw = (target: McpTarget) => request<RawSettings>(mcpUrl(target, "/raw"));
 export const saveMcpRaw = (target: McpTarget, revision: string, text: string) => request<RawSettings>(mcpUrl(target, "/raw"), "PUT", { revision, text });
@@ -139,7 +142,8 @@ export const removeSkill = (path: string, project?: string) => request<void>(wit
 export const restoreSkill = (path: string, project?: string) => request<void>(withProject("/api/resource-files/skill/restore", project), "POST", { path });
 export const createResource = (body: { scope: "global" | "project"; type: ResourceType; name: string; description?: string }, project?: string) =>
   request<{ type: ResourceType; path: string }>(withProject("/api/resource-files", project), "POST", body);
-export const loadPi = () => request<{ bin: string; installed?: string; builtFor: string }>("/api/pi");
+/** `latest` is a newer Pi on npm, when update checks found one. */
+export const loadPi = () => request<{ bin: string; installed?: string; builtFor: string; latest?: string }>("/api/pi");
 export const loadResourcePaths = (type: ResourceType, project?: string) => request<ResourcePathsView>(withProject(`/api/resource-paths?type=${type}`, project));
 export const changeResourcePath = (method: "POST" | "DELETE", body: { type: ResourceType; scope: Scope; revision: string; path: string }, project?: string) =>
   request<ResourcePathsView>(withProject("/api/resource-paths", project), method, body);

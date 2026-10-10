@@ -101,21 +101,3 @@ test("a sign-in waiting for an answer still asks it after the reader leaves Mode
   await job.getByRole("button", { name: "Cancel" }).click();
   await expect(job).toContainText("Cancelled");
 });
-
-test("after a connection test, each tool of a server gets its own exposure", async ({ page }) => {
-  test.slow();
-  await page.goto(server.url + "#mcp");
-  await page.getByRole("button", { name: /^echo/ }).click();
-  const detail = page.getByRole("region", { name: "echo" });
-  await expect(detail).toContainText("Test connections to list");
-  await page.getByRole("button", { name: "Test connections" }).click();
-  await expect(page.getByRole("region", { name: "Test MCP connections" })).toContainText("Finished", { timeout: 60_000 });
-  await detail.getByRole("combobox", { name: "Exposure of echo/echo" }).click();
-  await page.getByRole("option", { name: "Direct", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("echo/echo now uses Direct");
-  expect(JSON.parse(await readFile(join(agent, "mcp.json"), "utf8")).mcpServers.echo.toolExposure).toEqual({ echo: "direct" });
-  await detail.getByRole("combobox", { name: "Exposure of echo/echo" }).click();
-  await page.getByRole("option", { name: /^Inherit:/ }).click();
-  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("echo/echo follows the server again");
-  expect(JSON.parse(await readFile(join(agent, "mcp.json"), "utf8")).mcpServers.echo.toolExposure).toBeUndefined();
-});

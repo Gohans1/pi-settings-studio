@@ -4,11 +4,11 @@
 A personal, local GUI for **Pi core configuration**. Settings only: no chat, sessions UI, terminal or orchestration. The settings panel of [agegr/pi-web](https://github.com/agegr/pi-web) is the reference for features and feel; it is re-implemented here, not forked.
 
 ## Scope: Pi core only
-Tabs below. A project picker (folders Pi has sessions in) adds each tab's project scope and shows project trust. Operations that run something (MCP connection test, OAuth sign-in, package install) use Pi's own CLI or runtime. Installed extensions are trusted: selecting an extension automatically inspects its tools in a disposable Pi runtime, and opening Tools inspects every tool the same way.
+Tabs below. A project picker (folders Pi has sessions in) adds each tab's project scope and shows project trust. Operations that run something (MCP connection test, OAuth sign-in, package install) use Pi's own CLI or runtime. Installed extensions are trusted: selecting an extension automatically inspects its tools in a disposable Pi runtime, and opening Tools inspects every tool the same way. Opening MCP asks Pi (`pi mcp list --json`) for each server's state and tools. The app looks for newer packages and a newer Pi in the background, at most once a day.
 
 | Tab | Contents |
 |---|---|
-| MCP | Global and project `mcp.json` servers: list, enable/disable, exposure, add, edit, remove (undo). Codemode controls: `defaultTools` `+codemode`, `codemode.mode`, `codemode.inlineBudget`, `autoEnableCodemode`. `toolExposure`, `oauth`, `auth.provider`. Import from other clients. Connection test, OAuth sign-in, sign-in state, `mcp.log`. |
+| MCP | Global and project `mcp.json` servers: list, enable/disable, exposure, add, edit, remove (undo). Codemode controls: `defaultTools` `+codemode`, `codemode.mode`, `codemode.inlineBudget`, `autoEnableCodemode`. `toolExposure`, `oauth`, `auth.provider`. Import from other clients. Each server's state and tools when the tab opens (`pi mcp list`), connection test, OAuth sign-in, sign-in state, `mcp.log`. |
 | System prompt | Read-only. Pick project, then session (newest first); show the persisted system prompt sections and tool declarations exactly as Pi recorded them in the session file. Copy button. |
 | Skills | Discovered skills with source; enable/disable per skill and per group; whether the model may load a skill, per skill and per group; edit user and project skill files; create skills; remove user and project skills (undo). |
 | General | A form field for every documented `settings.json` key that no other tab owns; terminal-only keys grouped under "Terminal UI"; internal keys (`lastChangelogVersion`, `deviceId`, `trackingId`) never touched. Raw JSON editor. Global or project file. Keyboard shortcuts (`keybindings.json`). |

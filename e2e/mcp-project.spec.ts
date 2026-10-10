@@ -16,6 +16,9 @@ test.beforeEach(async () => {
   server = await startServer({ agentDir: agent, projectDir: project, port: 0, staticDir: resolve("dist/client") });
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
+// Opening MCP starts the servers to report their state. These fixtures name commands and URLs that must not
+// run here, so the report is empty; e2e/tools.spec.ts covers the real one.
+test.beforeEach(({ page }) => page.route("**/api/mcp/status*", route => route.fulfill({ json: { checkedAt: new Date().toISOString(), complete: true, servers: [], errors: [] } })));
 
 test("a global server is switched off for one project, then a project server is added", async ({ page }) => {
   const projectFile = async () => JSON.parse(await readFile(join(project, ".pi", "mcp.json"), "utf8"));

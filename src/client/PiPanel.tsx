@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { loadPi } from "./api";
-import { TriangleAlert } from "lucide-react";
+import { ArrowUp, TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription } from "./components/ui/alert";
+import { Badge } from "./components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
 import { JobPanel, useJob } from "./JobPanel";
@@ -9,7 +10,7 @@ import { home } from "./PageHeader";
 
 /** The Pi this machine runs, and `pi update` on click. */
 export function PiPanel() {
-  const [pi, setPi] = useState<{ bin: string; installed?: string; builtFor: string }>();
+  const [pi, setPi] = useState<Awaited<ReturnType<typeof loadPi>>>();
   const refresh = () => void loadPi().then(setPi).catch(() => setPi(undefined));
   useEffect(refresh, []);
   const update = useJob({ actions: ["pi-update"] }, refresh);
@@ -17,6 +18,7 @@ export function PiPanel() {
   if (!pi) return null;
   return <section className="pi-panel" aria-label="Pi">
     <p>{pi.installed ? <>Pi {pi.installed} is installed</> : <>The pi command was not found</>} <code translate="no">{home(pi.bin)}</code></p>
+    {pi.latest && <Badge variant="secondary"><ArrowUp aria-hidden="true" data-icon="inline-start" />Pi {pi.latest} available</Badge>}
     <AlertDialog open={asking} onOpenChange={setAsking}>
       <AlertDialogTrigger render={<Button variant="outline" size="sm" disabled={update.running || !pi.installed} />}>Update Pi</AlertDialogTrigger>
       <AlertDialogContent>

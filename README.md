@@ -33,12 +33,12 @@ Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && 
 
 ## Tabs
 
-- **General**: every documented `settings.json` key, raw JSON, keyboard shortcuts, the installed Pi version with Update Pi, and what cannot be edited here.
+- **General**: every documented `settings.json` key, raw JSON, keyboard shortcuts, the installed Pi version with Update Pi and a newer Pi on npm when there is one, and what cannot be edited here.
 - **Models**: every provider of Pi's model runtime with its models (limits, image input, thinking levels, price), sign-in and key setup through Pi's own login, credential check, defaults with the thinking levels each model offers and enabled models as a checklist, custom providers and changes to a shipped provider in `models.json`, with model lists from their endpoint.
 - **Skills**: switches, whether the model may load a skill (one, or a whole group from its menu), a file editor for each skill folder, new skills, Remove with Undo.
 - **Sub-agents**: profiles in Pi's example format.
 - **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (check for updates, update notices, install, update, remove, filters). Select an extension to inspect all registered tools and direct model declarations for the chosen project. Installed extensions are trusted and run automatically for this preview; see [Extension tools](docs/plugin-tools.md).
-- **MCP**: servers with exposure rules, OAuth and provider sign-in, Code mode, import from other clients, connection test, sign-in state, `mcp.log`.
+- **MCP**: servers with exposure rules, each server's state (connected, needs sign-in, failed) and tools as soon as the tab opens, OAuth and provider sign-in, Code mode, import from other clients, connection test, sign-in state, `mcp.log`.
 - **Tools**: what the model sees and doesn't see in a new session, and every source it comes from (built into Pi, extensions, MCP servers), off ones included, with search. Runs the same trusted inspection as Plugins; see [Extension tools](docs/plugin-tools.md).
 - **Instructions**: `AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`.
 - **System prompt**: what Pi recorded in a session.
@@ -49,11 +49,11 @@ Buttons that run something use the `pi` command on `PATH` (or `~/.local/bin/pi`)
 
 ## Package update notices
 
-Open **Plugins → Packages → Check for updates**. Pi's public checker reports which installed npm/Git packages have updates; matching rows say **Update available**, and the Packages entry shows the count. Checking does not install anything. **Update** and **Update all** still require a separate click.
+The app looks for package updates in the background, as Pi does at startup: when Plugins is listed and the last check for the current settings is missing or a day old. Pi's public checker reports which installed npm/Git packages have updates; matching rows say **Update available**, the Packages entry and the **Plugins** tab show the count. **Plugins → Packages → Check for updates** checks now. Checking does not install anything. **Update** and **Update all** still require a separate click.
 
-Checks are on demand, not a background timer. The last result and timestamp survive navigation/reloads while the server runs, and a check still running when you come back shows as checking. Settings changes and package operations invalidate those notices; check again after updating. Select and trust a project to include its packages. Updates run from that project's directory when selected, following Pi's global/project rules.
+The last result and timestamp are kept in `pi-settings-cache.json` beside Pi's files, so they survive reloads and restarts, and a check still running when you come back shows as checking. Settings changes and package operations invalidate those notices. A failed automatic check is not repeated within the hour. The newer Pi beside the installed one comes from `npm view` the same way, once a day; `PI_SKIP_VERSION_CHECK` turns that off. Select and trust a project to include its packages. Updates run from that project's directory when selected, following Pi's global/project rules.
 
-The checker uses system `npm` and `git` (not `npmCommand` from settings), and Pi's existing version/range, pin and project-precedence rules. It skips local paths, exact npm pins, pinned Git refs, missing installations and failed lookups. `PI_OFFLINE` skips networking. **“No updates reported” does not mean all packages are current:** Pi's API does not distinguish network/authentication failures or expose target version numbers. No extensions are loaded to perform the check.
+The checker uses system `npm` and `git` (not `npmCommand` from settings), and Pi's existing version/range, pin and project-precedence rules. It skips local paths, exact npm pins, pinned Git refs, missing installations and failed lookups. `PI_OFFLINE` skips networking, and automatic checks with it. **“No updates reported” does not mean all packages are current:** Pi's API does not distinguish network/authentication failures or expose target version numbers. No extensions are loaded to perform the check.
 
 ## Test
 

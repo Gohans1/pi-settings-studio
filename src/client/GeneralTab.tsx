@@ -55,7 +55,7 @@ export function GeneralTab({ project }: { project?: string }) {
   const [pane, setPane] = useState<string>(linked ?? sections[0].id);
   const [open, setOpen] = useState(!!linked);
   useEffect(() => { loadAvailableModels(project).then(found => setModels(modelSuggestions(found))).catch(() => setModels([])); }, [project]);
-  useEffect(() => { loadPi().then(found => setPi(found.installed)).catch(() => setPi(undefined)); }, []);
+  useEffect(() => { loadPi().then(found => setPi(found.latest ? `${found.installed} · ${found.latest} available` : found.installed)).catch(() => setPi(undefined)); }, []);
   const title = useRef<HTMLHeadingElement>(null);
   const inFile = (key: string) => !!view && (Object.hasOwn(view.values, key) || view.invalid.includes(key));
   // What Save writes: each draft edit as an edit of the file (VS Code's way: shared/settings.ts fileChange),

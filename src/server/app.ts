@@ -10,7 +10,7 @@ import { changeSchema, fields, readSetting, type DefaultText, type SettingsView 
 import { mcpRoutes } from "./mcp-api.ts";
 import { codemodeRoutes } from "./codemode.ts";
 import { sessionRoutes } from "./sessions.ts";
-import { extensionProviderSource, pluginRoutes, skillRoutes, toolRoutes } from "./resources.ts";
+import { extensionProviderSource, forgetPackageChecks, pluginRoutes, skillRoutes, toolRoutes } from "./resources.ts";
 import { agentRoutes } from "./agents.ts";
 import { modelRoutes } from "./models.ts";
 import { projectRegistry, projectRoutes } from "./projects.ts";
@@ -25,7 +25,11 @@ import { Inspections } from "./inspections.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
-export type AppOptions = { store: ConfigStore; agentDir: string; origins: string[]; staticDir?: string; projects?: string[] };
+export type AppOptions = {
+  store: ConfigStore; agentDir: string; origins: string[]; staticDir?: string; projects?: string[];
+  /** Look for newer packages and Pi in the background (npm, Git). The app turns this on; tests choose. */
+  checkUpdates?: boolean;
+};
 const SCOPE = z.enum(["global", "project"]);
 
 /** Pi's defaults that depend on this machine, resolved with Pi's own code. The editor follows the environment Pi starts in, which may not be this app's. */
@@ -40,7 +44,7 @@ function machineDefaults(agentDir: string): Record<string, DefaultText> {
   };
 }
 
-export function createApp({ store, agentDir, origins, staticDir, projects = [] }: AppOptions) {
+export function createApp({ store, agentDir, origins, staticDir, projects = [], checkUpdates = false }: AppOptions) {
   const app = new Hono();
   const registry = projectRegistry(agentDir, projects);
   const packageChecks: import("./resources.ts").PackageUpdateCache = new Map();
@@ -133,22 +137,22 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
     await store.restore(scope, input.revision);
     return c.json(await view(scope, store));
   });
-  app.route("/api/mcp", mcpRoutes(store, registry));
+  app.route("/api/mcp", mcpRoutes(store, registry, agentDir, inspections));
   app.route("/api/codemode", codemodeRoutes(store, registry));
   app.route("/api/sessions", sessionRoutes(agentDir, projects));
   app.route("/api/skills", skillRoutes(store, registry, agentDir));
-  app.route("/api/plugins", pluginRoutes(store, registry, agentDir, packageChecks, inspections));
+  app.route("/api/plugins", pluginRoutes(store, registry, agentDir, packageChecks, inspections, checkUpdates));
   app.route("/api/tools", toolRoutes(store, registry, agentDir, inspections));
   app.route("/api/agents", agentRoutes(store, registry, agentDir));
   app.route("/api/models", modelRoutes(store, agentDir, extensionProviderSource(store, registry, agentDir, inspections)));
   app.route("/api/projects", projectRoutes(registry, store, agentDir));
   app.route("/api/instructions", instructionRoutes(store, registry, agentDir));
   app.route("/api/keybindings", keybindingRoutes(store));
-  app.route("/api/jobs", jobRoutes(store, registry, agentDir, undefined, () => packageChecks.clear()));
+  app.route("/api/jobs", jobRoutes(store, registry, agentDir, undefined, () => void forgetPackageChecks(packageChecks, agentDir)));
   app.route("/api/themes", themeRoutes(store, registry, agentDir));
   app.route("/api/resource-files", resourceFileRoutes(store, registry, agentDir));
   app.route("/api/resource-paths", resourcePathRoutes(store, registry, agentDir));
-  app.route("/api/pi", piRoutes());
+  app.route("/api/pi", piRoutes(agentDir, { checkUpdates }));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));
   app.onError((error, c) => {

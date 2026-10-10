@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Bot, Boxes, FileText, Layers, Puzzle, ScrollText, Server, SlidersHorizontal, Wrench } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Badge } from "./components/ui/badge";
+import { checkPackageUpdates, loadPlugins } from "./api";
 import { Toaster } from "./components/ui/toast";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { ProjectPicker, TrustPanel, useProject } from "./ProjectBar";
@@ -43,10 +45,26 @@ function PiMark() {
   </svg>;
 }
 
+/**
+ * Package updates found for the chosen scope. Listing starts a check on the server when one is due, which this
+ * waits for; it asks again on each tab change, so an update made in Plugins clears its count.
+ */
+function useUpdateCount(project: string | undefined, active: string) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let live = true;
+    loadPlugins(project).then(view => view.updateChecking ? checkPackageUpdates(project) : view.updateCheck)
+      .then(check => { if (live) setCount(check?.updates.length ?? 0); }, () => { if (live) setCount(0); });
+    return () => { live = false; };
+  }, [project, active]);
+  return count;
+}
+
 export function App() {
   const [active, setActive] = useState(tabFromHash);
   const { projects, project, choose, updateTrust } = useProject();
   const current = projects?.find(entry => entry.path === project);
+  const updates = useUpdateCount(project, active);
   useEffect(() => {
     const sync = () => setActive(tabFromHash());
     window.addEventListener("hashchange", sync);
@@ -85,7 +103,11 @@ export function App() {
       </div>
       <div className="tabbar">
         <TabsList variant="line" aria-label="Settings sections">
-          {tabs.map(({ id, label, icon: Icon }) => <TabsTrigger key={id} value={id}><Icon aria-hidden="true" />{label}</TabsTrigger>)}
+          {tabs.map(({ id, label, icon: Icon }) => {
+            const count = id === "plugins" ? updates : 0;
+            return <TabsTrigger key={id} value={id} aria-label={count ? `${label}, ${count} ${count === 1 ? "update" : "updates"}` : undefined}>
+              <Icon aria-hidden="true" />{label}{count > 0 && <Badge variant="secondary">{count}</Badge>}</TabsTrigger>;
+          })}
         </TabsList>
       </div>
     </header>
