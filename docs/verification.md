@@ -1,3 +1,28 @@
+# Verification — hovered and highlighted rows in dark menus, selects and comboboxes, 2026-10-10
+
+Scope: in dark, `--popover`, `--accent` and `--muted` were all Flexoki's base-900, so the row Base UI highlights under the pointer or the arrow keys in every Select, DropdownMenu and Combobox drew nothing (`--accent` alone marks it), nor did a toast's ghost close button on hover or an AlertDialog's footer (`--muted`). Base UI did its part: the row had `data-highlighted` and focus (docs-mcp `base-ui`: Select, `highlightItemOnHover` defaults to true). Dark `--popover` moves to bg-2 (base-950), the card colour, as shadcn's default dark theme puts floating layers on its card colour with `--accent` one step above (docs-mcp `shadcn-ui`: Theming). Light is unchanged. Moving `--accent` to ui-2 instead would have left `--muted` on popovers and given hover the chosen row's colour.
+
+| Check | Result |
+|---|---|
+| `bun test` (`HOME` an empty folder) | 347 passed (48 files). New: in both schemes, `--accent` differs from `--popover`, and `--muted` from `--background`, `--sidebar`, `--card` and `--popover` |
+| RED/GREEN | 2 failed (dark `--accent` and `--muted` on `--popover`, both #282726), then passed |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 142 passed, unchanged |
+
+Measured with Playwright (`hover: hover` matches) on a temporary agent folder, 1280×800: the background a reader sees (each layer composited over the ones beneath), at rest and hovered or highlighted, as a WCAG luminance ratio.
+- Dark, before → after: rows of the Project and Thinking level selects, the File and `…` menus and the Default provider list 1:1 → 1.153:1, the step a hovered list row already takes (1.153:1); an AlertDialog's footer 1:1 → 1.07:1.
+- Light: unchanged, rows 1.241:1.
+
+Found, not changed:
+- Light: shadcn's SelectTrigger has no hover fill (only `dark:hover:bg-input/50`), and `shadcn add select --dry-run --diff` shows the file as the registry ships it; the pointer cursor is its hover sign.
+- Dark: a ghost button inside an InputGroup (the Combobox's "Show suggestions" chevron) turns darker on hover, 1.031:1: `dark:bg-input/30` is lighter than `dark:hover:bg-muted/50` because dark `--input` is base-600 for a 3:1 boundary. No token fixes it without moving `--muted` (the list rows' hover) or `--input` (control borders).
+- Dark: ghost icon buttons on the list pane (`+`, `…`) hover at 1.07:1, shadcn's `dark:hover:bg-muted/50` over bg-2.
+
+Manual: before, the running service, hover only, nothing chosen (T3 preview, then `agent-browser` in its own session after the preview host disconnected): a highlighted row #282726 on a #282726 popup in the Project select, the File menu and the Default provider list. After, screenshots of each open list in both schemes: the hovered row shows; menus over the list pane keep shadcn's ring and shadow. The real `~/.pi` was not written.
+
+---
+
 # Verification — suggested free text in a list like the selects, 2026-10-09
 
 Scope: the five free-text fields with suggestions (Default provider and model, the Enabled models pattern, the model rows of the per-model maps in Defaults and General, an MCP server's Pi provider) leave the browser's `datalist`, whose list the browser draws outside the page and its styles, for `SuggestInput`: shadcn's Combobox, added with `shadcn add combobox` and unchanged, on Base UI's Autocomplete root. In Base UI 1.8.0 every Autocomplete part but the root is the Combobox part (`autocomplete/index.parts`), and the root is the Combobox root with `selectionMode: "none"`, so the shipped parts keep whatever is typed. A click lists every suggestion, as the selects do; typing narrows by ID or name; providers are grouped Set up, then Not set up; each suggestion shows its name beside its ID. This replaces the datalist kept in the two entries below that name it (docs-mcp `base-ui`: Autocomplete, Combobox; `shadcn-ui`: Combobox; `shadcn search`: no autocomplete in @shadcn; @coss/autocomplete brings its own input and scroll area).
