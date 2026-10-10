@@ -10,7 +10,7 @@ import { changeSchema, fields, readSetting, type DefaultText, type SettingsView 
 import { mcpRoutes } from "./mcp-api.ts";
 import { codemodeRoutes } from "./codemode.ts";
 import { sessionRoutes } from "./sessions.ts";
-import { pluginRoutes, skillRoutes, toolRoutes } from "./resources.ts";
+import { extensionProviderSource, pluginRoutes, skillRoutes, toolRoutes } from "./resources.ts";
 import { agentRoutes } from "./agents.ts";
 import { modelRoutes } from "./models.ts";
 import { projectRegistry, projectRoutes } from "./projects.ts";
@@ -140,7 +140,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/plugins", pluginRoutes(store, registry, agentDir, packageChecks, inspections));
   app.route("/api/tools", toolRoutes(store, registry, agentDir, inspections));
   app.route("/api/agents", agentRoutes(store, registry, agentDir));
-  app.route("/api/models", modelRoutes(store, agentDir));
+  app.route("/api/models", modelRoutes(store, agentDir, extensionProviderSource(store, registry, agentDir, inspections)));
   app.route("/api/projects", projectRoutes(registry, store, agentDir));
   app.route("/api/instructions", instructionRoutes(store, registry, agentDir));
   app.route("/api/keybindings", keybindingRoutes(store));

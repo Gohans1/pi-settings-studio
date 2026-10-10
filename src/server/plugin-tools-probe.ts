@@ -1,19 +1,50 @@
 // Runs only in a disposable subprocess: installed extensions are trusted executable code.
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager,
-  type InlineExtension,
+  type ExtensionRuntime, type InlineExtension,
 } from "@earendil-works/pi-coding-agent";
+import type { Api, Model } from "@earendil-works/pi-ai";
 import type { PluginToolsView, SessionTools } from "../shared/plugin-tools.ts";
+import { credentialsOf, runtimeFor } from "./models.ts";
 
 export type ToolProbeInput = {
   agentDir: string; cwd: string; project: boolean;
   paths: string[]; globalSettings: Record<string, unknown>; projectSettings?: Record<string, unknown>;
   /** The extension to report and whether settings enable it. Without one, every registered tool is reported. */
   path?: string; enabled?: boolean;
+  /** Report the providers the extensions register instead of tools. */
+  providers?: boolean;
 };
 
-async function inspect(input: ToolProbeInput): Promise<PluginToolsView | SessionTools> {
+/** The providers extensions register, each with Pi's auth status and its chat models (headers left out), and what failed. */
+export type ExtensionProviders = { checkedAt: string; issues: string[]; providers: { id: string; name: string; configured: boolean; models: Model<Api>[] }[] };
+
+/**
+ * The providers that the loaded extensions queued, applied as Pi's runner applies them when it binds (Pi 1.1.0
+ * dist/core/extensions/runner.js bindCore, MIT, Copyright Mario Zechner), on a runtime over auth.json that cannot write it.
+ * No session starts: no model is chosen, so no credential command runs, and no MCP server starts.
+ */
+async function providersOf(queued: ExtensionRuntime, agentDir: string, issues: string[]): Promise<ExtensionProviders> {
+  const credentials = credentialsOf(await readFile(join(agentDir, "auth.json"), "utf8").then(JSON.parse, () => ({})));
+  const runtime = await runtimeFor(agentDir, credentials);
+  const known = new Set(runtime.getProviders().map(provider => provider.id));
+  const apply = (extensionPath: string, register: () => void) => {
+    try { register(); } catch (error) { issues.push(`${extensionPath}: ${error instanceof Error ? error.message : String(error)}`); }
+  };
+  for (const { name, config, extensionPath } of queued.pendingProviderRegistrations) apply(extensionPath, () => runtime.registerProvider(name, config));
+  for (const { provider, extensionPath } of queued.pendingNativeProviderRegistrations) apply(extensionPath, () => runtime.registerNativeProvider(provider));
+  for (const { definition, extensionPath } of queued.pendingVirtualModelRegistrations) apply(extensionPath, () => runtime.registerVirtualModel(definition));
+  // As the server reads Pi's status: a stored credential first (Pi fills "stored" only in an availability refresh).
+  const providers = runtime.getProviders().filter(provider => !known.has(provider.id)).map(provider => ({
+    id: provider.id, name: provider.name, configured: !!credentials[provider.id] || runtime.getProviderAuthStatus(provider.id).configured,
+    models: runtime.getModels(provider.id).map(({ headers: _headers, ...model }) => model as Model<Api>),
+  }));
+  return { checkedAt: new Date().toISOString(), issues, providers };
+}
+
+async function inspect(input: ToolProbeInput): Promise<PluginToolsView | SessionTools | ExtensionProviders> {
   const { agentDir, cwd, path, enabled } = input;
   function settings(discovery = false) {
     return SettingsManager.fromStorage({ withLock(scope, read) {
@@ -33,6 +64,7 @@ async function inspect(input: ToolProbeInput): Promise<PluginToolsView | Session
   });
   await loader.reload();
   const issues = loader.getExtensions().errors.map(error => `${error.path}: ${error.error}`);
+  if (input.providers) return providersOf(loader.getExtensions().runtime, agentDir, issues);
   const runtime = await ModelRuntime.create({
     authPath: join(agentDir, "auth.json"), modelsPath: join(agentDir, "models.json"), modelsStorePath: join(agentDir, "models-store.json"),
     allowModelNetwork: false, refreshOnCreate: false,

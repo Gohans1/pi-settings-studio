@@ -24,6 +24,9 @@ export type ProviderView = {
 
 export type ProvidersView = { revision: string; providers: ProviderView[]; error?: string };
 
+/** Providers that enabled extensions register, which Pi's catalog does not have; issues name extensions that could not be read. */
+export type ExtensionProvidersView = { issues: string[]; providers: (Pick<ProviderView, "id" | "name" | "models"> & { auth: { configured: boolean } })[] };
+
 /** A chat model as Pi's catalog describes it. */
 export type ModelSummary = {
   id: string; name: string; reasoning: boolean;

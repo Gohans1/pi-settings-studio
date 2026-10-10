@@ -1,8 +1,9 @@
 import { fileURLToPath } from "node:url";
-import type { z } from "zod";
+import { z } from "zod";
+import type { Api, Model } from "@earendil-works/pi-ai";
 import { pluginToolsSchema, sessionToolsSchema, type PluginToolsView, type SessionTools } from "../shared/plugin-tools.ts";
 import { ConfigError } from "./store.ts";
-import type { ToolProbeInput } from "./plugin-tools-probe.ts";
+import type { ExtensionProviders, ToolProbeInput } from "./plugin-tools-probe.ts";
 
 /** One extension's tools in a session started with the given settings. */
 export function runToolProbe(input: ToolProbeInput & { path: string; enabled: boolean }, signal?: AbortSignal, timeoutMs?: number): Promise<PluginToolsView> {
@@ -12,6 +13,17 @@ export function runToolProbe(input: ToolProbeInput & { path: string; enabled: bo
 /** Every tool such a session registers. */
 export function runToolsProbe(input: Omit<ToolProbeInput, "path" | "enabled">, signal?: AbortSignal, timeoutMs?: number): Promise<SessionTools> {
   return probe(input, sessionToolsSchema, signal, timeoutMs);
+}
+
+const providersSchema: z.ZodType<ExtensionProviders> = z.object({
+  checkedAt: z.string(), issues: z.array(z.string()),
+  providers: z.array(z.object({ id: z.string(), name: z.string(), configured: z.boolean(),
+    models: z.array(z.custom<Model<Api>>(value => typeof value === "object" && value !== null && typeof (value as Model<Api>).id === "string" && typeof (value as Model<Api>).provider === "string")) })),
+});
+
+/** The providers the extensions register, without starting a session. */
+export function runProvidersProbe(input: Omit<ToolProbeInput, "path" | "enabled" | "providers">, signal?: AbortSignal, timeoutMs?: number): Promise<ExtensionProviders> {
+  return probe({ ...input, providers: true }, providersSchema, signal, timeoutMs);
 }
 
 /** Separate process for extension globals, crashes and cleanup; this is not a security sandbox. */
