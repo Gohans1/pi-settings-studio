@@ -23,6 +23,7 @@ import { EmptyDetail, ListItem, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
 import { ResourceFolders, type FolderChange } from "./ResourceFolders";
 import { PluginTools } from "./PluginTools";
+import { SettingsForm } from "./SettingsForm";
 
 const typeLabels: Record<string, string> = { extensions: "extension", prompts: "prompt", themes: "theme" };
 const newLabels = { prompts: "Prompt template", themes: "Theme", extensions: "Extension" } as const;
@@ -170,7 +171,7 @@ export function PluginsTab({ project }: { project?: string }) {
         : updateCount ? `${updateCount} package ${updateCount === 1 ? "update" : "updates"} found.`
         : "No updates reported by Pi."}</p>
       {lastCheck && <p className="muted m-0">Last checked <time dateTime={lastCheck.checkedAt}>{new Date(lastCheck.checkedAt).toLocaleString()}</time></p>}
-      <p className="muted m-0">Checks use npm and Git without installing anything. Pi skips local paths, pinned versions and failed lookups; no reported update is not a guarantee that every package is current.</p>
+      <p className="muted m-0">Checks use the system's npm and Git, not the npm command below, and install nothing. Pi skips local paths, pinned versions and failed lookups; no reported update is not a guarantee that every package is current.</p>
       {checkError && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not check updates</AlertTitle><AlertDescription>{checkError}</AlertDescription></Alert>}
     </div>
     {/* ItemGroup is a list, which may own only list items: its separators are decoration (axe aria-required-children). */}
@@ -188,6 +189,7 @@ export function PluginsTab({ project }: { project?: string }) {
       {filtering === pkg.scope + pkg.source && <PackageFilterForm pkg={pkg} busy={busy} onCancel={() => setFiltering(undefined)}
         onSave={patch => void saveFilters(pkg.scope, pkg.source, patch)} />}
     </Item></Fragment>)}</ItemGroup> : <Empty><EmptyHeader><EmptyDescription>No packages yet. Install one by its npm name, git URL or folder.</EmptyDescription></EmptyHeader></Empty>}
+    <div className="settings-part"><SettingsForm section="packages" project={project} onSaved={text => { setMessage(text); setUndo(undefined); }} /></div>
   </section>;
   return <>
     <PageHeader title="Plugins" description="Extensions, prompt templates and themes, including Pi's built-ins and installed packages. Package skills are in the Skills tab."

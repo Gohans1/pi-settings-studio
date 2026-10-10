@@ -199,3 +199,67 @@ test("each MCP server says whether it connected or failed, with no click; a tool
   expect(JSON.parse(await readFile(join(agent, "mcp.json"), "utf8")).mcpServers["echo-server"].toolExposure).toEqual({ "say-it.v2": "direct" });
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("a built-in extension that is turned off says to turn it on in Plugins, where it is switched", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProjectTrust: "always", extensions: ["-extensions/todo.ts", "-builtin:llama.cpp"] }));
+  await page.goto(server.url + "#tools");
+  await expect(row(page, /^llama\.cpp/)).toContainText("Off");
+  await row(page, /^llama\.cpp/).click();
+  await expect(pane(page).getByRole("link", { name: "Turn on in Plugins" })).toHaveAttribute("href", "#plugins");
+});
+
+test("startup tools are a checklist in Tools that saves modifiers against Pi's defaults, and the views follow", async ({ page }) => {
+  const settings = async () => JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
+  const save = async () => {
+    await page.getByRole("region", { name: "Unsaved changes" }).getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to settings.json");
+  };
+  await page.goto(server.url + "#tools");
+  await row(page, /^Startup tools/).click();
+  await expect(row(page, /^Startup tools/)).toHaveAttribute("aria-pressed", "true");
+  await expect(row(page, /^What the model sees/)).toHaveAttribute("aria-pressed", "false");
+  const tools = page.getByRole("group", { name: "Startup tools" });
+  await expect(tools.getByRole("checkbox", { name: "read", exact: true })).toBeChecked();
+  await expect(tools.getByText("Automatic.", { exact: true })).toBeVisible();
+  await tools.getByRole("checkbox", { name: "grep", exact: true }).check();
+  await save();
+  expect((await settings()).defaultTools).toEqual(["+grep"]);
+  await expect(row(page, /^Core tools/)).toContainText("5 seen");
+  await tools.getByRole("checkbox", { name: "grep", exact: true }).uncheck();
+  await tools.getByRole("checkbox", { name: "write", exact: true }).uncheck();
+  await save();
+  expect((await settings()).defaultTools).toEqual(["-write"]);
+  await expect(row(page, /^Core tools/)).toContainText("3 seen");
+  await tools.getByRole("checkbox", { name: "write", exact: true }).check();
+  await save();
+  expect((await settings()).defaultTools).toBeUndefined();
+  await expect(row(page, /^Core tools/)).toContainText("4 seen");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("startup tools show Code mode's state in words, and its link opens MCP › Code mode", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProjectTrust: "always", extensions: ["-extensions/todo.ts"], defaultTools: ["+codemode"] }));
+  await page.goto(server.url + "#tools/startup");
+  const tools = page.getByRole("group", { name: "Startup tools" });
+  await expect(tools.getByRole("checkbox", { name: "codemode", exact: true })).toHaveCount(0);
+  await expect(tools.getByText("Always on here; Pi's default is automatic.", { exact: true })).toBeVisible();
+  await tools.getByRole("link", { name: "MCP › Code mode" }).click();
+  await expect(page).toHaveURL(/#mcp\/codemode$/);
+  await expect(page.getByRole("region", { name: "Code mode" }).getByRole("radio", { name: /Always on/ })).toBeChecked();
+});
+
+test("Pi's own tools are changed in Startup tools, a link away from their source and from each tool", async ({ page }) => {
+  await page.goto(server.url + "#tools");
+  await row(page, /^Core tools/).click();
+  await pane(page).getByRole("link", { name: "Change in Startup tools" }).click();
+  await expect(row(page, /^Startup tools/)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("group", { name: "Startup tools" })).toBeVisible();
+  await row(page, /^What the model sees/).click();
+  const read = pane(page).getByRole("button", { name: /^read/ });
+  await read.click();
+  await pane(page).getByRole("link", { name: "Change in Startup tools" }).click();
+  await expect(page.getByRole("group", { name: "Startup tools" })).toBeVisible();
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("searchbox", { name: "Search settings" }).fill("defaultTools");
+  await expect(page.getByText("No settings match")).toBeVisible();
+});

@@ -78,7 +78,7 @@ function toolEntries(settings: Record<string, unknown>): string[] | undefined {
   const value = settings.defaultTools;
   if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.some(entry => typeof entry !== "string")) {
-    throw new ConfigError("defaultTools in settings.json must be a list of tool names. Repair it in the General tab.");
+    throw new ConfigError("defaultTools in settings.json must be a list of tool names. Repair it in Tools › Startup tools.");
   }
   return value;
 }

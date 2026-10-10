@@ -230,3 +230,34 @@ test("a user skill is removed with its folder and Undo brings it back; package s
   expect(await readFile(join(agent, "skills/alpha/SKILL.md"), "utf8")).toBe(original);
   expect(await readFile(join(agent, "skills/alpha/references/notes.md"), "utf8")).toBe("Notes.\n");
 });
+
+test("Skill commands is set in the Skills tab, and General no longer lists it", async ({ page }) => {
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^Skill commands/ }).click();
+  const pane = page.getByRole("region", { name: "Skill commands" });
+  const commands = pane.getByRole("switch", { name: "Skill commands" });
+  await expect(commands).toBeChecked();
+  await expect(pane.locator('[id="row-enableSkillCommands"]')).toContainText("Default");
+  await commands.click();
+  await pane.getByRole("region", { name: "Unsaved changes" }).getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to settings.json");
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8"))).toEqual({ packages: ["./pkgs/my-pack"], enableSkillCommands: false });
+  await expect(pane.locator('[id="row-enableSkillCommands"]')).toContainText("Custom · Pi's default is on");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByRole("tab", { name: "General" }).click();
+  await page.getByRole("searchbox", { name: "Search settings" }).fill("enableSkillCommands");
+  await expect(page.getByText("No settings match")).toBeVisible();
+});
+
+test("an unsaved change to skill commands asks before the page is left, as General does", async ({ page }) => {
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^Skill commands/ }).click();
+  await page.getByRole("region", { name: "Skill commands" }).getByRole("switch", { name: "Skill commands" }).click();
+  await expect(page.getByRole("region", { name: "Unsaved changes" })).toBeVisible();
+  const asked = page.waitForEvent("dialog");
+  await page.close({ runBeforeUnload: true });
+  const dialog = await asked;
+  expect(dialog.type()).toBe("beforeunload");
+  await dialog.accept();
+});
+

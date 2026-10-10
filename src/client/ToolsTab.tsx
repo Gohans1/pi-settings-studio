@@ -1,5 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { CircleAlert, CircleCheck, CircleX, Eye, EyeOff, RefreshCw, TriangleAlert } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { CircleAlert, CircleCheck, CircleX, Eye, EyeOff, ListChecks, RefreshCw, TriangleAlert } from "lucide-react";
 import type { ToolsView } from "../shared/plugin-tools";
 import { loadTools } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
@@ -9,7 +9,9 @@ import { ItemGroup } from "./components/ui/item";
 import { Separator } from "./components/ui/separator";
 import { Spinner } from "./components/ui/spinner";
 import { Disclosure } from "./Disclosure";
+import { Feedback } from "./Feedback";
 import { PageHeader } from "./PageHeader";
+import { SettingsForm } from "./SettingsForm";
 import { SearchField } from "./SearchField";
 import { FAMILY_ICON, REACH, SourceLine, SourceTag, TAB_NAMES, Tally, ToolRows } from "./ToolRows";
 import { useCached } from "./useCached";
@@ -20,6 +22,9 @@ import { FAMILIES, REACHES, buildCatalog, bySource, isOff, type Catalog, type So
 type View = "sees" | "unseen";
 const VIEWS = { sees: { title: "What the model sees", icon: Eye }, unseen: { title: "What the model doesn't see", icon: EyeOff } } as const;
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/** The pinned editor of Pi's own tools; a link to #tools/startup opens it, from another tab or from this one. */
+const STARTUP = "startup";
+const linked = () => location.hash === "#tools/startup";
 
 function Gateway({ on, name }: { on: boolean; name: string }) {
   const Icon = on ? CircleCheck : CircleX;
@@ -49,7 +54,7 @@ function BySource({ catalog, tools, level = 3, showReach = false }: { catalog: C
 
 function Gateways({ catalog }: { catalog: Catalog }) {
   const { codemode, toolSearch } = catalog.gateways;
-  if (!codemode && !toolSearch) return <Alert role="note"><TriangleAlert aria-hidden="true" /><AlertDescription>Code mode and tool search are both off, so the model cannot reach these. Turn one on in General → Startup tools.</AlertDescription></Alert>;
+  if (!codemode && !toolSearch) return <Alert role="note"><TriangleAlert aria-hidden="true" /><AlertDescription>Code mode and tool search are both off, so the model cannot reach these. Turn one on in <a href="#tools/startup">Startup tools</a>.</AlertDescription></Alert>;
   return <p className="tools-note">Not declared. The model finds and calls these through {[codemode && "code mode", toolSearch && "tool search"].filter(Boolean).join(" or ")} when a task needs them.</p>;
 }
 
@@ -119,26 +124,37 @@ function headline(source: Source, tools: Tool[], query: string) {
 
 export function ToolsTab({ project }: { project?: string }) {
   const { data: view, error, loading, refresh } = useCached<ToolsView>(`tools\0${project ?? ""}`, (signal, fresh) => loadTools(project, signal, fresh));
-  // Kept across refreshes: the chosen view or source, the narrow screen's pane and the search.
-  const [chosen, setChosen] = useState<string>("sees");
-  const [open, setOpen] = useState(false);
+  // Kept across refreshes: the chosen view, source or Startup tools, the narrow screen's pane and the search.
+  const [chosen, setChosen] = useState<string>(() => linked() ? STARTUP : "sees");
+  const [open, setOpen] = useState(linked);
   const [query, setQuery] = useState("");
+  const [message, setMessage] = useState("");
   const catalog = useMemo(() => view && buildCatalog(view), [view]);
   const words = query.trim();
+  useEffect(() => {
+    const follow = () => { if (linked()) { setChosen(STARTUP); setOpen(true); } };
+    window.addEventListener("hashchange", follow);
+    return () => window.removeEventListener("hashchange", follow);
+  }, []);
 
   function workbench(catalog: Catalog) {
-    const choose = (key: string) => { setChosen(key); setOpen(true); };
+    // Choosing leaves #tools/startup, so following a link to it changes the hash again.
+    const choose = (key: string) => { setChosen(key); setOpen(true); if (linked()) history.replaceState(null, "", "#tools"); };
     const lower = words.toLowerCase();
     const matches = (tool: Tool) => !lower || [tool.short, tool.name, tool.description, catalog.byKey.get(tool.sourceKey)!.title].some(text => text.toLowerCase().includes(lower));
     const tools = catalog.tools.filter(matches);
     const of = (source: Source) => tools.filter(tool => tool.sourceKey === source.key);
     const pinned = { sees: tools.filter(tool => tool.reach === "sees").length, unseen: tools.filter(tool => tool.reach !== "sees").length };
     const source = catalog.byKey.get(chosen);
+    // A source no longer listed falls back to what the model sees.
+    const shown = chosen === STARTUP || chosen === "unseen" || source ? chosen : "sees";
     const list = <section aria-label="Tool views and sources">
       <div className="list-search"><SearchField label="Search tools" placeholder="Search tools…" value={query} onChange={setQuery} /></div>
       <ItemGroup aria-label="What the model gets">{(["sees", "unseen"] as View[]).map(key => <div role="listitem" key={key}>
-        <ListItem selected={chosen === key || (key === "sees" && !source && chosen !== "unseen")} onSelect={() => choose(key)} icon={VIEWS[key].icon} name={VIEWS[key].title} state={count(pinned[key], "tool", "tools")} />
-      </div>)}</ItemGroup>
+        <ListItem selected={shown === key} onSelect={() => choose(key)} icon={VIEWS[key].icon} name={VIEWS[key].title} state={count(pinned[key], "tool", "tools")} />
+      </div>)}
+        <div role="listitem"><ListItem selected={shown === STARTUP} onSelect={() => choose(STARTUP)} icon={ListChecks} name="Startup tools" state="Pi's tools, on or off" /></div>
+      </ItemGroup>
       <Separator className="mt-2" />
       {words && <p className="list-count">{count(tools.length, "tool matches", "tools match")} “{words}”</p>}
       {FAMILIES.map(({ family, title }) => {
@@ -152,14 +168,17 @@ export function ToolsTab({ project }: { project?: string }) {
         </section> : null;
       })}
     </section>;
-    const detail = source ? <SourceDetail source={source} catalog={catalog} tools={of(source)} query={words} />
-      : <ReachView view={chosen === "unseen" ? "unseen" : "sees"} catalog={catalog} tools={tools} query={words} />;
+    const detail = shown === STARTUP ? <section className="detail" aria-labelledby="startup-title"><header className="detail-header"><h2 id="startup-title">Startup tools</h2></header>
+        <SettingsForm section="tools" project={project} onSaved={text => { setMessage(text); refresh(); }} /></section>
+      : source ? <SourceDetail source={source} catalog={catalog} tools={of(source)} query={words} />
+      : <ReachView view={shown === "unseen" ? "unseen" : "sees"} catalog={catalog} tools={tools} query={words} />;
     return <Workbench list={list} detail={detail} open={open} onBack={() => setOpen(false)} backLabel="All views" />;
   }
 
   return <>
-    <PageHeader title="Tools" description="What a new session gives the model, and where each tool comes from: Pi, an extension or an MCP server. Read-only."
+    <PageHeader title="Tools" description="What a new session gives the model, and where each tool comes from: Pi, an extension or an MCP server."
       actions={<Button variant="outline" size="sm" disabled={loading} onClick={refresh}><RefreshCw aria-hidden="true" data-icon="inline-start" />Refresh tools</Button>} />
+    <Feedback message={message} onDismiss={() => setMessage("")} />
     {loading && <p className="loading" role="status"><Spinner aria-hidden="true" />{view ? "Checking for changes…" : "Loading tools with Pi…"}</p>}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>{view ? "Could not check again" : "Could not inspect tools"}</AlertTitle><AlertDescription>{error} Try Refresh tools.</AlertDescription></Alert>}
     {view && catalog && <>

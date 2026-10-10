@@ -251,15 +251,32 @@ test("thinking levels per model sit beside the default, each offering its own mo
   expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).modelThinkingLevels).toEqual({ "anthropic/claude-haiku-4-5": "low" });
 });
 
-test("Models and General point to each other where thinking is set", async ({ page }) => {
-  await page.goto(server.url + "#models");
-  await page.getByRole("button", { name: /^Defaults/ }).click();
-  await page.getByRole("region", { name: "Defaults" }).getByRole("link", { name: "Thinking budgets and prompt caching" }).click();
-  const general = page.getByRole("region", { name: "Models & thinking" });
-  await expect(general.getByLabel("Thinking budget: minimal", { exact: true })).toBeVisible();
-  await expect(general.getByRole("group", { name: "Thinking level per model" })).toHaveCount(0);
-  await general.getByRole("link", { name: "Models → Defaults" }).click();
-  await expect(page.getByRole("region", { name: "Defaults" }).getByRole("group", { name: "Thinking level per model" })).toBeVisible();
+test("Defaults also holds prompt caching and thinking budgets, which General no longer lists", async ({ page }) => {
+  await page.goto(server.url + "#models/defaults");
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const tuning = panel.getByRole("region", { name: "Prompt caching and thinking budgets" });
+  await expect(tuning.getByRole("switch", { name: "Cache notices" })).not.toBeChecked();
+  await expect(tuning.locator('[id="row-thinkingBudgets.low"]')).toContainText("Default");
+  await tuning.getByLabel("Thinking budget: low", { exact: true }).fill("4096");
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8")).thinkingBudgets).toEqual({ low: 4096 });
+  await expect(tuning.locator('[id="row-thinkingBudgets.low"]')).toContainText("Custom · Pi's default is 2,048");
+  await expect(panel.getByRole("link", { name: /General/ })).toHaveCount(0);
+  expect((await new AxeBuilder({ page }).include("form").analyze()).violations).toEqual([]);
+  await page.getByRole("tab", { name: "General" }).click();
+  await expect(page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: /^Models & thinking/ })).toHaveCount(0);
+});
+
+test("Save defaults takes the reader to a budget Pi would refuse, and writes nothing", async ({ page }) => {
+  await page.goto(server.url + "#models/defaults");
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const budget = panel.getByLabel("Thinking budget: minimal", { exact: true });
+  await budget.fill("-1");
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(budget).toBeFocused();
+  await expect(panel.getByText("Enter a whole number, 0 or more.")).toBeVisible();
+  await expect(readFile(join(agent, "settings.json"), "utf8")).rejects.toThrow();
 });
 
 test("enabled models are ticked in a checklist by provider, and patterns it does not touch stay", async ({ page }) => {
