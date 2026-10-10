@@ -57,13 +57,9 @@ test("sessions are listed by latest activity with their project, without message
   assert.equal("allMessagesText" in sessions[1], false);
 });
 
-test("the system prompt replays every system message: patched sections and removed tools", async (t) => {
+test("the latest prompt replays every system message: patched and added sections", async (t) => {
   const request = await fixture(t);
   const prompt = await (await request("/api/sessions/aaaa/system-prompt")).json();
-  assert.deepEqual(prompt.sections, [
-    { name: "preamble", text: "You are Pi." }, { name: "rules", text: "Rule two." }, { name: "skills", text: "<skills/>" },
-  ]);
-  assert.deepEqual(prompt.tools, [{ name: "read", description: "Read files" }]);
   assert.equal(prompt.text, "You are Pi.\n\nRule two.\n\n<skills/>");
 });
 

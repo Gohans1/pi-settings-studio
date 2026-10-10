@@ -201,7 +201,7 @@
   .switch-row { display: flex; gap: --spacing(3); align-items: center; font-weight: var(--font-weight-normal); }
 
   /* File contents, prompts, logs and job output; each scrolls in a shadcn ScrollArea of a set maximum height. */
-  :is(.log-tail, .prompt, .prompt-preview, .job-body) pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
+  :is(.log-tail, .prompt-preview, .job-body) pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); tab-size: 2; }
   .log-tail { overflow: hidden; background: var(--muted); border-radius: var(--radius); }
   .log-tail pre { padding: --spacing(3); }
   .resource-editor, .instruction, .raw-editor { display: grid; gap: --spacing(3); }
@@ -284,12 +284,11 @@
   .plain-list { list-style: none; margin: 0; padding: --spacing(1) --spacing(2); display: grid; gap: --spacing(1); }
   .list-note { margin: 0; padding: --spacing(1) --spacing(2.5); }
 
-  /* System prompt. */
-  .prompt { display: grid; gap: --spacing(2); }
-  .prompt-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); padding-bottom: --spacing(1); color: var(--muted-foreground); font-size: var(--text-small); font-variant-numeric: tabular-nums; }
-  .prompt [data-slot=accordion-trigger] .muted { margin-inline-start: --spacing(1); font-weight: var(--font-weight-normal); font-variant-numeric: tabular-nums; }
-  .tool-list { list-style: none; margin: 0; padding: 0; display: grid; gap: --spacing(2); }
-  .tool-list li { display: grid; gap: --spacing(0.5); }
+  /* Context: which session and the page's action, then the answer in a sentence and the workbench of parts. */
+  .context-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: --spacing(3); margin-bottom: --spacing(5); }
+  .name-list { display: flex; flex-wrap: wrap; gap: --spacing(1) --spacing(3); margin: --spacing(1.5) 0 0; padding: 0; list-style: none; }
+  .name-list code { font: var(--text-caption)/var(--leading-relaxed) var(--font-mono); }
+  .prompt-preview h3 { margin: 0 0 --spacing(2); font-size: var(--text-small); }
 
   /* Tools: the answer in a sentence, then the workbench. A tool is one line that opens to its description;
      off tools recede but keep their word. The detail pane's outline is the view (h2), its parts (h3), then sources. */

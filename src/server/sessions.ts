@@ -89,9 +89,6 @@ async function systemPrompt(path: string, id: string, cwd: string): Promise<Syst
       sections: Object.entries(change.sections ?? {}).map(([name, text]) => ({ name, text })),
       added: (change.toolsAdded ?? []).map(declarationPart), removed: (change.toolsRemoved ?? []).map(tool => tool.name),
     })),
-    sections: Object.entries(message?.sections ?? {}).flatMap(([name, text]) => typeof text === "string" ? [{ name, text }] : []),
-    content: message ? contentText(message.content) : "",
-    tools: (message?.toolsAdded ?? []).map(tool => ({ name: tool.name, description: tool.description })),
     text: message ? getSystemMessageText(message) : "",
   };
 }

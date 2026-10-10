@@ -14,8 +14,8 @@ import { ModelsTab } from "./ModelsTab";
 import { PluginsTab } from "./PluginsTab";
 import { SubagentsTab } from "./SubagentsTab";
 import { SkillsTab } from "./SkillsTab";
-import { SystemPromptTab } from "./SystemPromptTab";
 import { ToolsTab } from "./ToolsTab";
+import { ContextTab } from "./ContextTab";
 
 type Panel = (props: { project?: string; loadsInProject?: boolean }) => React.ReactElement;
 // Only implemented tabs are listed (SPEC.md: no fake tabs).
@@ -28,12 +28,16 @@ const tabs: { id: string; label: string; icon: typeof SlidersHorizontal; Panel: 
   { id: "mcp", label: "MCP", icon: Server, Panel: McpTab },
   { id: "tools", label: "Tools", icon: Wrench, Panel: ToolsTab },
   { id: "instructions", label: "Instructions", icon: FileText, Panel: InstructionsTab },
-  { id: "system-prompt", label: "System prompt", icon: ScrollText, Panel: SystemPromptTab },
+  { id: "context", label: "Context", icon: ScrollText, Panel: ContextTab },
 ];
+
+/** Tabs that were renamed, so their old links still open them. */
+const RENAMED: Record<string, string> = { "system-prompt": "context" };
 
 /** #tab, or #tab/entry where a tab opens on one of its entries (General's groups, Models' Defaults, Tools' Startup tools). */
 function tabFromHash(): string {
-  const id = location.hash.slice(1).split("/")[0]!;
+  const named = location.hash.slice(1).split("/")[0]!;
+  const id = RENAMED[named] ?? named;
   return tabs.some(tab => tab.id === id) ? id : tabs[0]!.id;
 }
 

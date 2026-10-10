@@ -26,10 +26,6 @@ export type SystemPromptView = {
   /** What Pi recorded for the first request: the prompt and every tool declaration. */
   start?: { at: number; content?: PromptPart; sections: PromptPart[]; declarations: PromptPart[]; tokens: number };
   changes: PromptChange[];
-  sections: { name: string; text: string }[];
-  /** Text outside named sections (older sessions). */
-  content: string;
-  tools: { name: string; description: string }[];
-  /** The full prompt as Pi renders it: content, then the sections. */
+  /** The prompt after every change, as Pi renders it: content, then the sections. */
   text: string;
 };
