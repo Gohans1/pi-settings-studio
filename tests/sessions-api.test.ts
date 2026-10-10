@@ -67,9 +67,35 @@ test("the system prompt replays every system message: patched sections and remov
   assert.equal(prompt.text, "You are Pi.\n\nRule two.\n\n<skills/>");
 });
 
+test("the first request is kept apart from what Pi changed later in the session", async (t) => {
+  const request = await fixture(t);
+  const prompt = await (await request("/api/sessions/aaaa/system-prompt")).json();
+  assert.deepEqual(prompt.start.sections.map(({ name, text }: { name: string; text: string }) => [name, text]), [["preamble", "You are Pi."], ["rules", "Rule one."]]);
+  assert.deepEqual(prompt.start.declarations.map(({ name }: { name: string }) => name), ["read", "write"]);
+  assert.deepEqual(prompt.changes, [{ at: Date.parse(at(3)), sections: [{ name: "rules", text: "Rule two." }, { name: "skills", text: "<skills/>" }], added: [], removed: ["write"] }]);
+});
+
+test("a tool loaded in the middle of a session is a later change, not part of the first request", async (t) => {
+  const request = await fixture(t);
+  await appendFile(request.fileA, lines({ type: "message", id: "e4", parentId: "e3", timestamp: at(4), message: { role: "system", content: "", timestamp: Date.parse(at(4)),
+    toolsAdded: [{ name: "docs_search", description: "Search docs", parameters: {} }] } }));
+  const prompt = await (await request("/api/sessions/aaaa/system-prompt")).json();
+  assert.deepEqual(prompt.start.declarations.map(({ name }: { name: string }) => name), ["read", "write"]);
+  assert.deepEqual(prompt.changes.at(-1).added.map(({ name }: { name: string }) => name), ["docs_search"]);
+});
+
+test("each part of the first request carries Pi's estimate of its tokens, about four characters each", async (t) => {
+  const request = await fixture(t);
+  const { start } = await (await request("/api/sessions/aaaa/system-prompt")).json();
+  assert.equal(start.sections[0].tokens, Math.ceil("You are Pi.".length / 4));
+  assert.equal(start.declarations[0].tokens, Math.ceil(JSON.stringify([{ name: "read", description: "Read files", parameters: {} }]).length / 4));
+  // The whole first request, as Pi estimates one system message.
+  assert.equal(start.tokens, Math.ceil(("You are Pi." + "Rule one." + JSON.stringify([{ name: "read", description: "Read files", parameters: {} }, { name: "write", description: "Write files", parameters: {} }])).length / 4));
+});
+
 test("a session without a recorded prompt returns an empty prompt; unknown ids are 404", async (t) => {
   const request = await fixture(t);
   const prompt = await (await request("/api/sessions/bbbb/system-prompt")).json();
-  assert.deepEqual([prompt.sections, prompt.tools, prompt.text], [[], [], ""]);
+  assert.deepEqual([prompt.start, prompt.changes, prompt.text], [undefined, [], ""]);
   assert.equal((await request("/api/sessions/nope/system-prompt")).status, 404);
 });
