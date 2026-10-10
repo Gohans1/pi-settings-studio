@@ -263,3 +263,12 @@ test("Pi's own tools are changed in Startup tools, a link away from their source
   await page.getByRole("searchbox", { name: "Search settings" }).fill("defaultTools");
   await expect(page.getByText("No settings match")).toBeVisible();
 });
+
+test("the overview counts in words: one declared tool is one tool", async ({ page }) => {
+  // Code mode only leaves code mode the one declaration.
+  await writeFile(join(project, ".pi", "settings.json"), JSON.stringify({ codemode: { mode: "only" } }));
+  await page.goto(server.url + "#tools");
+  await page.getByRole("combobox", { name: "Project", exact: true }).click();
+  await page.getByRole("option", { name: project, exact: true }).click();
+  await expect(page.locator(".tools-overview")).toContainText("A new session declares 1 tool to the model.");
+});

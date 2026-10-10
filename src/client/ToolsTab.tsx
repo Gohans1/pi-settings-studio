@@ -37,8 +37,8 @@ function Overview({ catalog }: { catalog: Catalog }) {
   const sees = of(tool => tool.reach === "sees"), demand = of(tool => tool.reach === "demand"), off = of(isOff);
   const sourcesOff = catalog.sources.filter(source => source.status === "off").length;
   return <div className="tools-overview">
-    <p>A new session declares <strong>{sees}</strong> tools to the model. <strong>{demand}</strong> more are on demand.{" "}
-      <strong>{off}</strong> are off{sourcesOff ? <>, and <strong>{sourcesOff}</strong> sources are turned off</> : null}.</p>
+    <p>A new session declares <strong>{sees}</strong> {sees === 1 ? "tool" : "tools"} to the model. <strong>{demand}</strong> more {demand === 1 ? "is" : "are"} on demand.{" "}
+      <strong>{off}</strong> {off === 1 ? "is" : "are"} off{sourcesOff ? <>, and <strong>{sourcesOff}</strong> {sourcesOff === 1 ? "source is" : "sources are"} turned off</> : null}.</p>
     {demand > 0 && <p className="tools-gateways">On demand through <Gateway on={catalog.gateways.codemode} name="Code mode" /> <Gateway on={catalog.gateways.toolSearch} name="Tool search" /></p>}
   </div>;
 }
