@@ -153,3 +153,43 @@ test("a failed inspection says the list may be incomplete, and Refresh tools ret
   await expect(pane(page).getByRole("region", { name: "tools.ts" })).toContainText("visible_tool");
   await expect(page.getByText("Could not verify all tools")).toHaveCount(0);
 });
+
+test("an MCP server's tools are listed as soon as it is opened, each with its own exposure", async ({ page }) => {
+  test.slow();
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: /^echo-server/ }).click();
+  const detail = page.getByRole("region", { name: "echo-server" });
+  const exposure = detail.getByRole("combobox", { name: "Exposure of echo-server/echo" });
+  await expect(exposure).toBeVisible({ timeout: 60_000 });
+  const toolExposure = async () => JSON.parse(await readFile(join(agent, "mcp.json"), "utf8")).mcpServers["echo-server"].toolExposure;
+  await exposure.click();
+  await page.getByRole("option", { name: "Direct", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("echo-server/echo now uses Direct");
+  expect(await toolExposure()).toEqual({ echo: "direct" });
+  await exposure.click();
+  await page.getByRole("option", { name: /^Inherit:/ }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("echo-server/echo follows the server again");
+  expect(await toolExposure()).toBeUndefined();
+});
+
+test("a server that is off lists its tools once it is turned on", async ({ page }) => {
+  test.slow();
+  await page.goto(server.url + "#mcp");
+  await page.getByRole("button", { name: /^off-server/ }).click();
+  const detail = page.getByRole("region", { name: "off-server" });
+  await expect(detail.getByRole("region", { name: "Tools" })).toContainText("Turn the server on to list its tools.", { timeout: 60_000 });
+  await page.getByRole("switch", { name: "Enable off-server" }).click();
+  await expect(detail.getByRole("combobox", { name: "Exposure of off-server/echo" })).toBeVisible({ timeout: 60_000 });
+});
+
+test("MCP reuses the tools Tools already listed, without starting the servers again", async ({ page }) => {
+  const log = join(root, "starts.log");
+  await writeFile(join(agent, "mcp.json"), JSON.stringify({ mcpServers: { "echo-server": { command: "bun", args: [ECHO], env: { ECHO_LOG: log } } } }));
+  const starts = async () => (await readFile(log, "utf8").catch(() => "")).split("\n").filter(Boolean).length;
+  await page.goto(server.url + "#tools");
+  await expect(row(page, /^echo-server/)).toContainText("1 on demand");
+  await page.getByRole("tab", { name: "MCP" }).click();
+  await page.getByRole("button", { name: /^echo-server/ }).click();
+  await expect(page.getByRole("region", { name: "echo-server" }).getByRole("combobox", { name: "Exposure of echo-server/echo" })).toBeVisible();
+  expect(await starts()).toBe(1);
+});
