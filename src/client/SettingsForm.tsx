@@ -122,8 +122,9 @@ export function SettingsForm({ section, project, onSaved }: { section: SectionId
     {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global settings" disabled={busy || !!changes.length} onChange={setScopeChoice} />}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <>
+      <div className="file-paths mb-4"><FilePath path={view.path} /></div>
       {rows(fields.filter(field => field.section === section))}
-      <p className="scope-footnote">In <FilePath path={view.path} />. Saved values apply to new Pi sessions, or after /reload.</p>
+      <p className="scope-footnote">Saved values apply to new Pi sessions, or after /reload.</p>
     </>}
     {changes.length > 0 && <SaveBar count={changes.length} busy={busy} onSave={() => void save()} onDiscard={() => { discard(); setError(""); }} />}
   </>;
