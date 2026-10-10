@@ -7,10 +7,12 @@ import { ProjectTrustStore } from "@earendil-works/pi-coding-agent";
 import { ConfigStore } from "../src/server/store.ts";
 import { createApp } from "../src/server/app.ts";
 import { packageRegistry } from "./fixtures/package-registry.ts";
+import { forgetPackageChecks, pluginRoutes } from "../src/server/resources.ts";
+import { projectRegistry } from "../src/server/projects.ts";
 
 const origin = "http://127.0.0.1:43123";
 const headers = { host: new URL(origin).host, origin, "content-type": "application/json" };
-async function fixture(t: import("node:test").TestContext) {
+async function fixture(t: import("node:test").TestContext, { checkUpdates = false } = {}) {
   const root = await mkdtemp(join(tmpdir(), "pss-package-updates-"));
   const agent = join(root, "agent"), project = join(root, "project");
   const registry = await packageRegistry(root);
@@ -26,11 +28,15 @@ async function fixture(t: import("node:test").TestContext) {
   await mkdir(join(agent, "local-package"));
   await writeFile(join(agent, "local-package", "index.ts"), `throw new Error('Extension code must not run');`);
   await writeFile(join(project, ".pi", "settings.json"), "{}");
-  const app = createApp({ store: new ConfigStore({ global: agent }), agentDir: agent, origins: [origin], projects: [project] });
-  const request = (path: string, init: RequestInit = {}) => app.request(origin + path, { ...init, headers: { ...headers, ...init.headers } });
-  const plugins = async (suffix = "") => (await request("/api/plugins" + suffix)).json();
-  const check = (suffix = "") => request("/api/plugins/updates" + suffix, { method: "POST", body: "{}" });
-  return { root, agent, project, registry, request, plugins, check, settings };
+  // Each call is a newly started app on the same folders.
+  function start() {
+    const app = createApp({ store: new ConfigStore({ global: agent }), agentDir: agent, origins: [origin], projects: [project], checkUpdates });
+    const request = (path: string, init: RequestInit = {}) => app.request(origin + path, { ...init, headers: { ...headers, ...init.headers } });
+    const plugins = async (suffix = "") => (await request("/api/plugins" + suffix)).json();
+    const check = (suffix = "") => request("/api/plugins/updates" + suffix, { method: "POST", body: "{}" });
+    return { request, plugins, check };
+  }
+  return { root, agent, project, registry, settings, ...start(), restart: start };
 }
 
 test("checking uses Pi's npm update rules only on request, stores scoped notices, and writes nothing", async t => {
@@ -117,4 +123,39 @@ test("the checking boundary refuses arbitrary input and cross-origin requests", 
   assert.equal((await request("/api/plugins/updates", { method: "POST", body: JSON.stringify({ source: "npm:not-configured" }) })).status, 422);
   assert.equal((await request("/api/plugins/updates", { method: "POST", body: "{}", headers: { origin: "https://attacker.invalid" } })).status, 403);
   assert.equal((await request("/api/plugins/updates", { method: "GET" })).status, 404);
+});
+
+test("with update checks on, listing plugins starts a check, and its result outlives a restart", async t => {
+  const f = await fixture(t, { checkUpdates: true });
+  assert.equal((await f.plugins()).updateChecking, true);
+  const result = await (await f.check()).json();
+  assert.deepEqual(result.updates, [{ source: "npm:old-package", scope: "global" }]);
+  const asked = f.registry.requests.length;
+  assert.deepEqual((await f.restart().plugins()).updateCheck, result);
+  assert.equal(f.registry.requests.length, asked);
+});
+
+test("an automatic check waits a day after the last one, and none runs offline or in an untrusted project", async t => {
+  const f = await fixture(t, { checkUpdates: true });
+  await (await f.check()).json();
+  assert.equal((await f.plugins()).updateChecking, undefined);
+  assert.equal((await f.plugins(`?project=${encodeURIComponent(f.project)}`)).updateChecking, undefined);
+  const path = join(f.agent, "pi-settings-cache.json");
+  const kept = JSON.parse(await readFile(path, "utf8"));
+  kept.packages[""].checkedAt = new Date(Date.now() - 2 * 24 * 60 * 60_000).toISOString();
+  await writeFile(path, JSON.stringify(kept));
+  process.env.PI_OFFLINE = "1";
+  try { assert.equal((await f.restart().plugins()).updateChecking, undefined); } finally { delete process.env.PI_OFFLINE; }
+  assert.equal((await f.restart().plugins()).updateChecking, true);
+});
+
+test("a package job forgets what checks found, also for the next start", async t => {
+  const f = await fixture(t);
+  await (await f.check()).json();
+  const checks = new Map();
+  const routes = () => pluginRoutes(new ConfigStore({ global: f.agent }), projectRegistry(f.agent, [f.project]), f.agent, checks);
+  assert.ok((await (await routes().request("/")).json()).updateCheck);
+  await forgetPackageChecks(checks, f.agent);
+  assert.equal((await (await routes().request("/")).json()).updateCheck, undefined);
+  assert.equal((await f.restart().plugins()).updateCheck, undefined);
 });

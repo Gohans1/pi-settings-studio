@@ -18,6 +18,7 @@ import { runProvidersProbe, runToolProbe, runToolsProbe } from "./plugin-tools.t
 import type { ExtensionProviderSource } from "./models.ts";
 import { Inspections } from "./inspections.ts";
 import { knownSecrets, redact } from "./jobs.ts";
+import { changeUpdateCache, DAY, readUpdateCache } from "./update-cache.ts";
 
 /** Pi's built-in extensions, as named in docs/settings.md (a test keeps the two in step). */
 export const BUILTIN_EXTENSIONS = ["mcp", "llama.cpp", "codemode", "tool-search"];
@@ -302,13 +303,55 @@ export function extensionProviderSource(store: ConfigStore, registry: ProjectReg
 const PLUGIN_TYPES = ["extensions", "prompts", "themes"] as const;
 const FILTER_KEYS = ["autoload", "extensions", "skills", "prompts", "themes"];
 
-/** Memory only; package mutations clear both completed and in-flight entries. */
+/** Checks by project ("" for global), each for the settings revisions it read. Results are also kept on disk (update-cache.ts). */
 export type PackageUpdateCache = Map<string, {
   revision: string; projectRevision?: string; result?: PackageUpdateCheck; pending?: Promise<PackageUpdateCheck>;
 }>;
 
-export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, checks: PackageUpdateCache = new Map(), inspections = new Inspections()) {
+/** A package job changed what is installed: forget every check, kept ones included. */
+export function forgetPackageChecks(checks: PackageUpdateCache, agentDir: string): Promise<void> {
+  checks.clear();
+  return changeUpdateCache(agentDir, ({ packages: _forgotten, ...cache }) => cache);
+}
+
+export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, checks: PackageUpdateCache = new Map(), inspections = new Inspections(), checkUpdates = false) {
   const context = resourceContext(store, registry, agentDir);
+  // What earlier runs found, unless this run already knows better.
+  const kept = readUpdateCache(agentDir).then(cache => {
+    for (const [key, result] of Object.entries(cache.packages ?? {})) {
+      if (!checks.has(key)) checks.set(key, { revision: result.revision, ...(result.projectRevision ? { projectRevision: result.projectRevision } : {}), result });
+    }
+  });
+  // When each automatic check last started, so a failing one is not repeated on every visit.
+  const started = new Map<string, number>();
+  const trusted = (project: string | undefined, settings: { global: Settings }) =>
+    !project || (new ProjectTrustStore(agentDir).getEntry(project)?.decision ?? settings.global.defaultProjectTrust === "always");
+
+  /** Pi's own check (npm view, git ls-remote), joined while it runs; a result is kept in memory and on disk. */
+  function check(key: string, revision: string, projectRevision: string | undefined, manager: DefaultPackageManager) {
+    const previous = checks.get(key);
+    if (previous?.pending && previous.revision === revision && previous.projectRevision === projectRevision) return previous;
+    // The last result stays shown while a new one is found for the same settings.
+    const entry: NonNullable<ReturnType<PackageUpdateCache["get"]>> = { revision, projectRevision,
+      ...(previous?.result && previous.revision === revision && previous.projectRevision === projectRevision ? { result: previous.result } : {}) };
+    // Bound the process-local history.
+    if (checks.size >= 30) checks.delete(checks.keys().next().value!);
+    checks.set(key, entry);
+    entry.pending = (async (): Promise<PackageUpdateCheck> => {
+      const offline = !!process.env.PI_OFFLINE;
+      // Public Pi API, not extension code. It uses npm view / git ls-remote, skips pins,
+      // deduplicates global/project sources and silently skips failed lookups.
+      const updates = await manager.checkForAvailableUpdates();
+      const result: PackageUpdateCheck = { revision, projectRevision, checkedAt: new Date().toISOString(), offline,
+        updates: updates.map(({ source, scope }) => ({ source, scope: scope === "user" ? "global" : "project" })) };
+      entry.result = result;
+      if (checks.get(key) === entry) await changeUpdateCache(agentDir, cache => ({ ...cache, packages: { ...cache.packages, [key]: result } }));
+      return result;
+    })();
+    entry.pending.catch(() => { if (checks.get(key) === entry) checks.delete(key); }).finally(() => { entry.pending = undefined; });
+    return entry;
+  }
+
   async function view(project: string | undefined): Promise<PluginsView> {
     const { resolved, revision, projectRevision, manager, settings } = await context.resolve(project);
     const resources = (await Promise.all(PLUGIN_TYPES.map(type => Promise.all(resolved[type].map(item => describe(type, item, agentDir)))))).flat();
@@ -322,8 +365,18 @@ export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agen
         return [{ scope, source, installed: !!path && existsSync(path), filtered: typeof pkg !== "string", filters }];
       });
     });
-    const cached = checks.get(project ?? "");
-    const current = cached?.revision === revision && cached.projectRevision === projectRevision ? cached : undefined;
+    await kept;
+    const key = project ?? "";
+    const cached = checks.get(key);
+    let current = cached?.revision === revision && cached.projectRevision === projectRevision ? cached : undefined;
+    // Like Pi at startup: look for updates in the background, at most once a day.
+    const due = !current?.result || Date.now() - Date.parse(current.result.checkedAt) > DAY;
+    const attempt = [key, revision, projectRevision].join("\0");
+    if (checkUpdates && due && !current?.pending && packages.length && !process.env.PI_OFFLINE && trusted(project, settings)
+      && Date.now() - (started.get(attempt) ?? 0) > DAY / 24) {
+      started.set(attempt, Date.now());
+      current = check(key, revision, projectRevision, manager);
+    }
     return { revision, ...(projectRevision ? { projectRevision } : {}), resources, packages,
       ...(current?.result ? { updateCheck: current.result } : {}), ...(current?.pending ? { updateChecking: true as const } : {}) };
   }
@@ -347,33 +400,12 @@ export function pluginRoutes(store: ConfigStore, registry: ProjectRegistry, agen
       z.object({}).strict().parse(await c.req.json());
       const project = c.req.query("project");
       const { manager, settings, revision, projectRevision } = await context.resolve(project);
-      if (project && !(new ProjectTrustStore(agentDir).getEntry(project)?.decision ?? settings.global.defaultProjectTrust === "always")) {
+      if (!trusted(project, settings)) {
         return c.json({ error: "Trust this project before checking its packages, or select global only." }, 403);
       }
-      const key = project ?? "";
-      const previous = checks.get(key);
-      if (previous?.pending && previous.revision === revision && previous.projectRevision === projectRevision) {
-        return c.json(await previous.pending);
-      }
-      const entry: NonNullable<ReturnType<PackageUpdateCache["get"]>> = { revision, projectRevision };
-      // Bound the process-local history; listing never starts a check.
-      if (checks.size >= 30) checks.delete(checks.keys().next().value!);
-      checks.set(key, entry);
-      entry.pending = (async (): Promise<PackageUpdateCheck> => {
-        const offline = !!process.env.PI_OFFLINE;
-        // Public Pi API, not extension code. It uses npm view / git ls-remote, skips pins,
-        // deduplicates global/project sources and silently skips failed lookups.
-        const updates = await manager.checkForAvailableUpdates();
-        const result: PackageUpdateCheck = { revision, projectRevision, checkedAt: new Date().toISOString(), offline,
-          updates: updates.map(({ source, scope }) => ({ source, scope: scope === "user" ? "global" : "project" })) };
-        entry.result = result;
-        return result;
-      })();
-      try { return c.json(await entry.pending); }
-      catch {
-        if (checks.get(key) === entry) checks.delete(key);
-        return c.json({ error: "Could not check package updates. Check your connection and package sources, then try again." }, 502);
-      } finally { entry.pending = undefined; }
+      await kept;
+      try { return c.json(await check(project ?? "", revision, projectRevision, manager).pending); }
+      catch { return c.json({ error: "Could not check package updates. Check your connection and package sources, then try again." }, 502); }
     })
     .put("/packages", async c => {
       const project = c.req.query("project");
