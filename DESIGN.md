@@ -22,7 +22,7 @@ Muted text, dark destructive, input borders and the primary blue sit one step st
 
 ## Typography
 
-System fonts through Tailwind's `--font-sans` (Segoe UI on Windows) and `--font-mono` for paths, keys, code and file contents. shadcn's components size their own text with Tailwind's scale (`text-sm`, `text-xs`; inputs are 16px on small screens so iOS does not zoom). The app's own text uses five sizes by role from `:root`: caption 12px (metadata, counts, code, list group names), small 13px (file paths), body 14px, heading 18px (every h2), display 24px (h1). They stay out of `@theme` on purpose: as `text-*` utilities, `cn` would read them as colours and drop one of a pair. Headings are semibold, labels and buttons medium. Headings balance their lines, descriptions use `text-wrap: pretty`, counts use tabular figures.
+System fonts through Tailwind's `--font-sans` (Segoe UI on Windows) and `--font-mono` for paths, keys, code and file contents. shadcn's components size their own text with Tailwind's scale (`text-sm`, `text-xs`; inputs are 16px on small screens so iOS does not zoom). The app's own text uses six sizes by role from `:root`: caption 12px (metadata, counts, code, list group names), small 13px (file paths), body 14px, title 16px (every h3), heading 18px (every h2), display 24px (h1). An h3 at body size read as one more label or row beside the 14px labels and row names under it, so a section heading takes a step of its own; steps of 1.125–1.2 suit a dense tool. They stay out of `@theme` on purpose: as `text-*` utilities, `cn` would read them as colours and drop one of a pair. Headings are semibold, labels and buttons medium. Headings balance their lines, descriptions use `text-wrap: pretty`, counts use tabular figures.
 
 ## Layout
 

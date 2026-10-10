@@ -75,6 +75,7 @@
   --text-caption: 0.75rem;
   --text-small: 0.8125rem;
   --text-body: 0.875rem;
+  --text-title: 1rem;
   --text-heading: 1.125rem;
   --text-display: 1.5rem;
 }
@@ -92,7 +93,7 @@
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   h1 { font-size: var(--text-display); font-weight: var(--font-weight-semibold); line-height: var(--leading-tight); letter-spacing: var(--tracking-tight); text-wrap: balance; }
   h2 { font-size: var(--text-heading); font-weight: var(--font-weight-semibold); line-height: var(--leading-snug); text-wrap: balance; }
-  h3 { font-size: var(--text-body); font-weight: var(--font-weight-semibold); }
+  h3 { font-size: var(--text-title); font-weight: var(--font-weight-semibold); line-height: var(--leading-snug); text-wrap: balance; }
   p { text-wrap: pretty; }
   /* Links in running text; a link styled with classes (buttonVariants, the skip link) brings its own colour. */
   a:not([class]) { color: var(--primary); text-underline-offset: 0.2em; text-decoration-thickness: from-font; }
@@ -303,7 +304,7 @@
   .tools-count { margin-inline-start: --spacing(1.5); color: var(--muted-foreground); font-weight: var(--font-weight-normal); font-variant-numeric: tabular-nums; }
   .tools-note { margin: --spacing(2) 0 --spacing(3); max-width: 72ch; color: var(--muted-foreground); font-size: var(--text-small); text-wrap: pretty; }
   .reach-part { margin-top: --spacing(8); }
-  .reach-part-title { margin: 0; padding-top: --spacing(4); border-top: 1px solid var(--border); font-size: var(--text-body); font-weight: var(--font-weight-semibold); }
+  .reach-part-title { margin: 0; padding-top: --spacing(4); border-top: 1px solid var(--border); }
   .source-group-title { display: flex; align-items: center; margin: --spacing(6) 0 --spacing(2); font-size: var(--text-small); font-weight: var(--font-weight-semibold); }
   .source-group:first-of-type > .source-group-title, .tools-note + .source-group > .source-group-title { margin-top: --spacing(3); }
   .source-group-title .source-tag { color: var(--foreground); font-size: var(--text-small); font-weight: var(--font-weight-semibold); }

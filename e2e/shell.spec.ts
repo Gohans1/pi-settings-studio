@@ -59,6 +59,15 @@ test("a list group's name reads as a label: smaller than its rows, in another co
   expect(group.textTransform).toBe("none");
 });
 
+test("a section heading in a detail reads above the settings under it, larger than their labels", async ({ page }) => {
+  await page.goto(server.url + "#general");
+  await page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: /^Sessions & context/ }).click();
+  const size = (element: Element) => parseFloat(getComputedStyle(element).fontSize);
+  const heading = await page.getByRole("heading", { name: "Advanced", exact: true }).evaluate(size);
+  const label = await page.getByText("Session directory", { exact: true }).evaluate(size);
+  expect(heading).toBeGreaterThan(label);
+});
+
 test("on a narrow screen the list and the chosen item take turns, with a way back", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(server.url + "#mcp");

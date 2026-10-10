@@ -144,7 +144,7 @@ describe("typography", () => {
   });
 
   test("the scale descends from page title to caption", () => {
-    const steps = ["display", "heading", "body", "small", "caption"].map((step) => tokens.get(`--text-${step}`));
+    const steps = ["display", "heading", "title", "body", "small", "caption"].map((step) => tokens.get(`--text-${step}`));
     const rem = steps.map((value) => Number(value?.match(/^([\d.]+)rem$/)?.[1]));
     expect(rem.every((size, i) => size > 0 && (i === 0 || size < (rem[i - 1] ?? 0)))).toBe(true);
   });
