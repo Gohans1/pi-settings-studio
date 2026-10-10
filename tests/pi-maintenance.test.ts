@@ -6,7 +6,8 @@ import { join } from "node:path";
 import { ConfigStore } from "../src/server/store.ts";
 import { createApp } from "../src/server/app.ts";
 import { jobRoutes } from "../src/server/jobs.ts";
-import { installedPiVersion } from "../src/server/pi-version.ts";
+import { installedPiVersion, piRoutes } from "../src/server/pi-version.ts";
+import { packageRegistry } from "./fixtures/package-registry.ts";
 import { projectRegistry } from "../src/server/projects.ts";
 
 const origin = "http://127.0.0.1:43123";
@@ -69,4 +70,43 @@ test("the installed Pi version is read from the package the pi command links to,
   await symlink(join(pkg, "dist", "cli.js"), join(root, "bin", "pi"));
   assert.equal(await installedPiVersion(join(root, "bin", "pi")), "9.8.7");
   assert.equal(await installedPiVersion(join(root, "bin", "missing")), undefined);
+});
+
+/** A pi command linked to a Pi package of this version, never run. */
+async function fakePi(root: string, version: string) {
+  const pkg = join(root, "pi-" + version, "node_modules", "@earendil-works", "pi-coding-agent");
+  await mkdir(join(pkg, "dist"), { recursive: true });
+  await writeFile(join(pkg, "package.json"), JSON.stringify({ name: "@earendil-works/pi-coding-agent", version }));
+  await writeFile(join(pkg, "dist", "cli.js"), "throw new Error('must not run');\n");
+  await symlink(join(pkg, "dist", "cli.js"), join(root, "pi-" + version, "pi"));
+  return join(root, "pi-" + version, "pi");
+}
+
+test("a newer Pi on npm is offered, and the answer is kept for a day, across restarts", async (t) => {
+  const { root, agent } = await agentFixture(t);
+  const registry = await packageRegistry(root);
+  t.after(() => registry.close());
+  await registry.configure(agent);
+  const bin = await fakePi(root, "1.0.0");
+  // A new routes object stands for a restarted app.
+  const ask = async () => (await piRoutes(agent, { checkUpdates: true, bin }).request("/")).json();
+  assert.equal((await ask()).latest, "2.0.0");
+  assert.equal((await ask()).latest, "2.0.0");
+  assert.deepEqual(registry.requests, ["@earendil-works/pi-coding-agent"]);
+});
+
+test("Pi's latest version is not looked up with update checks off, offline or skipped, nor offered when current", async (t) => {
+  const { root, agent } = await agentFixture(t);
+  const registry = await packageRegistry(root);
+  t.after(() => registry.close());
+  await registry.configure(agent);
+  const ask = async (bin: string, checkUpdates = true) => (await piRoutes(agent, { checkUpdates, bin }).request("/")).json();
+  const old = await fakePi(root, "1.0.0");
+  assert.equal((await ask(old, false)).latest, undefined);
+  for (const name of ["PI_OFFLINE", "PI_SKIP_VERSION_CHECK"]) {
+    process.env[name] = "1";
+    try { assert.equal((await ask(old)).latest, undefined); } finally { delete process.env[name]; }
+  }
+  assert.deepEqual(registry.requests, []);
+  assert.equal((await ask(await fakePi(root, "2.0.0"))).latest, undefined);
 });

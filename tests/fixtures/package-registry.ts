@@ -13,7 +13,7 @@ export async function packageRegistry(root: string) {
     await gate;
     if (unavailable) return new Response("Unavailable", { status: 503 });
     return Response.json({ name, "dist-tags": { latest }, versions: Object.fromEntries(
-      ["1.0.0", "1.5.0", "2.0.0"].map(version => [version, { name, version }])) });
+      [...new Set(["1.0.0", "1.5.0", "2.0.0", latest])].map(version => [version, { name, version }])) });
   } });
   async function configure(dir: string) {
     await mkdir(dir, { recursive: true });

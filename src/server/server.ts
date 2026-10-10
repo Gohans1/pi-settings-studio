@@ -6,7 +6,7 @@ export const DEFAULT_PORT = 4369;
 export type RunningServer = { url: string; close: () => Promise<void> };
 
 export async function startServer(options: {
-  agentDir: string; projectDir?: string; port?: number; staticDir?: string;
+  agentDir: string; projectDir?: string; port?: number; staticDir?: string; checkUpdates?: boolean;
 }): Promise<RunningServer> {
   const store = new ConfigStore({ global: options.agentDir });
   let app: ReturnType<typeof createApp> | undefined;
@@ -17,6 +17,6 @@ export async function startServer(options: {
   });
   // The bookmark uses localhost; WSL forwards it from the Windows browser.
   const origins = [`http://127.0.0.1:${server.port}`, `http://localhost:${server.port}`];
-  app = createApp({ store, agentDir: options.agentDir, projects: options.projectDir ? [options.projectDir] : [], origins, staticDir: options.staticDir ?? join(import.meta.dir, "../../dist/client") });
+  app = createApp({ store, agentDir: options.agentDir, projects: options.projectDir ? [options.projectDir] : [], origins, staticDir: options.staticDir ?? join(import.meta.dir, "../../dist/client"), checkUpdates: options.checkUpdates });
   return { url: `${origins[0]}/`, close: () => server.stop(true) };
 }

@@ -17,7 +17,7 @@ try {
     const rawAgentDir = values["agent-dir"] ?? process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
     const agentDir = resolve(rawAgentDir.replace(/^~(?=[/\\]|$)/, homedir()));
     // Projects come from Pi's sessions; --project adds one that has none yet.
-    const running = await startServer({ agentDir, projectDir: values.project && resolve(values.project), port });
+    const running = await startServer({ agentDir, projectDir: values.project && resolve(values.project), port, checkUpdates: true });
     process.stderr.write(`Pi Settings Studio: ${running.url}\n`);
     const stop = () => { void running.close().catch(() => { process.exitCode = 1; }); };
     process.once("SIGINT", stop);

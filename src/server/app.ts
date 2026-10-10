@@ -25,7 +25,11 @@ import { Inspections } from "./inspections.ts";
 
 // No login: the exact Host/Origin allowlist blocks browser-originated attacks (CSRF,
 // DNS rebinding). Same-user processes can edit the files directly; see SPEC.md.
-export type AppOptions = { store: ConfigStore; agentDir: string; origins: string[]; staticDir?: string; projects?: string[] };
+export type AppOptions = {
+  store: ConfigStore; agentDir: string; origins: string[]; staticDir?: string; projects?: string[];
+  /** Look for newer packages and Pi in the background (npm, Git). The app turns this on; tests choose. */
+  checkUpdates?: boolean;
+};
 const SCOPE = z.enum(["global", "project"]);
 
 /** Pi's defaults that depend on this machine, resolved with Pi's own code. The editor follows the environment Pi starts in, which may not be this app's. */
@@ -40,7 +44,7 @@ function machineDefaults(agentDir: string): Record<string, DefaultText> {
   };
 }
 
-export function createApp({ store, agentDir, origins, staticDir, projects = [] }: AppOptions) {
+export function createApp({ store, agentDir, origins, staticDir, projects = [], checkUpdates = false }: AppOptions) {
   const app = new Hono();
   const registry = projectRegistry(agentDir, projects);
   const packageChecks: import("./resources.ts").PackageUpdateCache = new Map();
@@ -148,7 +152,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [] }
   app.route("/api/themes", themeRoutes(store, registry, agentDir));
   app.route("/api/resource-files", resourceFileRoutes(store, registry, agentDir));
   app.route("/api/resource-paths", resourcePathRoutes(store, registry, agentDir));
-  app.route("/api/pi", piRoutes());
+  app.route("/api/pi", piRoutes(agentDir, { checkUpdates }));
   if (staticDir) app.get("*", serveStatic({ root: staticDir }));
   app.notFound(c => c.json({ error: "Not found." }, 404));
   app.onError((error, c) => {

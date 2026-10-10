@@ -139,7 +139,8 @@ export const removeSkill = (path: string, project?: string) => request<void>(wit
 export const restoreSkill = (path: string, project?: string) => request<void>(withProject("/api/resource-files/skill/restore", project), "POST", { path });
 export const createResource = (body: { scope: "global" | "project"; type: ResourceType; name: string; description?: string }, project?: string) =>
   request<{ type: ResourceType; path: string }>(withProject("/api/resource-files", project), "POST", body);
-export const loadPi = () => request<{ bin: string; installed?: string; builtFor: string }>("/api/pi");
+/** `latest` is a newer Pi on npm, when update checks found one. */
+export const loadPi = () => request<{ bin: string; installed?: string; builtFor: string; latest?: string }>("/api/pi");
 export const loadResourcePaths = (type: ResourceType, project?: string) => request<ResourcePathsView>(withProject(`/api/resource-paths?type=${type}`, project));
 export const changeResourcePath = (method: "POST" | "DELETE", body: { type: ResourceType; scope: Scope; revision: string; path: string }, project?: string) =>
   request<ResourcePathsView>(withProject("/api/resource-paths", project), method, body);
