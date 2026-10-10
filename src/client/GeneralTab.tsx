@@ -1,16 +1,15 @@
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { BellRing, Brain, ChevronDown, CircleAlert, FileJson, History, Image, Info, Keyboard, Lock, MessagesSquare, Monitor, Network, RotateCcw,
   SearchX, SquareTerminal, Wrench, type LucideIcon } from "lucide-react";
-import { defaultText, fields, fileChange, isPiDefault, sections, type Field, type SettingsChange, type SettingsView } from "../shared/settings";
+import { fields, isPiDefault, sections, type SettingsView } from "../shared/settings";
 import { loadAvailableModels, loadPi, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
-import { SettingField } from "./SettingField";
+import { focusSetting, SaveBar, useSettingDraft } from "./SettingsForm";
 import { modelSuggestions, type Suggestion } from "./SuggestInput";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
-import { FieldGroup, FieldSeparator } from "./components/ui/field";
 import { ItemGroup } from "./components/ui/item";
 import { Separator } from "./components/ui/separator";
 import { Feedback } from "./Feedback";
@@ -40,7 +39,6 @@ export function GeneralTab({ project }: { project?: string }) {
   const saveRaw = useCallback((revision: string, text: string) => saveRawSettings(revision, text, scope, target), [scope, target]);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<SettingsView>();
-  const [draft, setDraft] = useState<Record<string, SettingsChange>>({});
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,21 +55,12 @@ export function GeneralTab({ project }: { project?: string }) {
   useEffect(() => { loadAvailableModels(project).then(found => setModels(modelSuggestions(found))).catch(() => setModels([])); }, [project]);
   useEffect(() => { loadPi().then(found => setPi(found.installed)).catch(() => setPi(undefined)); }, []);
   const title = useRef<HTMLHeadingElement>(null);
-  const inFile = (key: string) => !!view && (Object.hasOwn(view.values, key) || view.invalid.includes(key));
-  // What Save writes: each draft edit as an edit of the file (VS Code's way: shared/settings.ts fileChange),
-  // and nothing for an edit that comes to no change.
-  const changes = Object.values(draft).flatMap(change => {
-    const parsed = "value" in change ? fieldOf(change.key).schema.safeParse(change.value) : undefined;
-    const written = fileChange(fieldOf(change.key), parsed?.success ? { key: change.key, value: parsed.data } : change, scope, inFile(change.key));
-    return written ? [written] : [];
-  });
-  const invalidKeys = changes.filter(change => "value" in change && !fieldOf(change.key).schema.safeParse(change.value).success).map(change => change.key);
-  const unsaved = (key: string) => changes.some(change => change.key === key);
+  const { changes, invalidKeys, unsaved, valueOf, rows, discard } = useSettingDraft(view, { project, models, onEdit: () => setMessage("") });
 
   useEffect(() => {
     let active = true;
     setLoading(true); setError(""); setMessage(""); setView(undefined);
-    setDraft({});
+    discard();
     void loadSettings(scope, target).then(data => {
       if (active) setView(data);
     }).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
@@ -84,24 +73,6 @@ export function GeneralTab({ project }: { project?: string }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [changes.length]);
 
-  function change(key: string, value: unknown) {
-    setMessage("");
-    setDraft(current => {
-      const next = { ...current };
-      if (JSON.stringify(view?.values[key]) === JSON.stringify(value)) delete next[key];
-      else next[key] = { key, value };
-      return next;
-    });
-  }
-  function reset(key: string) {
-    setDraft(current => {
-      const next = { ...current };
-      if (view && Object.hasOwn(view.values, key)) next[key] = { key, remove: true };
-      else delete next[key];
-      return next;
-    });
-    setMessage("");
-  }
   async function save() {
     if (!view) return;
     // Pi would refuse the file: take the reader to the first value to fix, and write nothing.
@@ -109,13 +80,13 @@ export function GeneralTab({ project }: { project?: string }) {
       // It may sit in another group, or outside the search: show its group first.
       const field = fieldOf(invalidKeys[0]!);
       flushSync(() => { setQuery(""); setPane(field.section); setOpen(true); });
-      document.getElementById("row-" + field.key)?.querySelector<HTMLElement>("[data-slot=input], [data-slot=input-group-control], [data-slot=textarea], [data-slot=select-trigger], [data-slot=switch]")?.focus();
+      focusSetting(field.key);
       return;
     }
     setBusy(true); setError(""); setMessage("");
     try {
       setView(await saveSettings(scope, view.revision, changes, target));
-      setDraft({}); setMessage("Saved to file. Reload Pi or start a new session to apply supported settings.");
+      discard(); setMessage("Saved to file. Reload Pi or start a new session to apply supported settings.");
       title.current?.focus({ preventScroll: true });
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Save failed. Your draft is unchanged."); }
     finally { setBusy(false); }
@@ -147,7 +118,7 @@ export function GeneralTab({ project }: { project?: string }) {
   async function closeRaw(saved: boolean) {
     setRaw(false);
     if (!saved) return;
-    setDraft({});
+    discard();
     setError("");
     setLoading(true);
     try { setView(await loadSettings(scope, target)); setMessage("Saved settings.json. Applies to new Pi sessions, or after /reload."); }
@@ -155,23 +126,6 @@ export function GeneralTab({ project }: { project?: string }) {
     finally { setLoading(false); }
   }
   const openRaw = () => { setRaw(true); setMessage(""); };
-  const valueOf = (key: string) => {
-    const edit = draft[key];
-    return edit ? ("value" in edit ? edit.value : undefined) : view?.values[key];
-  };
-  const row = (field: Field) => {
-    if (!view) return null;
-    const edit = draft[field.key];
-    const overridden = edit ? "value" in edit : Object.hasOwn(view.values, field.key);
-    const value = edit ? "value" in edit ? edit.value : view.inherited[field.key] : view.values[field.key] ?? view.inherited[field.key];
-    return <SettingField key={field.key} field={field} value={value} inherited={view.inherited[field.key]} overridden={overridden} scope={scope} project={project} models={models}
-      disabled={scope === "project" && !!field.globalOnly}
-      invalid={invalidKeys.includes(field.key) || (!edit && view.invalid.includes(field.key))}
-      piDefault={defaultText(field, view.defaults, key => valueOf(key) ?? view.inherited[key])}
-      isDefault={isPiDefault(field, valueOf(field.key))} unsaved={unsaved(field.key)}
-      onChange={value => change(field.key, value)} onReset={() => reset(field.key)} />;
-  };
-  const rows = (list: Field[]) => <FieldGroup>{list.map((field, index) => <Fragment key={field.key}>{index > 0 && <FieldSeparator />}{row(field)}</Fragment>)}</FieldGroup>;
   // What a group's row in the list says: matches while searching, else unsaved edits, else what differs.
   const groupState = (id: string): ReactNode => {
     const own = results.filter(field => field.section === id);
@@ -242,13 +196,8 @@ export function GeneralTab({ project }: { project?: string }) {
     {loading ? <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : view && <Workbench open={open} onBack={() => setOpen(false)} backLabel="All groups" list={list}
       detail={current ? <div className="detail">
         {detail}
-        {changes.length > 0 && <div className="save-bar" role="region" aria-label="Unsaved changes">
-          <p>{count(changes.length, "unsaved change", "unsaved changes")}</p>
-          <div className="actions">
-            <Button variant="outline" disabled={busy} onClick={() => { setDraft({}); setError(""); setMessage("Draft discarded. No file was changed."); }}>Discard</Button>
-            <Button disabled={busy} onClick={() => void save()}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save"}</Button>
-          </div>
-        </div>}
+        {changes.length > 0 && <SaveBar count={changes.length} busy={busy} onSave={() => void save()}
+          onDiscard={() => { discard(); setError(""); setMessage("Draft discarded. No file was changed."); }} />}
       </div> : <EmptyDetail icon={SearchX} title="No settings match">Try a label such as “model” or “budget”, or a key.</EmptyDetail>} />}
     <AlertDialog open={restore} onOpenChange={setRestore}>
       <AlertDialogContent>
