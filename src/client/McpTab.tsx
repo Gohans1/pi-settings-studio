@@ -118,7 +118,8 @@ export function McpTab({ project }: { project?: string }) {
   const [codemode, setCodemode] = useState<CodemodeView>();
   const [codemodeScope, setCodemodeScope] = useState<"global" | "project">("global");
   const codemodeProject = codemodeScope === "project" ? project : undefined;
-  const [selected, setSelected] = useState<Selection>();
+  // A link to #mcp/codemode opens on Code mode.
+  const [selected, setSelected] = useState<Selection | undefined>(() => location.hash.split("/")[1] === "codemode" ? "codemode" : undefined);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -143,7 +144,8 @@ export function McpTab({ project }: { project?: string }) {
       setViews({ global, project: local }); setCodemode(code);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the MCP settings."); }
   }
-  useEffect(() => { setSelected(undefined); setForm(undefined); setRawScope(undefined); setLog(undefined); setCodemodeScope("global"); }, [project]);
+  // Code mode is in every project, so it stays chosen; a server may not be.
+  useEffect(() => { setSelected(current => current === "codemode" ? current : undefined); setForm(undefined); setRawScope(undefined); setLog(undefined); setCodemodeScope("global"); }, [project]);
   useEffect(() => { void refresh(); }, [project, codemodeProject]);
 
   async function run(scope: "global" | "project", change: (revision: string) => Promise<McpFileView>, done: string, options: { undoable?: boolean } = {}) {

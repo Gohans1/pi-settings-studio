@@ -356,6 +356,21 @@ test("startup tools are a checklist that saves modifiers against Pi's defaults",
   expect((await new AxeBuilder({ page }).include("#row-defaultTools").analyze()).violations).toEqual([]);
 });
 
+test("startup tools show Code mode's state in words, not as a checkbox", async ({ page }) => {
+  const tools = page.getByRole("group", { name: "Startup tools" });
+  await expect(tools.getByRole("checkbox", { name: "codemode", exact: true })).toHaveCount(0);
+  await expect(tools.getByText("Automatic.", { exact: true })).toBeVisible();
+  await writeFile(file, JSON.stringify({ defaultTools: ["+codemode"] }));
+  await page.reload();
+  await expect(tools.getByText("Always on here; Pi's default is automatic.", { exact: true })).toBeVisible();
+});
+
+test("the Code mode link in startup tools opens MCP › Code mode", async ({ page }) => {
+  await page.getByRole("group", { name: "Startup tools" }).getByRole("link", { name: "MCP › Code mode" }).click();
+  await expect(page).toHaveURL(/#mcp\/codemode$/);
+  await expect(page.getByRole("region", { name: "Code mode" }).getByRole("radio", { name: /Automatic/ })).toBeChecked();
+});
+
 test("the list opens on everyday groups, with the terminal-only ones last", async ({ page }) => {
   const groups = page.getByRole("region", { name: "Setting groups" });
   await expect(groups.getByRole("button")).toHaveText([/^Pi/, /^Tools/, /^Messages & interaction/, /^Models & thinking/, /^Sessions & context/, /^Shell & packages/,
