@@ -17,6 +17,7 @@ import { EmptyDetail, ListItem, MoreMenu, Workbench } from "./Workbench";
 import { SearchField } from "./SearchField";
 import { FilePath } from "./PageHeader";
 import { ResourceFolders, type FolderChange } from "./ResourceFolders";
+import { SettingsForm } from "./SettingsForm";
 
 /** What Undo in the last message takes back: a settings.json write, a change of invocation, or a removed skill. */
 type Undo = { settings: NonNullable<FolderChange["undo"]> } | { paths: string[]; allowed: boolean } | { removed: ResourceView };
@@ -58,7 +59,7 @@ export function SkillsTab({ project }: { project?: string }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<"edit" | "new" | "folders">();
+  const [mode, setMode] = useState<"edit" | "new" | "folders" | "commands">();
   const [undo, setUndo] = useState<Undo>();
   const [folders, setFolders] = useState(0);
 
@@ -145,7 +146,8 @@ export function SkillsTab({ project }: { project?: string }) {
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></Alert>}
     {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading skills…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode(undefined); }} backLabel="All skills" list={<section aria-label="Skills list">
       <div className="list-search"><SearchField label="Search skills" placeholder="Search skills…" value={query} onChange={setQuery} /></div>
-      <ItemGroup><div role="listitem" className="list-row"><ListItem selected={mode === "folders"} onSelect={() => { setMode("folders"); setSelected(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds skills" /></div></ItemGroup>
+      <ItemGroup><div role="listitem" className="list-row"><ListItem selected={mode === "folders"} onSelect={() => { setMode("folders"); setSelected(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds skills" /></div>
+        <div role="listitem" className="list-row"><ListItem selected={mode === "commands"} onSelect={() => { setMode("commands"); setSelected(undefined); }} icon={SquareSlash} name="Skill commands" state="/skill:name" /></div></ItemGroup>
       <Separator className="mt-2" />
       <p className="list-count">{skills.filter(skill => skill.enabled).length} of {skills.length} skills on{shadowed > 0 && `, ${shadowed} not loaded (same name)`}</p>
       {!visible.length && <Empty><EmptyHeader><EmptyDescription>{skills.length ? `No skills match “${query.trim()}”.` : "No skills found. Create one, or add skill folders to ~/.pi/agent/skills."}</EmptyDescription></EmptyHeader></Empty>}
@@ -173,6 +175,8 @@ export function SkillsTab({ project }: { project?: string }) {
         </div>;
       })}
     </section>} detail={mode === "folders" ? <div className="detail"><ResourceFolders key={folders} type="skills" project={project} level={2} onChanged={folderChanged} /></div>
+        : mode === "commands" ? <section className="detail" aria-labelledby="commands-title"><header className="detail-header"><h2 id="commands-title">Skill commands</h2></header>
+          <SettingsForm section="skills" project={project} onSaved={text => { setMessage(text); setUndo(undefined); }} /></section>
         : mode === "new" ? <NewResourceForm type="skills" project={project} onCancel={() => setMode(undefined)}
           onCreated={async (path, name) => { await refresh(); setSelected(path); setMode("edit"); setMessage(`Created ${name}. Applies to new Pi sessions, or after /reload.`); }} />
         : current && mode === "edit" ? <ResourceEditor key={current.path} type="skills" path={current.path} name={current.name} editable={current.origin === "top-level"}

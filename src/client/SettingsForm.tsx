@@ -1,7 +1,12 @@
-import { Fragment, useState } from "react";
-import { defaultText, fields, fileChange, isPiDefault, type Field, type SettingsChange, type SettingsView } from "../shared/settings";
+import { Fragment, useEffect, useState } from "react";
+import { CircleAlert } from "lucide-react";
+import { defaultText, fields, fileChange, isPiDefault, type Field, type SectionId, type SettingsChange, type SettingsView } from "../shared/settings";
+import { loadSettings, saveSettings } from "./api";
+import { FilePath } from "./PageHeader";
+import { ScopeChoice, type Scope } from "./ScopeChoice";
 import { SettingField } from "./SettingField";
 import type { Suggestion } from "./SuggestInput";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 import { FieldGroup, FieldSeparator } from "./components/ui/field";
 import { Spinner } from "./components/ui/spinner";
@@ -79,4 +84,47 @@ export function SaveBar({ count, busy, onDiscard, onSave }: { count: number; bus
       <Button disabled={busy} onClick={onSave}>{busy && <Spinner data-icon="inline-start" aria-hidden="true" />}{busy ? "Saving…" : "Save"}</Button>
     </div>
   </div>;
+}
+
+/**
+ * A section of settings.json that a tab edits beside its own items: its rows in the global file or the chosen
+ * project's, and a save bar once something changes.
+ */
+export function SettingsForm({ section, project, onSaved }: { section: SectionId; project?: string; onSaved: (message: string) => void }) {
+  const [scopeChoice, setScopeChoice] = useState<Scope>("global");
+  const scope = project ? scopeChoice : "global";
+  const target = scope === "project" ? project : undefined;
+  const [view, setView] = useState<SettingsView>();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const { changes, invalidKeys, rows, discard } = useSettingDraft(view, { project });
+  useEffect(() => {
+    let active = true;
+    setView(undefined); setError(""); discard();
+    loadSettings(scope, target).then(data => { if (active) setView(data); })
+      .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "Could not read settings.json."); });
+    return () => { active = false; };
+  }, [scope, target]);
+
+  async function save() {
+    if (!view) return;
+    // Pi would refuse the file: take the reader to the first value to fix, and write nothing.
+    if (invalidKeys.length) { focusSetting(invalidKeys[0]!); return; }
+    setBusy(true); setError("");
+    try {
+      setView(await saveSettings(scope, view.revision, changes, target));
+      discard();
+      onSaved("Saved to settings.json. Applies to new Pi sessions, or after /reload.");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Save failed. Your draft is unchanged."); }
+    finally { setBusy(false); }
+  }
+  return <>
+    {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global settings" disabled={busy || !!changes.length} onChange={setScopeChoice} />}
+    {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <>
+      {rows(fields.filter(field => field.section === section))}
+      <p className="scope-footnote">In <FilePath path={view.path} />. Saved values apply to new Pi sessions, or after /reload.</p>
+    </>}
+    {changes.length > 0 && <SaveBar count={changes.length} busy={busy} onSave={() => void save()} onDiscard={() => { discard(); setError(""); }} />}
+  </>;
 }

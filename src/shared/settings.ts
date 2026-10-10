@@ -16,8 +16,8 @@ export const sections = [
   { id: "terminal", title: "Terminal UI", note: "Only affects Pi in a terminal." },
 ] as const;
 // Keys another tab edits, which General does not list: Models › Defaults has its own controls for
-// "modelDefaults" and shows "models" as rows below them.
-export type SectionId = typeof sections[number]["id"] | "modelDefaults" | "models";
+// "modelDefaults" and shows "models" as rows below them; Skills shows "skills".
+export type SectionId = typeof sections[number]["id"] | "modelDefaults" | "models" | "skills";
 
 export type Option = { label: string; value: string | number | boolean };
 /** Pi's default in words, and what it depends on. */
@@ -72,7 +72,7 @@ export const fields: Field[] = [
   { key: "thinkingBudgets.medium", label: "Thinking budget: medium", section: "models", advanced: true, help: "Token budget for the medium thinking level.", defaultValue: 8192, ...number() },
   { key: "thinkingBudgets.high", label: "Thinking budget: high", section: "models", advanced: true, help: "Token budget for the high thinking level.", defaultValue: 16384, ...number() },
   // Messages & interaction
-  { key: "enableSkillCommands", label: "Skill commands", section: "interaction", help: "Register skills as /skill:name commands. Typed /skill:name commands work either way.", defaultValue: true, ...bool },
+  { key: "enableSkillCommands", label: "Skill commands", section: "skills", help: "Register skills as /skill:name commands. Typed /skill:name commands work either way.", defaultValue: true, ...bool },
   { key: "steeringMode", label: "Steering delivery", section: "interaction", help: "How queued steering messages are delivered.", defaultValue: "one-at-a-time", ...select(choices("one-at-a-time", "all")) },
   { key: "followUpMode", label: "Follow-up delivery", section: "interaction", help: "How queued follow-up messages are delivered.", defaultValue: "one-at-a-time", ...select(choices("one-at-a-time", "all")) },
   { key: "defaultProjectTrust", globalOnly: true, label: "Default project trust", section: "interaction", help: "Fallback when a project has no saved trust decision. Global setting only.", defaultValue: "ask", ...select(choices("ask", "always", "never")) },
