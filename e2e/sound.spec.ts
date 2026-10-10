@@ -77,7 +77,8 @@ test("one action plays one cue, from the control or from its label", async ({ pa
   await group(page, "Sessions & context");
   expect(await delta(() => page.getByRole("switch", { name: "Automatic compaction" }).click())).toBe(one);
   expect(await delta(() => page.getByRole("switch", { name: "Automatic compaction" }).press("Space"))).toBe(one);
-  await group(page, "Tools");
+  await page.getByRole("tab", { name: "Tools" }).click();
+  await page.getByRole("region", { name: "Tool views and sources" }).getByRole("button", { name: /^Startup tools/ }).click();
   expect(await delta(() => page.getByRole("checkbox", { name: "grep" }).click())).toBe(one);
   expect(await delta(() => page.locator("label[for='tool-grep']").click())).toBe(one);
 });

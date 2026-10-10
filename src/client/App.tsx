@@ -29,7 +29,7 @@ const tabs: { id: string; label: string; icon: typeof SlidersHorizontal; Panel: 
   { id: "system-prompt", label: "System prompt", icon: ScrollText, Panel: SystemPromptTab },
 ];
 
-/** #tab, or #tab/entry where a tab opens on one of its entries (General's groups, Models' Defaults). */
+/** #tab, or #tab/entry where a tab opens on one of its entries (General's groups, Models' Defaults, Tools' Startup tools). */
 function tabFromHash(): string {
   const id = location.hash.slice(1).split("/")[0]!;
   return tabs.some(tab => tab.id === id) ? id : tabs[0]!.id;

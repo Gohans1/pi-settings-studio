@@ -17,7 +17,7 @@ function piSettingKeys(): string[] {
   return flatten("Settings", "");
 }
 
-test("every Pi setting has a home: a General field, another tab, raw JSON or internal", () => {
+test("every Pi setting has a home: a settings row, another tab, raw JSON or internal", () => {
   const known = new Set([...fields.map(field => field.key), ...Object.keys(settingHomes)]);
   const missing = piSettingKeys().filter(key => !known.has(key));
   assert.deepEqual(missing, [], `Pi has settings this app does not cover yet. Add a field or a home for: ${missing.join(", ")}`);

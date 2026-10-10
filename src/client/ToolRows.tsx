@@ -12,7 +12,7 @@ export const REACH: Record<Reach, { label: string; short: string; icon: LucideIc
   hidden: { label: "Hidden", short: "hidden", icon: EyeOff, variant: "ghost" },
 };
 export const FAMILY_ICON: Record<Family, LucideIcon> = { pi: SquareTerminal, extension: Puzzle, mcp: Server };
-export const TAB_NAMES: Record<Source["tab"], string> = { general: "General", plugins: "Plugins", mcp: "MCP" };
+export const TAB_NAMES: Record<Source["tab"], string> = { "tools/startup": "Startup tools", plugins: "Plugins", mcp: "MCP" };
 const EXPOSURE: Record<string, string> = {
   direct: "Direct: declared while on", "model-only": "Model only: declared while on, never called by other tools",
   codemode: "Code mode: called from code mode scripts", deferred: "Deferred: loaded by tool search or called from code mode", hidden: "Hidden: nothing reaches it",

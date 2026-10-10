@@ -10,8 +10,8 @@ export type Source = {
   key: string; family: Family; title: string; detail?: string;
   /** off: turned off in settings, so Pi loads none of its tools; empty: on, but registering none. */
   status: "on" | "off" | "empty";
-  /** The tab where the source is changed. */
-  tab: "general" | "plugins" | "mcp";
+  /** Where the source is changed: a tab, or Tools' own Startup tools. */
+  tab: "tools/startup" | "plugins" | "mcp";
   tools: Tool[]; counts: Record<Reach, number>;
 };
 export type Catalog = { tools: Tool[]; sources: Source[]; byKey: Map<string, Source>; gateways: { codemode: boolean; toolSearch: boolean } };
@@ -26,12 +26,12 @@ const zero = (): Record<Reach, number> => ({ sees: 0, demand: 0, off: 0, hidden:
 export const isOff = (tool: Tool) => tool.reach === "off" || tool.reach === "hidden";
 
 function describe(source: ToolSource): Pick<Source, "key" | "family" | "title" | "detail" | "tab"> {
-  if (source.kind === "pi") return { key: "pi", family: "pi", title: "Core tools", detail: "Pi's own tools", tab: "general" };
+  if (source.kind === "pi") return { key: "pi", family: "pi", title: "Core tools", detail: "Pi's own tools", tab: "tools/startup" };
   if (source.kind === "mcp") return { key: `mcp:${source.server}`, family: "mcp", title: source.server, tab: "mcp" };
   // Built-in extensions (code mode, tool search) belong with Pi's own tools.
   const builtIn = source.group === "Built-in";
   return { key: `extension:${source.group ?? ""}:${source.name}`, family: builtIn ? "pi" : "extension",
-    title: builtIn ? BUILT_IN[source.name] ?? source.name : source.name, detail: builtIn ? "Built-in extension" : source.group, tab: builtIn ? "general" : "plugins" };
+    title: builtIn ? BUILT_IN[source.name] ?? source.name : source.name, detail: builtIn ? "Built-in extension" : source.group, tab: builtIn ? "tools/startup" : "plugins" };
 }
 
 export function buildCatalog(view: ToolsView): Catalog {

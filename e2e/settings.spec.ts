@@ -28,7 +28,7 @@ test("while the settings load, a spinner says so", async ({ page }) => {
   await expect(page.getByText("Reading settings…")).toBeVisible();
   await expect(page.getByRole("status", { name: "Loading" })).toBeVisible();
   release();
-  await expect(page.getByRole("heading", { name: "Tools" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Messages & interaction" })).toBeVisible();
   await expect(page.getByRole("status", { name: "Loading" })).toHaveCount(0);
   await page.unrouteAll({ behavior: "wait" });
 });
@@ -277,11 +277,11 @@ test("unsaved changes keep their save action in view while scrolling", async ({ 
 
 test("choosing a group shows its settings beside the list", async ({ page }) => {
   const groups = page.getByRole("region", { name: "Setting groups" });
-  await expect(groups.getByRole("button", { name: /^Tools/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(groups.getByRole("button", { name: /^Messages & interaction/ })).toHaveAttribute("aria-pressed", "true");
   await open(page, "Network & retries");
   await expect(page.getByRole("heading", { name: "Network & retries" })).toBeVisible();
   await expect(groups.getByRole("button", { name: /^Network & retries/ })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("group", { name: "Startup tools" })).toBeHidden();
+  await expect(page.getByRole("combobox", { name: "Steering delivery" })).toBeHidden();
 });
 
 test("on a narrow screen the list comes first, then one group with a way back", async ({ page }) => {
@@ -317,7 +317,7 @@ test("the list counts the settings each group changes from Pi's default and mark
 });
 
 test("slash moves to the search field unless the reader is typing", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: "Tools" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Messages & interaction" })).toBeVisible();
   await page.keyboard.press("/");
   await expect(page.getByRole("searchbox", { name: "Search settings" })).toBeFocused();
   await open(page, "Shell");
@@ -326,41 +326,9 @@ test("slash moves to the search field unless the reader is typing", async ({ pag
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toHaveValue("a/");
 });
 
-test("startup tools are a checklist that saves modifiers against Pi's defaults", async ({ page }) => {
-  const tools = page.getByRole("group", { name: "Startup tools" });
-  await expect(tools.getByRole("checkbox", { name: "read", exact: true })).toBeChecked();
-  await expect(tools.getByRole("checkbox", { name: "grep", exact: true })).not.toBeChecked();
-  await tools.getByRole("checkbox", { name: "grep", exact: true }).check();
-  await tools.getByRole("checkbox", { name: "write", exact: true }).uncheck();
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
-  expect(JSON.parse(await readFile(file, "utf8")).defaultTools).toEqual(["+grep", "-write"]);
-  await tools.getByRole("checkbox", { name: "grep", exact: true }).uncheck();
-  await tools.getByRole("checkbox", { name: "write", exact: true }).check();
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Saved to file");
-  expect(JSON.parse(await readFile(file, "utf8")).defaultTools).toBeUndefined();
-  expect((await new AxeBuilder({ page }).include("#row-defaultTools").analyze()).violations).toEqual([]);
-});
-
-test("startup tools show Code mode's state in words, not as a checkbox", async ({ page }) => {
-  const tools = page.getByRole("group", { name: "Startup tools" });
-  await expect(tools.getByRole("checkbox", { name: "codemode", exact: true })).toHaveCount(0);
-  await expect(tools.getByText("Automatic.", { exact: true })).toBeVisible();
-  await writeFile(file, JSON.stringify({ defaultTools: ["+codemode"] }));
-  await page.reload();
-  await expect(tools.getByText("Always on here; Pi's default is automatic.", { exact: true })).toBeVisible();
-});
-
-test("the Code mode link in startup tools opens MCP › Code mode", async ({ page }) => {
-  await page.getByRole("group", { name: "Startup tools" }).getByRole("link", { name: "MCP › Code mode" }).click();
-  await expect(page).toHaveURL(/#mcp\/codemode$/);
-  await expect(page.getByRole("region", { name: "Code mode" }).getByRole("radio", { name: /Automatic/ })).toBeChecked();
-});
-
 test("the list opens on everyday groups, with the terminal-only ones last", async ({ page }) => {
   const groups = page.getByRole("region", { name: "Setting groups" });
-  await expect(groups.getByRole("button")).toHaveText([/^Pi/, /^Tools/, /^Messages & interaction/, /^Sessions & context/, /^Shell/,
+  await expect(groups.getByRole("button")).toHaveText([/^Pi/, /^Messages & interaction/, /^Sessions & context/, /^Shell/,
     /^Images/, /^Updates, telemetry & warnings/, /^Network & retries/, /^Terminal UI/, /^Keyboard shortcuts/, /^Not editable here/]);
 });
 

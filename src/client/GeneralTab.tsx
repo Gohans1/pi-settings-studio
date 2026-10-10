@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { BellRing, ChevronDown, CircleAlert, FileJson, History, Image, Info, Keyboard, Lock, MessagesSquare, Monitor, Network, RotateCcw,
-  SearchX, SquareTerminal, Wrench, type LucideIcon } from "lucide-react";
+  SearchX, SquareTerminal, type LucideIcon } from "lucide-react";
 import { fields, isPiDefault, sections, type SettingsView } from "../shared/settings";
 import { loadAvailableModels, loadPi, loadRawSettings, loadSettings, restoreSettings, saveRawSettings, saveSettings } from "./api";
 import { focusSetting, SaveBar, useSettingDraft } from "./SettingsForm";
@@ -25,7 +25,7 @@ import { Spinner } from "./components/ui/spinner";
 
 // Entries pinned around the groups: the installed Pi above them; shortcuts and what is not editable below.
 const PI = "pi", KEYBINDINGS = "keybindings", ELSEWHERE = "elsewhere";
-const icons: Record<string, LucideIcon> = { tools: Wrench, interaction: MessagesSquare, context: History, shell: SquareTerminal,
+const icons: Record<string, LucideIcon> = { interaction: MessagesSquare, context: History, shell: SquareTerminal,
   images: Image, updates: BellRing, network: Network, terminal: Monitor };
 const fieldOf = (key: string) => fields.find(field => field.key === key)!;
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;

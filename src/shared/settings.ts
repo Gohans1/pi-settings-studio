@@ -7,7 +7,6 @@ import { DEFAULT_TOOLS, effectiveTools } from "./tools";
 
 // In page order: the groups people change most come first; terminal-only ones last.
 export const sections = [
-  { id: "tools", title: "Tools" },
   { id: "interaction", title: "Messages & interaction" },
   { id: "context", title: "Sessions & context" },
   { id: "shell", title: "Shell" },
@@ -17,8 +16,9 @@ export const sections = [
   { id: "terminal", title: "Terminal UI", note: "Only affects Pi in a terminal." },
 ] as const;
 // Keys another tab edits, which General does not list: Models › Defaults has its own controls for
-// "modelDefaults" and shows "models" as rows below them; Skills shows "skills", Plugins › Packages "packages".
-export type SectionId = typeof sections[number]["id"] | "modelDefaults" | "models" | "skills" | "packages";
+// "modelDefaults" and shows "models" as rows below them; Tools › Startup tools shows "tools", Skills "skills"
+// and Plugins › Packages "packages".
+export type SectionId = typeof sections[number]["id"] | "modelDefaults" | "models" | "tools" | "skills" | "packages";
 
 export type Option = { label: string; value: string | number | boolean };
 /** Pi's default in words, and what it depends on. */
@@ -143,7 +143,7 @@ export const fields: Field[] = [
   { key: "markdown.mermaid", label: "Mermaid diagrams", section: "terminal", advanced: true, help: "Mermaid rendering mode.", defaultValue: "streaming", ...select(choices("streaming", "final", "off")) },
 ];
 
-/** Settings Pi has that the General tab deliberately does not edit, and where they live instead. */
+/** Settings Pi has that no settings row edits, and where they live instead. */
 export const settingHomes: Record<string, string> = {
   "codemode.mode": "MCP tab",
   "codemode.inlineBudget": "MCP tab",

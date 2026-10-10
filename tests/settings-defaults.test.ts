@@ -90,7 +90,7 @@ test("the provider timeout defaults to the HTTP idle timeout, whatever that is s
   assert.deepEqual(defaultText(field("retry.provider.timeoutMs"), {}, none), { value: "300,000", note: "same as the HTTP idle timeout" });
 });
 
-test("every General field without one fixed default says what Pi uses", () => {
+test("every settings row without one fixed default says what Pi uses", () => {
   const machine = ["shellPath", "externalEditor", "sessionDir"];
   const silent = fields.filter(entry => entry.section !== "modelDefaults" && entry.defaultValue === undefined && !machine.includes(entry.key)
     && defaultText(entry, {}, none).value === "none" && !entry.defaultText);
