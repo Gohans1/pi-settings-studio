@@ -1,10 +1,12 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { McpFileView, McpOAuthInput, McpOAuthView, McpServerInput, McpServerView, NamedValue } from "../shared/mcp.ts";
+import type { McpFileView, McpOAuthInput, McpOAuthView, McpServerInput, McpServerView, McpStatusView, NamedValue } from "../shared/mcp.ts";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { isRecord, MCP_EXPOSURES, mcpNamespace, readMcpServers, updateMcpServer, type McpEntry } from "./mcp-config.ts";
-import { knownSecrets, redact } from "./jobs.ts";
+import { knownSecrets, piCommand, redact } from "./jobs.ts";
+import { Inspections } from "./inspections.ts";
+import { inspectionStamp, redacted } from "./resources.ts";
 import { maskArgs, maskUrl, unmaskArgs, unmaskUrl } from "./mcp-secrets.ts";
 import { maskJson, mcpSecrets, unmaskJson } from "./json-secrets.ts";
 import { convertMcpConfig } from "./mcp-import.ts";
@@ -216,7 +218,26 @@ function assertAccepted(file: Record<string, unknown>, name: string, base?: Map<
 const SCOPE = z.enum(["global", "project"]);
 type Context = { scope: Scope; store: ConfigStore; base?: Map<string, McpServerConfig> };
 
-export function mcpRoutes(store: ConfigStore, registry: ProjectRegistry) {
+const statusSchema = z.object({
+  servers: z.array(z.object({ name: z.string(), enabled: z.boolean(), state: z.string(), tools: z.array(z.string()), error: z.string().optional() })),
+  errors: z.array(z.string()),
+});
+
+/** `pi mcp list --json`, Pi's own report: it starts each enabled server, as a session would, and closes it. */
+async function listServers(command: string[], cwd: string, agentDir: string, signal: AbortSignal): Promise<McpStatusView> {
+  const child = Bun.spawn([...command, "mcp", "list", "--json"], {
+    cwd, stdin: "ignore", stdout: "pipe", stderr: "ignore", env: { ...process.env, PI_CODING_AGENT_DIR: agentDir, NO_COLOR: "1" },
+    signal: AbortSignal.any([signal, AbortSignal.timeout(60_000)]), killSignal: "SIGKILL",
+  });
+  const [text] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+  // Pi exits with 1 when a server is not connected; the report still says which.
+  let parsed;
+  try { parsed = statusSchema.parse(JSON.parse(text)); } catch { throw new ConfigError("Pi did not report the MCP servers. Try Test connections, or View mcp.log.", 502); }
+  const servers = parsed.servers.map(({ name, enabled, state, tools, error }) => ({ name, enabled, state, tools, ...(error ? { error } : {}) }));
+  return { checkedAt: new Date().toISOString(), complete: true, servers, errors: parsed.errors };
+}
+
+export function mcpRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string, inspections = new Inspections(), command = piCommand()) {
   /** Global servers, which a project file can override or replace. */
   async function globalServers(): Promise<Map<string, McpServerConfig>> {
     try {
@@ -253,7 +274,17 @@ export function mcpRoutes(store: ConfigStore, registry: ProjectRegistry) {
   const importText = z.string().min(1).max(60_000);
 
   return new Hono()
-    // Before the /:scope routes, which would take "log" for a scope.
+    // Before the /:scope routes, which would take these names for a scope.
+    .post("/status", async c => {
+      const { fresh } = z.object({ fresh: z.boolean().optional() }).strict().parse(await c.req.json());
+      const project = c.req.query("project");
+      const dir = project === undefined ? undefined : await registry.require(project);
+      const projectStore = dir === undefined ? undefined : registry.storeFor(dir);
+      // Kept while the MCP and credential files are unchanged, like a tool inspection.
+      const stamp = await inspectionStamp(store, projectStore, agentDir, [], []);
+      return c.json(await inspections.get(`mcp\0${project ?? ""}`, stamp, !!fresh, signal => redacted(knownSecrets(store, projectStore),
+        () => listServers(command, dir ?? agentDir, agentDir, signal)), c.req.raw.signal));
+    })
     .get("/log", async c => {
       const path = join(dirname(store.path("global", "mcp.json")), "mcp.log");
       const file = Bun.file(path);

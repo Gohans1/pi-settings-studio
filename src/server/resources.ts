@@ -207,7 +207,7 @@ export function skillRoutes(store: ConfigStore, registry: ProjectRegistry, agent
  * What an inspection reads besides the settings: the MCP and credential files and the extensions' own
  * files. A file an extension imports, or a server whose tools change, waits for Refresh tools or the age limit.
  */
-async function inspectionStamp(store: ConfigStore, projectStore: ConfigStore | undefined, agentDir: string, settings: (string | undefined)[], paths: string[]) {
+export async function inspectionStamp(store: ConfigStore, projectStore: ConfigStore | undefined, agentDir: string, settings: (string | undefined)[], paths: string[]) {
   const revision = (target: ConfigStore | undefined, scope: Scope, file: DocumentName) => target?.read(scope, file).then(document => document.revision, () => "unreadable");
   const modified = (path: string) => stat(path).then(info => info.mtimeMs, () => 0);
   return JSON.stringify([...settings, await revision(store, "global", "mcp.json"), await revision(projectStore, "project", "mcp.json"),
@@ -216,7 +216,7 @@ async function inspectionStamp(store: ConfigStore, projectStore: ConfigStore | u
 }
 
 /** A tool inspection's result, or its error, with known credentials hidden. */
-async function redacted<T>(known: string[] | Promise<string[]>, run: () => Promise<T>): Promise<T> {
+export async function redacted<T>(known: string[] | Promise<string[]>, run: () => Promise<T>): Promise<T> {
   const secrets = await known;
   try { return redact(await run(), secrets); } catch (error) {
     if (error instanceof ConfigError) throw new ConfigError(redact(error.message, secrets), error.status);

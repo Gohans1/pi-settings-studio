@@ -1,8 +1,7 @@
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from "react";
-import { toolExposure, type McpFileView, type McpServerInput, type McpServerView } from "../shared/mcp";
+import { toolExposure, type McpFileView, type McpServerInput, type McpServerStatus, type McpServerView, type McpStatusView } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
-import type { ToolSource, ToolsView } from "../shared/plugin-tools";
-import { addMcpServer, editMcpServer, loadCodemode, loadMcp, loadMcpLog, loadTools, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget, loadMcpRaw, saveMcpRaw } from "./api";
+import { addMcpServer, editMcpServer, loadCodemode, loadMcp, loadMcpLog, loadMcpStatus, removeMcpServer, restoreMcp, saveCodemode, saveMcpServer, saveMcpSettings, type McpTarget, loadMcpRaw, saveMcpRaw } from "./api";
 import { useCached } from "./useCached";
 import { RawJsonEditor, SECRET_NOTE } from "./RawJsonEditor";
 import { CodemodePanel } from "./CodemodePanel";
@@ -10,7 +9,7 @@ import { exposureLabels, McpServerForm } from "./McpServerForm";
 import { McpImportPanel } from "./McpImportPanel";
 import { JobPanel, useJob } from "./JobPanel";
 import type { JobView } from "../shared/jobs";
-import { Braces, CircleAlert, FileJson, Import, Plus, PlugZap, ScrollText, Server } from "lucide-react";
+import { Braces, CircleAlert, CircleCheck, CircleX, FileJson, Import, Plus, PlugZap, ScrollText, Server } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
 import { Badge } from "./components/ui/badge";
@@ -35,6 +34,27 @@ function shortState(server: McpServerView): string {
   return exposureLabels[server.exposure]?.[0] ?? server.exposure;
 }
 
+/** A server's row: Pi's refusal or its switch, then how its last start went (`pi mcp list`), else its exposure. */
+function listState(server: McpServerView, live?: McpServerStatus): { state: ReactNode; tone?: "refused" | "shadowed" | "ready" } {
+  const state = shortState(server);
+  if (server.error) return { state, tone: "refused" };
+  if (!server.enabled) return { state };
+  switch (live?.state) {
+    case "connected": return { state: <><CircleCheck aria-hidden="true" /><span className="sr-only">connected, </span>{state}</>, tone: "ready" };
+    case "needs-auth": return { state: <><CircleAlert aria-hidden="true" />sign in</>, tone: "shadowed" };
+    case "failed": return { state: <><CircleX aria-hidden="true" />failed</>, tone: "refused" };
+    default: return { state };
+  }
+}
+
+/** How the server's last start went, in a word, beside its name. */
+function liveBadge(live: McpServerStatus) {
+  if (live.state === "connected") return <><CircleCheck aria-hidden="true" className="text-success" />Connected · {live.tools.length} {live.tools.length === 1 ? "tool" : "tools"}</>;
+  if (live.state === "needs-auth") return <><CircleAlert aria-hidden="true" className="text-warning" />Needs sign-in</>;
+  if (live.state === "failed") return <><CircleX aria-hidden="true" className="text-destructive" />Failed</>;
+  return undefined;
+}
+
 function signIn(server: McpServerView): string | undefined {
   if (server.transport !== "http") return undefined;
   if (server.authProvider) return `Sends the token of the Pi provider ${server.authProvider}.`;
@@ -50,25 +70,26 @@ function Names({ names }: { names: string[] }) {
 }
 
 /**
- * The server's tools in a new session, from the tool inspection Tools shares, each with how it reaches the
- * model. Choosing one writes an exact toolExposure rule; "Inherit" removes it, so the server's exposure (or a
- * pattern rule) applies again.
+ * The server's tools by their names on the server, from Pi's last report, each with how it reaches the model.
+ * Choosing one writes an exact toolExposure rule; "Inherit" removes it, so the server's exposure (or a pattern
+ * rule) applies again.
  */
-function ServerTools({ server, inspection, busy, onToolExposure }: {
-  server: McpServerView; inspection: ReturnType<typeof useCached<ToolsView>>; busy: boolean; onToolExposure?: (tool: string, exposure: string | null) => void;
+function ServerTools({ server, live, status, busy, onToolExposure }: {
+  server: McpServerView; live?: McpServerStatus; status: ReturnType<typeof useCached<McpStatusView>>; busy: boolean;
+  onToolExposure?: (tool: string, exposure: string | null) => void;
 }) {
   const label = (exposure: string) => exposureLabels[exposure]?.[0] ?? exposure;
-  const view = inspection.data;
-  const ours = (source: ToolSource) => source.kind === "mcp" && source.server === server.name;
-  const tools = view?.tools.flatMap(tool => ours(tool.source) && tool.mcpTool ? [tool.mcpTool] : []) ?? [];
-  const off = view?.idleSources.some(idle => ours(idle.source) && idle.status === "off");
-  return <section className="server-tools" aria-labelledby="server-tools-title" aria-busy={inspection.loading}>
+  const tools = live?.state === "connected" ? live.tools : [];
+  const note = !status.data ? undefined : !server.enabled || live?.state === "disabled" ? "Turn the server on to list its tools."
+    : live?.state === "failed" ? `Pi could not connect: ${live.error?.split("\n")[0] ?? "no reason given"}. Test connections or mcp.log says more.`
+    : live?.state === "needs-auth" ? "Sign in to list its tools."
+    : live?.state === "connected" ? "This server offers no tools." : undefined;
+  return <section className="server-tools" aria-labelledby="server-tools-title" aria-busy={status.loading}>
     <h3 id="server-tools-title">Tools</h3>
-    {inspection.loading && <p className="loading" role="status"><Spinner aria-hidden="true" />{view ? "Checking for changes…" : "Loading tools with Pi…"}</p>}
-    {!view ? inspection.error && <p className="muted">Could not list the tools: {inspection.error}{" "}
-      <Button variant="link" size="xs" onClick={inspection.refresh}>Try again</Button></p>
-      : !tools.length ? <p className="muted">{off ? "Turn the server on to list its tools."
-        : view.complete ? "This server offers no tools." : "Pi could not list this server's tools. Test connections or mcp.log says why."}</p>
+    {status.loading && <p className="loading" role="status"><Spinner aria-hidden="true" />{status.data ? "Checking for changes…" : "Starting the servers with Pi…"}</p>}
+    {!status.data ? status.error && <p className="muted">Could not check the servers: {status.error}{" "}
+      <Button variant="link" size="xs" onClick={status.refresh}>Try again</Button></p>
+      : !tools.length ? note && <p className="muted break-words">{note}</p>
       : <ItemGroup>{tools.map((tool, index) => {
         const { [tool]: own, ...others } = server.toolExposure;
         const options = [{ value: "", label: `Inherit: ${label(toolExposure({ exposure: server.exposure, toolExposure: others }, tool))}` },
@@ -82,9 +103,10 @@ function ServerTools({ server, inspection, busy, onToolExposure }: {
   </section>;
 }
 
-function ServerDetail({ server, busy, onExposure, actions, children }: {
-  server: McpServerView; busy: boolean; onExposure?: (exposure: string) => void; actions?: ReactNode; children?: ReactNode;
+function ServerDetail({ server, live, busy, onExposure, actions, children }: {
+  server: McpServerView; live?: McpServerStatus; busy: boolean; onExposure?: (exposure: string) => void; actions?: ReactNode; children?: ReactNode;
 }) {
+  const badge = server.enabled && !server.error && live ? liveBadge(live) : undefined;
   const rows: [string, React.ReactNode][] = [];
   if (server.description) rows.push(["Description", server.description]);
   if (server.transport) rows.push(["Transport", server.transport === "http" ? "Streamable HTTP" : "stdio"]);
@@ -102,8 +124,9 @@ function ServerDetail({ server, busy, onExposure, actions, children }: {
     {Object.keys(server.toolExposure).length > 0 && <p className="muted">Own exposure: {Object.entries(server.toolExposure).map(([tool, exposure]) => `${tool} → ${exposureLabels[exposure]?.[0] ?? exposure}`).join(", ")}</p>}
   </>]);
   if (server.timeout) rows.push(["Timeout", `${server.timeout} s`]);
-  return <section className="detail" aria-labelledby="server-title">
-    <header className="detail-header"><h2 id="server-title">{server.name}</h2>{actions && <div className="actions">{actions}</div>}</header>
+  return <section className="detail" aria-labelledby="server-title" aria-describedby={badge ? "server-status" : undefined}>
+    <header className="detail-header"><div className="detail-title"><h2 id="server-title">{server.name}</h2>
+      {badge && <Badge id="server-status" variant="outline">{badge}</Badge>}</div>{actions && <div className="actions">{actions}</div>}</header>
     {server.error && <Alert role="note" variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Pi refuses this entry, so it never connects</AlertTitle><AlertDescription>{server.error}</AlertDescription></Alert>}
     {!server.error && !server.enabled && <Alert role="note"><AlertDescription>Turned off in the file, so it does not connect.</AlertDescription></Alert>}
     <dl className="detail-list">{rows.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}</dl>
@@ -136,8 +159,11 @@ export function McpTab({ project }: { project?: string }) {
   const [formError, setFormError] = useState("");
   const [undo, setUndo] = useState<McpTarget>();
   const target = (scope: "global" | "project"): McpTarget => ({ scope, project });
-  // Test connections reports each server's state and errors; the tool list comes from the tool inspection.
-  const check = useJob({ actions: ["mcp-test"], project });
+  // Each server's state and tools, from Pi's own report, when the tab opens (AGENTS.md: a view loads what it shows).
+  const status = useCached<McpStatusView>(`mcp-status\0${project ?? ""}`, (signal, fresh) => loadMcpStatus(project, signal, fresh));
+  const liveOf = (name: string) => status.data?.servers.find(server => server.name === name);
+  // Test connections runs the same report as a job with Pi's full output; its result replaces the kept one.
+  const check = useJob({ actions: ["mcp-test"], project }, () => status.refresh());
   const [rawScope, setRawScope] = useState<"global" | "project">();
   const [log, setLog] = useState<{ path: string; exists: boolean; text: string }>();
   const showLog = () => { setSelected(undefined); setForm(undefined); loadMcpLog(project).then(setLog).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read mcp.log.")); };
@@ -157,8 +183,8 @@ export function McpTab({ project }: { project?: string }) {
   useEffect(() => { setSelected(current => current === "codemode" ? current : undefined); setForm(undefined); setRawScope(undefined); setLog(undefined); setCodemodeScope("global"); }, [project]);
   useEffect(() => { void refresh(); }, [project, codemodeProject]);
 
-  /** Saves a change; one that may change which tools servers offer lists them again, unless `keepsTools`. */
-  async function run(scope: "global" | "project", change: (revision: string) => Promise<McpFileView>, done: string, options: { undoable?: boolean; keepsTools?: boolean } = {}) {
+  /** Saves a change; one that may change which servers start, or how, checks them again, unless `keepsStatus`. */
+  async function run(scope: "global" | "project", change: (revision: string) => Promise<McpFileView>, done: string, options: { undoable?: boolean; keepsStatus?: boolean } = {}) {
     const view = views[scope];
     if (!view) return;
     setBusy(true); setError(""); setMessage(""); setUndo(undefined);
@@ -167,7 +193,7 @@ export function McpTab({ project }: { project?: string }) {
       setViews(current => ({ ...current, [scope]: next }));
       setMessage(`${done} Applies to new Pi sessions, or after /reload.`);
       if (options.undoable) setUndo(target(scope));
-      if (!options.keepsTools) inspection.refresh();
+      if (!options.keepsStatus) status.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not change the server.");
       await refresh();
@@ -200,7 +226,7 @@ export function McpTab({ project }: { project?: string }) {
       setMessage(`${shown} ${form.mode === "add" ? "added" : "saved"}. Applies to new Pi sessions, or after /reload.`);
       setSelected({ scope: form.scope, name: shown });
       setForm(undefined);
-      inspection.refresh();
+      status.refresh();
     } catch (cause) {
       // Keep the draft next to the error; reload in case the file changed.
       setFormError(cause instanceof Error ? cause.message : "Could not save the server.");
@@ -213,8 +239,6 @@ export function McpTab({ project }: { project?: string }) {
   const projectServers = local?.servers ?? [];
   const inProject = (name: string) => projectServers.find(server => server.name === name);
   const current = selected && selected !== "codemode" ? (views[selected.scope]?.servers ?? []).find(server => server.name === selected.name) : undefined;
-  // The inspection Tools runs, shared with it; it starts when a server is opened.
-  const inspection = useCached<ToolsView>(current ? `tools\0${project ?? ""}` : undefined, (signal, fresh) => loadTools(project, signal, fresh));
   const isSelected = (scope: "global" | "project", name: string) => selected !== "codemode" && selected?.scope === scope && selected.name === name;
   const choose = (next: Selection) => { setSelected(next); setForm(undefined); setLog(undefined); };
 
@@ -240,11 +264,12 @@ export function McpTab({ project }: { project?: string }) {
   function serverList(scope: "global" | "project", list: McpServerView[]) {
     return <ItemGroup>{list.map(server => {
       const local = scope === "global" ? inProject(server.name) : undefined;
-      const state = scope === "project" && server.override ? `override, ${server.enabled ? "on" : "off"}`
-        : local ? (local.override ? `${shortState(server)}, ${local.enabled ? "on" : "off"} here` : `${shortState(server)}, replaced here`) : shortState(server);
+      // A row that describes its project setting says that; others say how the server's last start went.
+      const { state, tone } = scope === "project" && server.override ? { state: `override, ${server.enabled ? "on" : "off"}` }
+        : local ? { state: local.override ? `${shortState(server)}, ${local.enabled ? "on" : "off"} here` : `${shortState(server)}, replaced here`, tone: server.error ? "refused" as const : undefined }
+        : listState(server, liveOf(server.name));
       return <div key={server.name} role="listitem" className="list-row">
-        <ListItem selected={isSelected(scope, server.name)} onSelect={() => choose({ scope, name: server.name })} name={server.name} state={state}
-          tone={server.error ? "refused" : undefined} />
+        <ListItem selected={isSelected(scope, server.name)} onSelect={() => choose({ scope, name: server.name })} name={server.name} state={state} tone={tone} />
         <Switch aria-label={scope === "global" ? `Enable ${server.name}` : `Enable ${server.name} in this project`} checked={server.enabled} disabled={busy}
           onCheckedChange={enabled => void run(scope, revision => saveMcpServer(target(scope), server.name, revision, { enabled }),
             `${server.name} turned ${enabled ? "on" : "off"}${scope === "project" ? " in this project" : ""}.`)} />
@@ -267,7 +292,7 @@ export function McpTab({ project }: { project?: string }) {
         setViews(current => ({ ...current, [scope]: next }));
         setForm(undefined); setError(""); setUndo(target(scope));
         setMessage(`Imported ${names.join(", ")}. Applies to new Pi sessions, or after /reload.`);
-        inspection.refresh();
+        status.refresh();
       }} />;
   } else if (form) {
     detail = <McpServerForm key={form.mode + form.scope + (current?.name ?? "")} server={form.mode === "edit" ? current : undefined} busy={busy} error={formError} scope={form.scope}
@@ -280,14 +305,14 @@ export function McpTab({ project }: { project?: string }) {
       project={project} scope={codemodeScope} onScope={setCodemodeScope}
       onChange={(patch, done) => void runCodemode(patch, done)}
       onAutoEnable={enabled => void run(autoScope, revision => saveMcpSettings(revision, { autoEnableCodemode: enabled }, target(autoScope)),
-        enabled === null ? "Automatic start follows the global choice in this project." : enabled ? `Code mode turns on automatically again${where}.` : `Code mode no longer turns on automatically${where}.`, { keepsTools: true }).then(refreshCodemode)} />;
+        enabled === null ? "Automatic start follows the global choice in this project." : enabled ? `Code mode turns on automatically again${where}.` : `Code mode no longer turns on automatically${where}.`, { keepsStatus: true }).then(refreshCodemode)} />;
   } else if (current && selected && selected !== "codemode") {
     const scope = selected.scope;
     const label = scope === "project" ? "the project's .pi/mcp.json" : "mcp.json";
     detail = current.override
       ? <ServerDetail server={current} busy={busy}>{projectControls(current.name)}<FieldDescription>Other settings come from the global server.</FieldDescription></ServerDetail>
-      : <ServerDetail server={current} busy={busy}
-        onExposure={exposure => void run(scope, revision => saveMcpServer(target(scope), current.name, revision, { exposure }), `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`, { keepsTools: true })}
+      : <ServerDetail server={current} live={liveOf(current.name)} busy={busy}
+        onExposure={exposure => void run(scope, revision => saveMcpServer(target(scope), current.name, revision, { exposure }), `${current.name} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.`, { keepsStatus: true })}
         actions={<>
           {current.transport === "http" && !current.authProvider && !current.headers.some(name => name.toLowerCase() === "authorization") && <>
             <Button variant="outline" disabled={busy || signIn.running} onClick={() => void signIn.start({ action: "mcp-login", server: current.name, ...(scope === "project" ? { project } : {}) })}>Sign in</Button>
@@ -297,9 +322,9 @@ export function McpTab({ project }: { project?: string }) {
           <Button variant="destructive" disabled={busy} aria-label={`Remove ${current.name}`}
             onClick={() => void run(scope, revision => removeMcpServer(target(scope), current.name, revision), `Removed ${current.name} from ${label}.`, { undoable: true })}>Remove</Button>
         </>}>{scope === "global" ? projectControls(current.name) : undefined}
-          {!current.error && <ServerTools server={current} busy={busy} inspection={inspection}
+          {!current.error && <ServerTools server={current} live={liveOf(current.name)} status={status} busy={busy}
             onToolExposure={(tool, exposure) => void run(scope, revision => saveMcpServer(target(scope), current.name, revision, { tool: { name: tool, exposure } }),
-              exposure ? `${current.name}/${tool} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.` : `${current.name}/${tool} follows the server again.`, { keepsTools: true })} />}
+              exposure ? `${current.name}/${tool} now uses ${exposureLabels[exposure]?.[0] ?? exposure}.` : `${current.name}/${tool} follows the server again.`, { keepsStatus: true })} />}
           <JobPanel job={signIn.job} error={signIn.error} onAnswer={value => void signIn.answer(value)} onCancel={() => void signIn.cancel()} onDismiss={signIn.dismiss} />
         </ServerDetail>;
   }
@@ -330,7 +355,7 @@ export function McpTab({ project }: { project?: string }) {
     </JobPanel>
     {rawScope ? <RawJsonEditor file="mcp.json" load={loadRaw} save={saveRaw}
       note={SECRET_NOTE}
-      onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new Pi sessions, or after /reload."); void refresh(); inspection.refresh(); } }} />
+      onClose={saved => { setRawScope(undefined); if (saved) { setMessage("Saved mcp.json. Applies to new Pi sessions, or after /reload."); void refresh(); status.refresh(); } }} />
     : !global ? !error && <div className="loading" aria-busy="true"><Spinner />Reading MCP settings…</div> : <Workbench open={open} onBack={back} backLabel="All servers" detail={detail} list={<>
       <ItemGroup><div role="listitem" className="list-row"><ListItem selected={selected === "codemode"} onSelect={() => choose("codemode")} icon={Braces} name="Code mode" state={codemodeState} /></div></ItemGroup>
       <Separator className="mt-2" />

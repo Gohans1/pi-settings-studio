@@ -19,9 +19,9 @@ test.beforeEach(async () => {
   server = await startServer({ agentDir, projectDir: join(root, "project"), port: 0, staticDir: resolve("dist/client") });
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
-// Opening a server inspects tools by starting the servers. These fixtures name commands and URLs that must not
-// run here, so the inspection answers with no tools; e2e/tools.spec.ts covers the real one.
-test.beforeEach(({ page }) => page.route("**/api/tools*", route => route.fulfill({ json: { checkedAt: new Date().toISOString(), complete: true, issues: [], tools: [], idleSources: [] } })));
+// Opening MCP starts the servers to report their state. These fixtures name commands and URLs that must not
+// run here, so the report is empty; e2e/tools.spec.ts covers the real one.
+test.beforeEach(({ page }) => page.route("**/api/mcp/status*", route => route.fulfill({ json: { checkedAt: new Date().toISOString(), complete: true, servers: [], errors: [] } })));
 
 test("icon-only buttons and file paths say more in a tooltip", async ({ page }) => {
   // Base UI's tooltip is for sighted users and has no role; the buttons carry their names themselves.

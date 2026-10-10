@@ -40,7 +40,7 @@ async function fixture(t: import("node:test").TestContext, servers: Record<strin
   return { root, agent, project, request, inspect };
 }
 
-type Tool = { name: string; description: string; visibility: string; source: Record<string, string>; mcpTool?: string };
+type Tool = { name: string; description: string; visibility: string; source: Record<string, string> };
 const named = (view: { tools: Tool[] }, name: string) => view.tools.find(tool => tool.name === name);
 
 test("lists Pi's own tools, extension tools and MCP server tools, each with its source", async t => {
@@ -53,14 +53,6 @@ test("lists Pi's own tools, extension tools and MCP server tools, each with its 
   assert.deepEqual(named(view, "codemode")?.source, { kind: "extension", name: "codemode", group: "Built-in" });
   // The server's name as configured, not the sanitized namespace in the tool name.
   assert.deepEqual(named(view, "mcp__echo_server__echo")?.source, { kind: "mcp", server: "echo-server" });
-});
-
-test("an MCP tool carries its name on the server, which toolExposure rules name", async t => {
-  // Pi's tool names keep only [A-Za-z0-9_], so this one is mcp__echo_server__say_it_v2.
-  const f = await fixture(t, { "echo-server": { command: "bun", args: [ECHO, "say-it.v2"] } });
-  const view = await f.inspect();
-  assert.equal(named(view, "mcp__echo_server__say_it_v2")?.mcpTool, "say-it.v2");
-  assert.equal(named(view, "read")?.mcpTool, undefined);
 });
 
 test("each tool says whether the model sees it directly, only indirectly, or not at all", async t => {

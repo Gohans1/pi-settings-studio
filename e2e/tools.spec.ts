@@ -182,14 +182,20 @@ test("a server that is off lists its tools once it is turned on", async ({ page 
   await expect(detail.getByRole("combobox", { name: "Exposure of off-server/echo" })).toBeVisible({ timeout: 60_000 });
 });
 
-test("MCP reuses the tools Tools already listed, without starting the servers again", async ({ page }) => {
-  const log = join(root, "starts.log");
-  await writeFile(join(agent, "mcp.json"), JSON.stringify({ mcpServers: { "echo-server": { command: "bun", args: [ECHO], env: { ECHO_LOG: log } } } }));
-  const starts = async () => (await readFile(log, "utf8").catch(() => "")).split("\n").filter(Boolean).length;
-  await page.goto(server.url + "#tools");
-  await expect(row(page, /^echo-server/)).toContainText("1 on demand");
-  await page.getByRole("tab", { name: "MCP" }).click();
+test("each MCP server says whether it connected or failed, with no click; a tool keeps its name on the server", async ({ page }) => {
+  test.slow();
+  await writeFile(join(agent, "mcp.json"), JSON.stringify({ mcpServers: {
+    "echo-server": { command: "bun", args: [ECHO, "say-it.v2"] }, dead: { command: "definitely-not-a-command-xyz" },
+  } }));
+  await page.goto(server.url + "#mcp");
+  await expect(page.getByRole("button", { name: /^echo-server/ })).toHaveAccessibleName(/connected/, { timeout: 60_000 });
+  await expect(page.getByRole("button", { name: /^dead/ })).toContainText("failed");
+  await page.getByRole("button", { name: /^dead/ }).click();
+  await expect(page.getByRole("region", { name: "dead" })).toContainText("Pi could not connect");
   await page.getByRole("button", { name: /^echo-server/ }).click();
-  await expect(page.getByRole("region", { name: "echo-server" }).getByRole("combobox", { name: "Exposure of echo-server/echo" })).toBeVisible();
-  expect(await starts()).toBe(1);
+  await page.getByRole("combobox", { name: "Exposure of echo-server/say-it.v2" }).click();
+  await page.getByRole("option", { name: "Direct", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("echo-server/say-it.v2 now uses Direct");
+  expect(JSON.parse(await readFile(join(agent, "mcp.json"), "utf8")).mcpServers["echo-server"].toolExposure).toEqual({ "say-it.v2": "direct" });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });

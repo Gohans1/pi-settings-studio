@@ -1,5 +1,5 @@
 import type { SettingsView, SettingsChange } from "../shared/settings";
-import type { McpFileView, McpImportPreview, McpServerInput } from "../shared/mcp";
+import type { McpFileView, McpImportPreview, McpServerInput, McpStatusView } from "../shared/mcp";
 import type { CodemodeView } from "../shared/codemode";
 import type { SessionSummary, SystemPromptView } from "../shared/sessions";
 import type { PackageUpdateCheck, PluginsView, ResourceFileView, ResourcePathsView, ResourceType, SkillsView } from "../shared/resources";
@@ -49,6 +49,9 @@ export const removeMcpServer = (target: McpTarget, name: string, revision: strin
 export const previewMcpImport = (target: McpTarget, text: string) => request<McpImportPreview>(mcpUrl(target, "/import/preview"), "POST", { text });
 export const importMcp = (target: McpTarget, revision: string, text: string, names: string[]) =>
   request<McpFileView>(mcpUrl(target, "/import"), "POST", { revision, text, names });
+/** Each server's state and tools from `pi mcp list`, kept by the server while the MCP files are unchanged; `fresh` asks again. */
+export const loadMcpStatus = (project?: string, signal?: AbortSignal, fresh = false) =>
+  request<McpStatusView>(withProject("/api/mcp/status", project), "POST", fresh ? { fresh } : {}, signal);
 export const loadMcpLog = (project?: string) => request<{ path: string; exists: boolean; text: string }>(withProject("/api/mcp/log", project));
 export const loadMcpRaw = (target: McpTarget) => request<RawSettings>(mcpUrl(target, "/raw"));
 export const saveMcpRaw = (target: McpTarget, revision: string, text: string) => request<RawSettings>(mcpUrl(target, "/raw"), "PUT", { revision, text });

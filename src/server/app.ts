@@ -137,7 +137,7 @@ export function createApp({ store, agentDir, origins, staticDir, projects = [], 
     await store.restore(scope, input.revision);
     return c.json(await view(scope, store));
   });
-  app.route("/api/mcp", mcpRoutes(store, registry));
+  app.route("/api/mcp", mcpRoutes(store, registry, agentDir, inspections));
   app.route("/api/codemode", codemodeRoutes(store, registry));
   app.route("/api/sessions", sessionRoutes(agentDir, projects));
   app.route("/api/skills", skillRoutes(store, registry, agentDir));
