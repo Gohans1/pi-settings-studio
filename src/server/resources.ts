@@ -8,7 +8,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
 import { Hono } from "hono";
 import { z } from "zod";
-import { DefaultPackageManager, loadSkills, parseFrontmatter, ProjectTrustStore, SettingsManager, type ResolvedResource } from "@earendil-works/pi-coding-agent";
+import { DefaultPackageManager, loadProjectContextFiles, loadSkills, parseFrontmatter, ProjectTrustStore, SettingsManager, type ResolvedResource } from "@earendil-works/pi-coding-agent";
 import type { PackageUpdateCheck, PackageView, PluginsView, ResourceType, ResourceView, SkillsView } from "../shared/resources.ts";
 import type { ToolSource, ToolsView } from "../shared/plugin-tools.ts";
 import { isRecord, mcpNamespace, readMcpServers } from "./mcp-config.ts";
@@ -224,6 +224,16 @@ export async function redacted<T>(known: string[] | Promise<string[]>, run: () =
   }
 }
 
+/**
+ * What a new session's prompt reads besides settings and skills: the context files Pi finds from `cwd` up (a new one
+ * changes the list), and SYSTEM.md and APPEND_SYSTEM.md, global or the project's.
+ */
+async function promptFilesStamp(agentDir: string, cwd: string) {
+  const contextFiles = loadProjectContextFiles({ cwd, agentDir }).map(file => `${file.path}#${Bun.hash(file.content)}`);
+  const prompts = [agentDir, join(cwd, ".pi")].flatMap(dir => ["SYSTEM.md", "APPEND_SYSTEM.md"].map(name => join(dir, name)));
+  return JSON.stringify([...contextFiles, ...await Promise.all(prompts.map(path => stat(path).then(info => `${path}@${info.mtimeMs}`, () => "")))]);
+}
+
 /** The MCP servers a session loads here, each on or off: the global file, then the project's overrides and servers, as Pi merges them. */
 async function mcpServersOf(store: ConfigStore, projectStore?: ConfigStore): Promise<Map<string, boolean>> {
   async function file(target: ConfigStore, scope: Scope) {
@@ -254,10 +264,12 @@ export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentD
       return path.startsWith(BUILTIN_PREFIX) ? { kind: "pi" } : { kind: "extension", name: basename(path) };
     }
     const paths = resolved.extensions.filter(item => item.enabled).map(item => item.path);
-    const stamp = await inspectionStamp(store, projectStore, agentDir, [revision, projectRevision], paths);
+    const skills = resolved.skills.filter(item => item.enabled).map(item => item.path);
+    const cwd = project ?? agentDir;
+    const stamp = await inspectionStamp(store, projectStore, agentDir, [revision, projectRevision, await promptFilesStamp(agentDir, cwd)], [...paths, ...skills]);
     return c.json(await inspections.get(`tools\0${project ?? ""}`, stamp, !!fresh, signal => redacted(knownSecrets(store, projectStore), async (): Promise<ToolsView> => {
       const view = await runToolsProbe({
-        agentDir, cwd: project ?? agentDir, project: !!project, paths,
+        agentDir, cwd, project: !!project, paths, skills,
         globalSettings: settings.global, projectSettings: settings.project,
       }, signal);
       const tools = view.tools.map(({ path, namespace, ...tool }) => ({ ...tool, source: sourceOf(path, namespace) }));
@@ -271,7 +283,7 @@ export function toolRoutes(store: ConfigStore, registry: ProjectRegistry, agentD
         }),
         ...[...servers].flatMap(([server, on]) => idle({ kind: "mcp", server }, on)),
       ];
-      return { ...view, tools, idleSources };
+      return { ...view, tools, idleSources, context: { ...view.context, unrun: view.context.unrun.map(path => sourceOf(path)) } };
     }), c.req.raw.signal));
   });
 }

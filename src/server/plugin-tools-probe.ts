@@ -3,11 +3,12 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager,
-  type ExtensionRuntime, type InlineExtension,
+  type AgentSession, type BeforeAgentStartEventResult, type BuildSystemPromptOptions, type ExtensionRuntime, type InlineExtension, type NormalizedBuildSystemPromptOptions,
 } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import type { PluginToolsView, SessionTools } from "../shared/plugin-tools.ts";
+import type { PluginToolsView, SessionContext, SessionTools } from "../shared/plugin-tools.ts";
 import { credentialsOf, runtimeFor } from "./models.ts";
+import { declarationPart, sectionPart, tokensOf } from "./prompt-parts.ts";
 
 export type ToolProbeInput = {
   agentDir: string; cwd: string; project: boolean;
@@ -16,6 +17,8 @@ export type ToolProbeInput = {
   path?: string; enabled?: boolean;
   /** Report the providers the extensions register instead of tools. */
   providers?: boolean;
+  /** For a run without `path`: the skill files a session loads, resolved by Pi in the server. The run then reads context files and reports the first request too. */
+  skills?: string[];
 };
 
 /** The providers extensions register, each with Pi's auth status and its chat models (headers left out), and what failed. */
@@ -44,6 +47,51 @@ async function providersOf(queued: ExtensionRuntime, agentDir: string, issues: s
   return { checkedAt: new Date().toISOString(), issues, providers };
 }
 
+/**
+ * The system message of the first request, as Pi builds it when a turn starts (Pi 1.1.0 dist/core/agent-session.js
+ * prompt and extensions/runner.js emitBeforeAgentStart, MIT, Copyright Mario Zechner): the session's prompt options,
+ * changed by before_agent_start handlers, rendered by Pi's own functions, with the declarations Pi does not hide.
+ * Only Pi's built-in handlers run (its MCP servers section): an extension's handler belongs to a real turn and may
+ * act on it, so it is named instead.
+ */
+async function contextOf(session: AgentSession, loader: DefaultResourceLoader, issues: string[]): Promise<SessionContext> {
+  // Pi 1.1.0 renders prompts in dist/core/system-prompt.js, which the package does not export; reuse it rather than copy it.
+  const { buildSystemPrompt, buildSystemPromptState } = await import(new URL("./core/system-prompt.js", import.meta.resolve("@earendil-works/pi-coding-agent")).href) as {
+    buildSystemPrompt(options: BuildSystemPromptOptions): string;
+    buildSystemPromptState(options: BuildSystemPromptOptions): { content: string; sections?: Record<string, string> };
+  };
+  const runner = session.extensionRunner;
+  const options: NormalizedBuildSystemPromptOptions = structuredClone(runner.createCommandContext().getSystemPromptOptions() as NormalizedBuildSystemPromptOptions);
+  const unrun: string[] = [];
+  for (const extension of loader.getExtensions().extensions) {
+    const handlers = extension.handlers.get("before_agent_start") ?? [];
+    if (!handlers.length) continue;
+    if (!extension.path.startsWith("builtin:")) { unrun.push(extension.path); continue; }
+    for (const handler of handlers) {
+      try {
+        const event = { type: "before_agent_start", prompt: "", images: undefined, get systemPrompt() { return buildSystemPrompt(options); }, systemPromptOptions: options };
+        const result = await handler(event, runner.createContext()) as BeforeAgentStartEventResult | undefined;
+        if (result?.systemPrompt !== undefined) options.forceSystemPrompt = result.systemPrompt;
+      } catch (error) { issues.push(`${extension.path}: ${error instanceof Error ? error.message : String(error)}`); }
+    }
+  }
+  const { content, sections = {} } = buildSystemPromptState(options);
+  const hidden = new Set(options.hiddenTools);
+  const declared = session.agent.state.tools.filter(tool => !hidden.has(tool.name)).map(({ name, description, parameters }) => ({ name, description, parameters }));
+  return {
+    tokens: tokensOf({ content, sections, toolsAdded: declared }),
+    ...(content ? { content: sectionPart("content", content) } : {}),
+    sections: Object.entries(sections).map(([name, text]) => sectionPart(name, text)),
+    declarations: declared.map(declarationPart),
+    files: {
+      ...(loader.getSystemPromptSource() ? { systemPrompt: loader.getSystemPromptSource()!.path } : {}),
+      appendSystemPrompt: loader.getAppendSystemPromptSources().map(source => source.path),
+      contextFiles: options.contextFiles.map(file => ({ path: file.path, tokens: sectionPart(file.path, file.content).tokens })),
+    },
+    unrun,
+  };
+}
+
 async function inspect(input: ToolProbeInput): Promise<PluginToolsView | SessionTools | ExtensionProviders> {
   const { agentDir, cwd, path, enabled } = input;
   function settings(discovery = false) {
@@ -60,7 +108,7 @@ async function inspect(input: ToolProbeInput): Promise<PluginToolsView | Session
   const loader = new DefaultResourceLoader({
     cwd, agentDir, settingsManager: settings(true), noExtensions: true,
     additionalExtensionPaths: input.paths, extensionFactories: builtInExtensions,
-    noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
+    noSkills: true, additionalSkillPaths: input.skills ?? [], noPromptTemplates: true, noThemes: true, noContextFiles: input.skills === undefined,
   });
   await loader.reload();
   const issues = loader.getExtensions().errors.map(error => `${error.path}: ${error.error}`);
@@ -99,7 +147,8 @@ async function inspect(input: ToolProbeInput): Promise<PluginToolsView | Session
         return { name: tool.name, description: described(tool.name, visibility, tool.description), exposure: tool.exposure, visibility,
           path: tool.sourceInfo.path, ...(tool.namespace ? { namespace: tool.namespace.name } : {}) };
       });
-      return { checkedAt: new Date().toISOString(), complete: issues.length === 0, issues, tools };
+      const context = await contextOf(session, loader, issues);
+      return { checkedAt: new Date().toISOString(), complete: issues.length === 0, issues, tools, context };
     }
     const extension = loader.getExtensions().extensions.find(item => item.path === path || item.resolvedPath === path);
     if (!extension && !issues.length) issues.push("Pi did not load this extension; another extension may replace it.");

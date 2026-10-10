@@ -160,3 +160,83 @@ test("known credentials are redacted from tool descriptions", async t => {
   assert.ok(!JSON.stringify(view).includes("secret-fixture-token"));
   assert.match(named(view, "visible_tool")?.description ?? "", /hidden/);
 });
+
+type Part = { name: string; text: string; tokens: number };
+const section = (view: { context: { sections: Part[] } }, name: string) => view.context.sections.find(part => part.name === name)?.text;
+
+test("a new session's prompt is built as Pi builds it: its sections, AGENTS.md files, skills and MCP servers", async t => {
+  const f = await fixture(t);
+  await writeFile(join(f.agent, "AGENTS.md"), "Global rules.");
+  await writeFile(join(f.project, "AGENTS.md"), "Project rules.");
+  await mkdir(join(f.agent, "skills", "demo"), { recursive: true });
+  await writeFile(join(f.agent, "skills", "demo", "SKILL.md"), "---\nname: demo\ndescription: Demo skill for tests.\n---\nBody");
+  const view = await f.inspect(f.project);
+  assert.deepEqual(view.context.sections.map((part: Part) => part.name), ["preamble", "tools", "rules", "docs", "project_context", "skills", "cwd", "mcp_servers"]);
+  assert.match(section(view, "project_context")!, /Global rules\.[\s\S]*Project rules\./);
+  assert.deepEqual(view.context.files.contextFiles.map((file: { path: string }) => file.path), [join(f.agent, "AGENTS.md"), join(f.project, "AGENTS.md")]);
+  assert.match(section(view, "skills")!, /Demo skill for tests\./);
+  assert.match(section(view, "cwd")!, new RegExp(f.project));
+  // Pi's MCP extension adds its servers when a turn starts; the preview runs Pi's own handlers.
+  assert.match(section(view, "mcp_servers")!, /echo_server/);
+});
+
+test("SYSTEM.md replaces Pi's base prompt and APPEND_SYSTEM.md adds to it, each named with its file", async t => {
+  const f = await fixture(t);
+  await writeFile(join(f.agent, "APPEND_SYSTEM.md"), "Appended rules.");
+  let view = await f.inspect();
+  assert.match(section(view, "addendum")!, /Appended rules\./);
+  assert.deepEqual(view.context.files.appendSystemPrompt, [join(f.agent, "APPEND_SYSTEM.md")]);
+  assert.equal(view.context.files.systemPrompt, undefined);
+  await writeFile(join(f.agent, "SYSTEM.md"), "Custom base prompt.");
+  view = await f.inspect();
+  assert.equal(section(view, "preamble"), "Custom base prompt.");
+  assert.equal(section(view, "tools"), undefined);
+  assert.equal(view.context.files.systemPrompt, join(f.agent, "SYSTEM.md"));
+});
+
+test("the first request declares only the tools Pi does not hide: with code mode only, code mode alone", async t => {
+  const f = await fixture(t);
+  const declared = (view: { context: { declarations: Part[] } }) => view.context.declarations.map(part => part.name);
+  assert.deepEqual(declared(await f.inspect()), ["read", "bash", "edit", "write", "visible_tool", "codemode"]);
+  await writeFile(join(f.agent, "settings.json"), JSON.stringify({ defaultProjectTrust: "always", codemode: { mode: "only" } }));
+  const view = await f.inspect();
+  assert.deepEqual(declared(view), ["codemode"]);
+  assert.doesNotMatch(section(view, "tools")!, /- read:/);
+  // A declaration as the model reads it: name, description and parameters.
+  assert.deepEqual(Object.keys(JSON.parse(view.context.declarations[0].text)), ["name", "description", "parameters"]);
+});
+
+test("the prompt's parts carry Pi's token estimate, and the whole is the first request's", async t => {
+  const f = await fixture(t);
+  const { context } = await f.inspect();
+  const cwd = context.sections.find((part: Part) => part.name === "cwd");
+  assert.equal(cwd.tokens, Math.ceil(cwd.text.length / 4));
+  const chars = context.sections.reduce((sum: number, part: Part) => sum + part.text.length, 0)
+    + JSON.stringify(context.declarations.map((part: Part) => JSON.parse(part.text))).length;
+  assert.equal(context.tokens, Math.ceil(chars / 4));
+});
+
+test("an edited AGENTS.md or a new skill inspects again", async t => {
+  const f = await fixture(t);
+  await writeFile(join(f.agent, "AGENTS.md"), "First rules.");
+  assert.match(section(await f.inspect(), "project_context")!, /First rules\./);
+  await writeFile(join(f.agent, "AGENTS.md"), "Second rules.");
+  assert.match(section(await f.inspect(), "project_context")!, /Second rules\./);
+  await mkdir(join(f.agent, "skills", "late"), { recursive: true });
+  await writeFile(join(f.agent, "skills", "late", "SKILL.md"), "---\nname: late\ndescription: Added later.\n---\nBody");
+  assert.match(section(await f.inspect(), "skills")!, /Added later\./);
+});
+
+test("an extension that changes the prompt when a turn starts is named, and the preview does not run it", async t => {
+  const f = await fixture(t);
+  const marker = join(f.root, "turn-started");
+  await writeFile(join(f.agent, "extensions", "turn.ts"), `import { writeFileSync } from "node:fs";
+export default pi => pi.on("before_agent_start", event => {
+  writeFileSync(${JSON.stringify(marker)}, "ran");
+  event.systemPromptOptions.sections.turn = "Added when a turn starts.";
+});`);
+  const view = await f.inspect();
+  assert.deepEqual(view.context.unrun.map((source: { name: string }) => source.name), ["turn.ts"]);
+  assert.equal(section(view, "turn"), undefined);
+  assert.equal(await readFile(marker, "utf8").catch(() => "not run"), "not run");
+});
