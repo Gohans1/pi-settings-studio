@@ -27,6 +27,7 @@
   "include": [
     "src",
     "tests",
+    "scripts",
     "e2e",
     "*.config.ts"
   ]

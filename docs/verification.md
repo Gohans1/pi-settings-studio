@@ -1,3 +1,18 @@
+# Verification — tested-tarball npm release pipeline, 2026-10-11
+
+Scope: release tooling and documentation only (`scripts/release.ts`, `tests/release.test.ts`, `.github/workflows/release.yml`, `docs/release.md`, lint/typecheck coverage of `scripts/`, one README link). The app, its dependencies and AGENTS.md are unchanged. Nothing has been published: the npm package is still not on the registry.
+
+- `tests/release.test.ts` was written first and failed with `Cannot find module '../scripts/release.ts'`. It now has nine tests: the checker accepts a checkout-identical package; rejects packed `.npmrc`, traversal paths, links and special files, altered metadata, altered server code, a built page naming a missing asset, and consumer install hooks; and the workflow test pins the credential boundary (read-only default, no OIDC in the build job, staging only from main in the `npm` environment, no rebuild in that job).
+- The tarball is packed once (`bun pm pack --ignore-scripts`: 392,062 bytes packed, 1.38 MB unpacked). `scripts/release.ts smoke` installs that exact file into a temporary consumer with an empty home and no install scripts, audits the consumer's production tree (145 packages, no vulnerabilities, no exceptions), runs the installed CLI `--help`, starts the installed server, and requests the HTML (with its security header), the JavaScript and `/api/settings/global`.
+- The first two smoke runs failed and were fixed: `--production` writes no lockfile, so `bun audit` had nothing to read; then the settings URL was wrong (404). The final run passes.
+- Browser check of the installed package (agent-browser, own session): the General tab loaded from the tarball's files, the console and page errors were empty. The browser was closed and the server stopped.
+- The full project audit still reports `braces@3.0.3`, GHSA-vfj7-8cjw-p6xm (high, no patched version published), reached only through the development-only shadcn CLI. The maintainer accepted it explicitly; the workflow ignores that one advisory in the development gate and keeps the unfiltered report. `bun audit --audit-level=high --ignore=GHSA-vfj7-8cjw-p6xm` exits 0 (544 packages, 1 ignored). This is an accepted exception, not a fix.
+- `npm stage publish <tarball> --dry-run --access=public --tag=latest --ignore-scripts --json` (npm 11.21.0) accepted the workflow's options and changed nothing.
+- Repository checks: bun test (404 passed), typecheck, lint and `git diff --check`. To mimic a CI runner without Pi, bun test was repeated with `pi` removed from PATH: 403 passed, 1 skipped (the test that compares the SDK pin with the installed Pi), 0 failed; build and test:e2e there: 185 passed (6.1 minutes). The environment `npm` on GitHub requires review by the maintainer and accepts deployments from main only.
+- Not performed: a GitHub Actions run, actionlint (not installed), the OIDC staging step and its provenance with a tarball argument, configuring the npm trusted publisher, and the publication itself.
+
+---
+
 # Verification — resolve delegated README writing blockers, 2026-10-11
 
 Scope: README copy only, plus this verification record; application code, service unit, dependencies and AGENTS.md are unchanged.
