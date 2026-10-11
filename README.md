@@ -1,6 +1,10 @@
 # Pi Settings Studio
 
-A local, settings-only GUI for Pi core configuration. Inspired by the settings panel of [pi-web](https://github.com/agegr/pi-web), without chat. Personal tool, not published.
+A local GUI for [Pi](https://pi.dev) core configuration: MCP servers, models, skills, packages, and an inspector that shows what a new session puts in front of the model. Settings only, no chat. Inspired by the settings panel of [pi-web](https://github.com/agegr/pi-web). Unofficial: not affiliated with Earendil Works.
+
+![Context: a new session's system prompt and tool declarations, part by part, with token estimates](docs/screenshots/context.png)
+
+Native Pi files stay authoritative: the app reads and writes `settings.json`, `mcp.json`, `models.json`, skills and `AGENTS.md` in place, and keeps unknown keys. More screens: [Tools](docs/screenshots/tools.png), [MCP](docs/screenshots/mcp.png).
 
 Scope, decisions and boundaries: [SPEC.md](SPEC.md). Coverage: [docs/parity.md](docs/parity.md). Progress: [tasks/todo.md](tasks/todo.md).
 
@@ -8,9 +12,11 @@ Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Run
 
-Requires Bun 1.4.2.
+Requires [Bun](https://bun.sh) 1.4.2 or newer (tested on 1.4.2) and Pi, with `pi` on your `PATH`. Not on npm yet.
 
 ```sh
+git clone https://github.com/Gohans1/pi-settings-studio
+cd pi-settings-studio
 bun install --frozen-lockfile
 bun run build
 bun run start            # http://localhost:4369
@@ -23,6 +29,7 @@ Options: `--port`, `--agent-dir` (default `PI_CODING_AGENT_DIR` or `~/.pi/agent`
 ```sh
 bun run build
 mkdir -p ~/.config/systemd/user
+# edit WorkingDirectory in the unit to where you cloned the repository
 cp service/pi-settings-studio.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now pi-settings-studio
@@ -57,6 +64,12 @@ The last result and timestamp are kept in `pi-settings-cache.json` beside Pi's f
 
 The checker uses system `npm` and `git` (not `npmCommand` from settings), and Pi's existing version/range, pin and project-precedence rules. It skips local paths, exact npm pins, pinned Git refs, missing installations and failed lookups. `PI_OFFLINE` skips networking, and automatic checks with it. **“No updates reported” does not mean all packages are current:** Pi's API does not distinguish network/authentication failures or expose target version numbers. No extensions are loaded to perform the check.
 
+## Security
+
+- The server listens on `127.0.0.1` only, checks Host and Origin, rejects cross-site requests and has no login. Anyone who can reach it can change your Pi settings, so do not expose it beyond your machine (see the tailnet note above).
+- Installed extensions are trusted. Selecting one, or opening Tools or Context, loads installed extensions and connects configured MCP servers through Pi in a separate process. This is not a sandbox. [Details](docs/plugin-tools.md).
+- Secrets stay on the server: `auth.json` values and MCP `env` / `headers` values are never sent to the browser.
+
 ## Test
 
 ```sh
@@ -65,3 +78,7 @@ bun run typecheck
 bun run lint
 bun run build && bun run test:e2e
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE). Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

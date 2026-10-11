@@ -17,4 +17,4 @@ Change Pi core configuration from a browser tab: MCP servers, what a session put
 Runs in WSL beside Pi, always on at `http://localhost:4369`, opened from a bookmark in the Windows browser. A saved file is not proof that a running Pi session uses it.
 
 ## Capabilities and Constraints
-Personal use; not published. Track feature coverage against pi-web's settings panel in docs/parity.md. Installed extensions are trusted: selecting one automatically inspects its tools in a disposable Pi runtime, including MCP connections. Resource-list reads remain non-executing. Never send secrets to the browser.
+Open source under the MIT license. Track feature coverage against pi-web's settings panel in docs/parity.md. Installed extensions are trusted: selecting one automatically inspects its tools in a disposable Pi runtime, including MCP connections. Resource-list reads remain non-executing. Never send secrets to the browser.

@@ -1,18 +1,48 @@
 {
   "name": "pi-settings-studio",
-  "version": "0.0.0-development",
-  "private": true,
+  "version": "0.1.0",
   "description": "A local settings-only GUI for Pi core configuration",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
+  "author": "Gohans",
+  "homepage": "https://github.com/Gohans1/pi-settings-studio#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gohans1/pi-settings-studio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Gohans1/pi-settings-studio/issues"
+  },
+  "keywords": [
+    "pi",
+    "pi-coding-agent",
+    "settings",
+    "gui",
+    "mcp",
+    "skills",
+    "bun"
+  ],
   "packageManager": "bun@1.4.2",
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "bin": {
+    "pi-settings-studio": "src/server/cli.ts"
+  },
+  "files": [
+    "src/server",
+    "src/shared",
+    "dist/client",
+    "THIRD_PARTY_NOTICES.md"
+  ],
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src tests e2e",
     "build": "vite build",
     "test:e2e": "bun --bun playwright test",
-    "start": "bun src/server/cli.ts"
+    "start": "bun src/server/cli.ts",
+    "prepack": "bun run build"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "1.1.0",

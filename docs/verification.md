@@ -1,3 +1,25 @@
+# Verification — the project is licensed MIT and packaged to be published, 2026-10-11
+
+Scope: the repository said "Personal tool, not published": `private: true`, `UNLICENSED`, no LICENSE, no `bin` or `files`. It is now MIT, with a `pi-settings-studio` bin that runs under Bun, a `files` list that ships only `src/server`, `src/shared` and the built `dist/client`, and a `prepack` that builds the client. Version 0.1.0. It is not on npm yet. The package has no `pi-package` keyword: it holds no extension, skill, prompt or theme, so the Pi package gallery has nothing to load from it.
+
+- `tests/package-metadata.test.ts` keeps the rules: not private, MIT with a LICENSE file, a Bun bin that ships with what it serves and imports and without tests, every shipped source folder present, repository and `engines.bun` set. It failed on the old `package.json` (4 of 4), then passed.
+- README says what the app is, shows it, says it is unofficial, and has a Security section; PRODUCT.md and SPEC.md drop "personal". Screenshots in docs/screenshots come from a demo agent folder under a temporary HOME (no real settings, skills or paths).
+
+| Check | Result |
+|---|---|
+| RED/GREEN | `bun test ./tests/package-metadata.test.ts`: 4 failed on the old `package.json`, 4 passed after |
+| `bun test` | 384 passed (52 files) |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed; the >500 kB chunk warning remains |
+| `bun run test:e2e` | 172 passed |
+| `npm pack` | 55 files, 389 kB: LICENSE, README, THIRD_PARTY_NOTICES, `src/server`, `src/shared`, `dist/client`; none of tests, e2e, `.codegraph`, `.env*`, docs/evidence |
+
+Manual: the tarball was installed with `bun add` into an empty folder and started from there (`./node_modules/.bin/pi-settings-studio --port 4391`, temporary agent folder, `PI_OFFLINE=1`): `/` answered 200 text/html and the built script 200, so the static folder resolves from another working directory. The three screenshots were taken with agent-browser at 1440×900 on port 4392 (own session, closed after); console clean.
+
+Not checked: `bunx pi-settings-studio` from the npm registry (nothing is published), Bun newer than 1.4.2, and a Windows or macOS host.
+
+---
+
 # Verification — the workbench list runs down the window's edge, and the page scrolls as one, 2026-10-10
 
 Scope: the framed split view sat in a centred 80rem box under the page header, at least 28rem tall, inside `main`, which scrolls too: three scrollers, one inside another, and at 1376×640 every tab's page scrolled 22–166px before either pane did. The list now runs down the window's left edge and the page beside it is the one scroller (B, drawn in the thread).
@@ -151,7 +173,7 @@ Scope: `package-updates.spec.ts:44` and `motion.spec.ts:73` failed now and then.
 Scope: a phone on the tailnet opens the app. Before, only `127.0.0.1` and `localhost` passed the Host and Origin allowlist.
 
 - `--allow-origin URL` (repeatable) in `cli.ts` and `startServer({ allowedOrigins })`. `parseAllowedOrigin` keeps only an http or https origin with no path. Nothing is allowed by default.
-- The installed service has a drop-in at `~/.config/systemd/user/pi-settings-studio.service.d/tailnet.conf` (outside the repo) with `--allow-origin https://anphat-1.taild3d41b.ts.net:4369`. `tailscale serve --bg --https=4369 http://127.0.0.1:4369` serves it on the tailnet only. The existing 443 route to 127.0.0.1:3773 was not changed.
+- The installed service has a drop-in at `~/.config/systemd/user/pi-settings-studio.service.d/tailnet.conf` (outside the repo) with `--allow-origin https://machine.tailnet.ts.net:4369`. `tailscale serve --bg --https=4369 http://127.0.0.1:4369` serves it on the tailnet only. The existing 443 route to 127.0.0.1:3773 was not changed.
 
 | Check | Result |
 |---|---|
@@ -159,7 +181,7 @@ Scope: a phone on the tailnet opens the app. Before, only `127.0.0.1` and `local
 | `bun test` | 361 passed (50 files): 2 new |
 | `bun run typecheck` / `bun run lint` / `bun run build` | Passed |
 | `bun run test:e2e` | Run 1: 153 passed, 1 failed (`package-updates.spec.ts:44`, a strict-mode locator that matched 2 status elements; it passed alone 2 of 2). Run 2: 153 passed, 1 failed (`motion.spec.ts:73`, the flake recorded below) |
-| Live, from this machine on `https://anphat-1.taild3d41b.ts.net:4369` | GET 200; POST from its own origin 415 (origin accepted, nothing written); POST from `https://evil.example` 403; localhost 200; the 443 route 200. The phone itself was not tested |
+| Live, from this machine on `https://machine.tailnet.ts.net:4369` | GET 200; POST from its own origin 415 (origin accepted, nothing written); POST from `https://evil.example` 403; localhost 200; the 443 route 200. The phone itself was not tested |
 
 # Verification — update checks in the background, a newer Pi, and each MCP server's state on open, 2026-10-10
 
