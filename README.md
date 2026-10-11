@@ -10,6 +10,10 @@ Scope, decisions and boundaries: [SPEC.md](SPEC.md). Coverage: [docs/parity.md](
 
 Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+## Demo
+
+`bun run build:demo` builds a static copy of the app with sample data and no server (`dist/demo`): every tab opens on a sample Pi home, and changes are refused. It is what the project's hosted demo serves. `bun run record:demo` records its data from the real server; `bun run deploy:demo` publishes it with Wrangler (Cloudflare account needed). Details: [SPEC.md](SPEC.md#demo).
+
 ## Run
 
 Requires [Bun](https://bun.sh) 1.4.2 or newer (tested on 1.4.2) and Pi, with `pi` on your `PATH`. Not on npm yet.
