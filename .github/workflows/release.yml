@@ -1,0 +1,99 @@
+name: npm release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+          no-cache: true
+      - run: bun install --frozen-lockfile
+      - name: Unfiltered development audit report
+        continue-on-error: true
+        run: bun audit --json > development-audit.json
+      - name: Development audit policy (one documented exception)
+        run: |
+          bun -e 'await Bun.file("development-audit.json").json()'
+          bun audit --audit-level=high --ignore=GHSA-vfj7-8cjw-p6xm
+      - run: bun test
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun run build
+      - run: bun --bun playwright install --with-deps chromium
+      - run: bun run test:e2e
+      - name: Pack once, validate, install and test the same tarball
+        run: |
+          mkdir -p dist/release
+          bun pm pack --ignore-scripts --destination dist/release
+          bun scripts/release.ts check dist/release/*.tgz > dist/release/package-info.json
+          bun scripts/release.ts smoke dist/release/*.tgz
+          cp development-audit.json dist/release/
+          (cd dist/release && sha256sum *.tgz > SHA256SUMS)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        id: package
+        with:
+          name: npm-package
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Evidence for release review
+        run: |
+          cat dist/release/package-info.json >> "$GITHUB_STEP_SUMMARY"
+          echo 'Known accepted dev-only advisory: GHSA-vfj7-8cjw-p6xm. Production installation audited without exceptions.' >> "$GITHUB_STEP_SUMMARY"
+    outputs:
+      artifact-id: ${{ steps.package.outputs.artifact-id }}
+
+  stage:
+    if: github.ref == 'refs/heads/main' && github.repository == 'Gohans1/pi-settings-studio'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+          no-cache: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.21.0
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+          path: dist/release
+          merge-multiple: true
+      - name: Verify the unchanged artifact against a fresh checkout
+        run: |
+          (cd dist/release && sha256sum -c SHA256SUMS)
+          bun scripts/release.ts check dist/release/*.tgz
+      - name: Stage the tested tarball using OIDC and provenance
+        run: npm stage publish dist/release/*.tgz --access=public --tag=latest --provenance --ignore-scripts --json > stage-result.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: npm-stage-result
+          path: stage-result.json
+          if-no-files-found: error
+      - run: cat stage-result.json >> "$GITHUB_STEP_SUMMARY"

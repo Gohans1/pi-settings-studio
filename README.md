@@ -110,6 +110,8 @@ bun run lint
 bun run build && bun run test:e2e
 ```
 
+For maintainers: [release workflow and verification](docs/release.md).
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
