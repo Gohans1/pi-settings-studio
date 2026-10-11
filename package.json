@@ -39,9 +39,12 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src tests e2e",
-    "build": "vite build",
+    "build": "vite build && vite build --mode demo",
+    "build:demo": "vite build --mode demo",
     "test:e2e": "bun --bun playwright test",
     "start": "bun src/server/cli.ts",
+    "record:demo": "bun src/demo/record.ts",
+    "deploy:demo": "bun run build:demo && bun x wrangler deploy",
     "prepack": "bun run build"
   },
   "dependencies": {
