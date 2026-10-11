@@ -1,7 +1,7 @@
 # Specification
 
 ## Objective
-A personal, local GUI for **Pi core configuration**. Settings only: no chat, sessions UI, terminal or orchestration. The settings panel of [agegr/pi-web](https://github.com/agegr/pi-web) is the reference for features and feel; it is re-implemented here, not forked.
+A local GUI for **Pi core configuration**. Settings only: no chat, sessions UI, terminal or orchestration. The settings panel of [agegr/pi-web](https://github.com/agegr/pi-web) is the reference for features and feel; it is re-implemented here, not forked.
 
 ## Scope: Pi core only
 Tabs below. A project picker (folders Pi has sessions in) adds each tab's project scope and shows project trust. Operations that run something (MCP connection test, OAuth sign-in, package install) use Pi's own CLI or runtime. Installed extensions are trusted: selecting an extension automatically inspects its tools in a disposable Pi runtime, and opening Tools or Context inspects a whole new session the same way. Opening MCP asks Pi (`pi mcp list --json`) for each server's state and tools. The app looks for newer packages and a newer Pi in the background, at most once a day.
