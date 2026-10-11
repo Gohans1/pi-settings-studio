@@ -1,3 +1,17 @@
+# Verification — release 0.1.1 after the bootstrap version went public, 2026-10-11
+
+Scope: `package.json` version (0.1.0 to 0.1.1) and `docs/release.md`, plus this record. No application code, workflow, dependency or AGENTS.md change.
+
+- The third Actions run (run 38158093135, commit 836ddb9) passed every build step (19 of 19) on the runner. Its artifact matched `SHA256SUMS` (`dea05719…ac83`) and `scripts/release.ts check` accepted it against the checkout; the asset file names were identical to a local build.
+- The maintainer's account then approved the locally staged bootstrap copy of that artifact instead of rejecting it (the registry lists the account as approver; who clicked what is not known to this record). pi-settings-studio@0.1.0 went public at 2026-10-11T17:24:39Z, tagged latest. Its tarball's SHA-256 equals the artifact's, and it has **no provenance** (the registry's attestations endpoint answers 404). Nothing unsafe was found; it is only missing the origin record. A published version cannot be replaced, so the next release carries provenance.
+- The trusted publisher (`Gohans1/pi-settings-studio`, `release.yml`, environment `npm`, stage permission only) is configured and shows "Pending validation" until a workflow publishes once through OIDC.
+- The waiting run 38158093135 was cancelled, because its stage job would have staged an existing version.
+- This change bumps the version so the workflow can stage 0.1.1 with provenance, and records 0.1.0's origin in `docs/release.md` and the bootstrap warning (approving a local stage publishes it without provenance).
+- Local checks: release and package-metadata tests (13 passed), typecheck, lint, `git diff --check`. The full suite runs in the workflow.
+- Not performed yet: the 0.1.1 workflow run, its OIDC staging and provenance, the maintainer's approval and the check of the published version.
+
+---
+
 # Verification — E2E waits for a closing tooltip before axe, 2026-10-11
 
 Scope: two lines each in `e2e/models.spec.ts` and `e2e/sound.spec.ts`, and this record. No application code, workflow, dependency or AGENTS.md change; nothing has been published.

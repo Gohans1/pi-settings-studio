@@ -25,9 +25,13 @@ The unfiltered development report remains in the release artifact. The developme
 
 npm requires the package to exist before configuring its trusted publisher. Staging a new package creates a public `0.0.0-stage` placeholder; it does not publish the app version.
 
-Use the GitHub-tested tarball to create the first local stage. Configure the trusted publisher for `Gohans1/pi-settings-studio`, workflow `release.yml`, environment `npm`, with stage permission only. Reject the bootstrap stage; **do not approve it**, because a local upload does not have GitHub OIDC provenance. Then allow the workflow's staging job to upload the same tested artifact with provenance and review that new stage.
+Use the GitHub-tested tarball to create the first local stage. Configure the trusted publisher for `Gohans1/pi-settings-studio`, workflow `release.yml`, environment `npm`, with stage permission only. Reject the bootstrap stage; **do not approve it**, because a local upload does not have GitHub OIDC provenance and approving it publishes that version without it, as happened with 0.1.0 (see below). Then allow the workflow's staging job to upload the same tested artifact with provenance and review that new stage.
 
 Staging, trusted-publisher setup, rejection and approval use npm's documented commands. The maintainer completes any security-key confirmation personally. Never use a bypass-2FA token or recovery code for routine releases.
+
+## Release history
+
+- **0.1.0** (2026-10-11): the bootstrap stage was approved instead of rejected, so this version went public from the maintainer's machine without provenance. Its bytes are identical to the artifact of workflow run 38158093135 (commit 836ddb9, SHA-256 `dea05719b4b44c0f07dfcb9a58e89ef30f18f66bac4e4388ce6fb76788d6ac83`), which passed the same checks. A published version cannot be replaced, so provenance starts with the next release.
 
 ## Check a release
 
