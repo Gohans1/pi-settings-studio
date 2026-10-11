@@ -84,6 +84,7 @@ A Base UI checkbox or switch forwards its click to a hidden input; the input sta
 - Do use a semantic token; when no role fits, add one rather than borrowing a token for its value.
 - Do keep the visible label inside the accessible name ("Use default for Shell", not "Reset Shell").
 - Do give every state a word or an icon as well as a colour.
+- Do say in the demo build, in a note at the top of the page, that its data is sample data and read-only; a refused change toasts that sentence, since each tab reports its own errors its own way.
 - Don't edit files in `components/ui`; reinstall them with the shadcn CLI and change an instance through props, variants or a layout `className`.
 - Don't silence `@shadcn/lint` with a disable comment; a deliberate exception is a contract in `.oxlintrc.json`, with its reason here.
 - Don't write colour literals, raw spacing or font sizes, or `!important` in `styles.css`; the design-token tests fail on them.

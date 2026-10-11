@@ -16,6 +16,7 @@ import { SubagentsTab } from "./SubagentsTab";
 import { SkillsTab } from "./SkillsTab";
 import { ToolsTab } from "./ToolsTab";
 import { ContextTab } from "./ContextTab";
+import { DemoNotice } from "./DemoNotice";
 
 type Panel = (props: { project?: string; loadsInProject?: boolean }) => React.ReactElement;
 // Only implemented tabs are listed (SPEC.md: no fake tabs).
@@ -118,6 +119,7 @@ export function App() {
       </div>
     </header>
     <main id="main" tabIndex={-1}>
+      {import.meta.env.VITE_DEMO && <DemoNotice />}
       {current && <TrustPanel project={current.path} trust={current.trust} onChange={trust => updateTrust(current.path, trust)} />}
       {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id} className="flex flex-col"><Panel project={project} loadsInProject={current?.trust.loadsWithoutPrompt} /></TabsContent>)}
     </main>

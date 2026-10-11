@@ -32,6 +32,9 @@ Bun serves `127.0.0.1:4369` (configurable) and runs in the background. No login.
 
 The allowlist also takes origins given with `--allow-origin` (repeatable, each an origin only). The installed service uses it for the `tailscale serve` address on port 4369, so a phone on the tailnet can open the app. Anyone on that tailnet who reaches the address can read and change settings, and the app has no login.
 
+## Demo
+A static build of the same app (`vite build --mode demo`, output `dist/demo`) that runs with no server and no access to anyone's files, so it can be hosted (Cloudflare static assets, `wrangler.jsonc`) and opened from a link. It answers every request from `src/demo/snapshot.json`, which `bun run record:demo` records from the real server on a sample home (`src/demo/seed.ts`), so the demo shows what the app shows, not a mock of it. `src/demo/reads.ts` lists every read the app makes; the unit test and `e2e/demo.spec.ts` fail when the snapshot lacks one. The recording refuses to be written when it holds a path of the machine that recorded it. A change is refused with a toast ("read-only demo") and the page says so in a note. The demo is never a way to edit real settings: that needs the app running next to Pi (a hosted page cannot read `~/.pi`, and the app's server accepts only its own origin). The branch is gone from the normal build (`import.meta.env.VITE_DEMO`).
+
 ## UI
 Horizontal tab bar like pi-web, English, light/dark from the OS, shadcn (Base UI) components. Switches save immediately. Forms save on Save, without a review step. Failed saves keep the draft. Keyboard and narrow-screen support. Tabs that are not implemented are hidden, not faked.
 
@@ -43,9 +46,10 @@ Lint: `bun run lint`
 Build: `bun run build`
 Browser tests: `bun run test:e2e`
 Start: `bun run start`
+Record the demo's answers: `bun run record:demo`. Deploy the demo: `bun run deploy:demo` (publishing: ask first).
 
 ## Structure
-`src/server`: HTTP service and file access. `src/shared`: validated contracts. `src/client`: UI. `tests`: unit/integration tests on temporary directories. `e2e`: browser flows. `docs`: coverage and verification. `tasks`: plan and status.
+`src/server`: HTTP service and file access. `src/shared`: validated contracts. `src/client`: UI. `src/demo`: the demo's sample home, recorder and recorded answers. `tests`: unit/integration tests on temporary directories. `e2e`: browser flows. `docs`: coverage and verification. `tasks`: plan and status.
 
 ## Updating (manual)
 When asked to update: bump the Pi SDK to the installed Pi version, run the tests (the drift test lists `settings.json` keys without a form; the port test flags ported logic to re-check), then review pi-web settings changes since the commit recorded in `docs/parity.md`.

@@ -1,0 +1,6 @@
+// The demo: static files only, no Worker script. `bun run deploy:demo`.
+{
+  "name": "pi-settings-studio-demo",
+  "compatibility_date": "2026-10-11",
+  "assets": { "directory": "./dist/demo" }
+}

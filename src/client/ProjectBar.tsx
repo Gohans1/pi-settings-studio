@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Folder, TriangleAlert } from "lucide-react";
+import { DEMO_PROJECT } from "../shared/demo";
 import type { ProjectView, TrustView } from "../shared/projects";
 import { loadProjects, saveTrust } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
@@ -14,7 +15,7 @@ const STORAGE_KEY = "pi-settings:project";
 /** The chosen project, remembered across visits; undefined until the list is known. */
 export function useProject() {
   const [projects, setProjects] = useState<ProjectView[]>();
-  const [project, setProject] = useState<string | undefined>(() => localStorage.getItem(STORAGE_KEY) ?? undefined);
+  const [project, setProject] = useState<string | undefined>(() => localStorage.getItem(STORAGE_KEY) ?? (import.meta.env.VITE_DEMO ? DEMO_PROJECT : undefined));
   useEffect(() => { loadProjects().then(setProjects).catch(() => setProjects([])); }, []);
   function choose(path: string | undefined) {
     if (path) localStorage.setItem(STORAGE_KEY, path); else localStorage.removeItem(STORAGE_KEY);

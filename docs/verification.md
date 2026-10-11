@@ -1,3 +1,28 @@
+# Verification — a static demo build that runs on Cloudflare with sample data, 2026-10-11
+
+Scope: a hosted page cannot read `~/.pi`, and the app's server accepts only its own origin, so a link can show the app but not edit anyone's settings. `vite build --mode demo` now makes `dist/demo`: the same app with every request answered from `src/demo/snapshot.json` (168 answers, 762 kB, 60 kB gzip in its own chunk), served as static assets by a Cloudflare Worker with no script (`wrangler.jsonc`) and the same CSP and headers as the app's server (`src/demo/public/_headers`). It is not deployed yet.
+
+- The snapshot is recorded from the real server on a sample home (`src/demo/seed.ts`: settings, three providers' worth of keys that are not keys, a custom Ollama provider, five skills, two sub-agents, a prompt, two extensions, a connecting stdio MCP server and a disabled remote one, a project with its own skill and server, one recorded session). `bun run record:demo` refuses to write when the text holds this machine's home, user name or working directory.
+- `src/demo/reads.ts` lists every read the tabs make on opening (with and without the project chosen); the loaders' argument types are checked by `tsc`, and both the unit test and the browser test fail when the snapshot lacks one.
+- A change is refused (`READ_ONLY`), tells the page whichever way its tab reports errors, and shows a toast with an error cue; a read the demo lacks says "not included in the demo". A note at the top says it is a read-only demo and links to the repository.
+- The normal build is unchanged in behaviour: `import.meta.env.VITE_DEMO` is empty there, and its bundle holds none of the demo's strings or data.
+
+| Check | Result |
+|---|---|
+| RED/GREEN | `tests/demo.test.ts` (8) failed with the module missing, then passed; `tests/demo-snapshot.test.ts` failed on an empty snapshot until the recording; `e2e/demo.spec.ts` failed on the missing note and project, then passed; the toast on refusal was added after the browser showed a switch flipping back with no word |
+| Mutation | Removing the project's `code-review/SKILL.md` answer from the snapshot makes "every row of every list opens without an error" fail at Skills, row 3 (it first passed twice for the wrong reasons: a regex that missed "Edit files of", and a key without `project=`; the real run also flagged "re-reading" in a sample prompt as a loading state, so it now checks `aria-busy`) |
+| `bun test` | 395 passed (54 files) |
+| `bun run typecheck` / `bun run lint` | Passed |
+| `bun run build` | Passed (client, then demo); the >500 kB chunk warning remains; no demo string in `dist/client` |
+| `bun run test:e2e` | 185 passed (13 new in `e2e/demo.spec.ts`: the note, each of the nine tabs with no `/api` request, no console error and no alert, every row of every list, a refused change, axe on the first screen) |
+| `wrangler dev` | Serves `dist/demo` with the `_headers` applied (CSP, nosniff, referrer and permissions policy seen in the response) |
+
+Manual (agent-browser against `wrangler dev` on port 8788, own session, closed after): Skills at 1440×900 shows the note and the sample skills; clicking a switch leaves it on and shows the toast "This is a read-only demo with sample data…"; at 390×844 in dark, nothing overflows sideways (scrollWidth 390); console clean. No real file under `~/.pi` was read or written; the recorder ran on a temporary home.
+
+Not checked: the deployed Worker (needs a Cloudflare login), Firefox and Safari, and the demo's size on a slow network (694 kB chunk, loaded after the app's own).
+
+---
+
 # Verification — the project is licensed MIT and packaged to be published, 2026-10-11
 
 Scope: the repository said "Personal tool, not published": `private: true`, `UNLICENSED`, no LICENSE, no `bin` or `files`. It is now MIT, with a `pi-settings-studio` bin that runs under Bun, a `files` list that ships only `src/server`, `src/shared` and the built `dist/client`, and a `prepack` that builds the client. Version 0.1.0. It is not on npm yet. The package has no `pi-package` keyword: it holds no extension, skill, prompt or theme, so the Pi package gallery has nothing to load from it.

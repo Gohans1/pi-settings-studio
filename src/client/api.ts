@@ -13,6 +13,8 @@ import type { JobSummary, JobView } from "../shared/jobs";
 import type { ThemeView } from "../shared/themes";
 type Scope = SettingsView["scope"];
 async function request<T>(url: string, method = "GET", body?: unknown, signal?: AbortSignal): Promise<T> {
+  // The demo build (vite --mode demo) has no server: it answers from a recording. Elsewhere this branch is gone from the bundle.
+  if (import.meta.env.VITE_DEMO) return (await import("./demo")).demoRequest<T>(url, method, body);
   const response = await fetch(url, {
     method, credentials: "same-origin", signal,
     ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
