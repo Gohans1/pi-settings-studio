@@ -1,10 +1,10 @@
 # Pi Settings Studio
 
-A local GUI for [Pi](https://pi.dev) core configuration: MCP servers, models, skills, packages, and an inspector that shows what a new session puts in front of the model. Settings only, no chat. Inspired by the settings panel of [pi-web](https://github.com/agegr/pi-web). Unofficial: not affiliated with Earendil Works.
+A local GUI for [Pi](https://pi.dev) core configuration: MCP servers, models, skills, packages, and an inspector that previews a new session's startup context. Settings only, no chat. Inspired by the settings panel of [pi-web](https://github.com/agegr/pi-web). Unofficial: not affiliated with Earendil Works.
 
 [Try the demo](https://pi-settings-studio-demo.khoaphamda.workers.dev) — no installation, sample data only. To edit your own settings, [run it locally](#run).
 
-![Context: a new session's system prompt and tool declarations, part by part, with token estimates](docs/screenshots/context.png)
+![Context: a startup preview of Pi's system prompt and tool declarations, with token estimates](docs/screenshots/context.png)
 
 Native Pi files stay authoritative: the app reads and writes `settings.json`, `mcp.json`, `models.json`, skills and `AGENTS.md` in place, and keeps unknown keys. More screens: [Tools](docs/screenshots/tools.png), [MCP](docs/screenshots/mcp.png).
 
@@ -39,7 +39,19 @@ Use a temporary `--agent-dir` while trying changes.
 
 ## Run in the background
 
-Requires Linux with systemd, or WSL with systemd enabled. Before enabling the service, edit the copied unit: set `WorkingDirectory` to the repository's absolute path and replace `/usr/local/bin/bun` in `ExecStart` with the absolute path returned by `command -v bun`.
+Requires Linux with systemd, or WSL with systemd enabled. Before enabling the service, edit the copied unit:
+
+- Set `WorkingDirectory` to the repository's absolute path.
+- Replace `/usr/local/bin/bun` in `ExecStart` with the absolute path returned by `command -v bun`.
+- If Pi, its runtime or npm is installed in a user-local directory, include those bin directories in the service's `PATH`. MCP commands also need to be reachable there; a working terminal `PATH` does not guarantee the service has the same one.
+
+For user-local installs, add this to the unit's `[Service]` section, replacing the example directories with your absolute bin paths:
+
+```ini
+Environment="PATH=/absolute/pi-bin:/absolute/runtime-bin:/absolute/npm-bin:/usr/local/bin:/usr/bin:/bin"
+```
+
+Do not use `~`, `$HOME` or `$PATH` in that value; systemd does not expand them.
 
 ```sh
 bun run build
@@ -59,18 +71,20 @@ To open it from a phone on your tailnet, run `tailscale serve --bg --https=4369 
 ## Tabs
 
 - **General**: the `settings.json` keys no other tab owns, raw JSON, keyboard shortcuts, the installed Pi version with Update Pi and a newer Pi on npm when there is one, and what cannot be edited here.
-- **Models**: every provider of Pi's model runtime with its models (limits, image input, thinking levels, price), sign-in and key setup through Pi's own login, credential check, defaults with the thinking levels each model offers, enabled models as a checklist, prompt caching and thinking budgets, custom providers and changes to a shipped provider in `models.json`, with model lists from their endpoint.
+- **Models**: Pi's model-runtime providers and `models.json` providers, with model details, credential setup, custom endpoints and model discovery. Defaults controls the startup provider/model, enabled models, thinking levels, prompt caching and thinking budgets. Models registered by enabled extensions appear in Defaults; configure their credentials in Pi.
 - **Skills**: switches, whether the model may load a skill (one, or a whole group from its menu), a file editor for each skill folder, new skills, Remove with Undo, skill commands.
 - **Sub-agents**: profiles in Pi's example format.
 - **Plugins**: extensions, prompts and themes (switches, editor, new files), packages (check for updates, update notices, install, update, remove, filters, the npm command). Select an extension to inspect all registered tools and direct model declarations for the chosen project. Installed extensions are trusted and run automatically for this preview; see [Extension tools](docs/plugin-tools.md).
 - **MCP**: servers with exposure rules, each server's state (connected, needs sign-in, failed) and tools as soon as the tab opens, OAuth and provider sign-in, Code mode, import from other clients, connection test, sign-in state, `mcp.log`.
-- **Tools**: what the model sees and doesn't see in a new session, and every source it comes from (built into Pi, extensions, MCP servers), off ones included, with search. Startup tools turns Pi's own tools on or off. Runs the same trusted inspection as Plugins; see [Extension tools](docs/plugin-tools.md).
+- **Tools**: a startup preview of tools the model sees directly, can reach on demand, or cannot use. Grouped by Pi, extension and MCP sources, including disabled sources, with search. Startup tools edits Pi's default tool selection. Uses the same trusted inspection as Plugins; see [Extension tools](docs/plugin-tools.md).
 - **Instructions**: `AGENTS.md`, `SYSTEM.md`, `APPEND_SYSTEM.md`.
-- **Context**: what a session puts in front of the model before the first message, part by part, each with Pi's token estimate, the file it comes from and the tab that changes it. Next session builds it with the trusted inspection Tools runs; Recorded session shows a session's first request and what Pi changed later.
+- **Context**: startup and recorded context, broken down into system-prompt sections and tool declarations, with Pi's token estimates and source files. **Next session** uses trusted inspection for a startup preview. **Recorded session** shows the first request Pi recorded and later context changes.
 
-The project picker adds each project's `.pi` files and trust. Changes apply to new Pi sessions, or after `/reload`.
+Startup previews do not run third-party turn-start or request hooks. Host or provider additions can make the actual request differ. See [preview limitations](docs/plugin-tools.md#context).
 
-Buttons that run something use the `pi` command on `PATH` (or `~/.local/bin/pi`) with `PI_CODING_AGENT_DIR` set to the app's agent directory.
+The project picker includes that project's `.pi` files and shows Pi's saved trust decision. Inspections treat the selected project as trusted without changing `trust.json`, even if Pi's saved decision rejects it. Configuration changes apply to new Pi sessions, or after `/reload`.
+
+CLI-backed jobs use `pi` on `PATH` (or `~/.local/bin/pi`), with `PI_CODING_AGENT_DIR` set to the app's agent directory. Provider sign-in/key setup and extension inspections use the app's pinned Pi SDK, not the installed CLI.
 
 ## Package update notices
 
@@ -84,6 +98,7 @@ The checker uses system `npm` and `git` (not `npmCommand` from settings), and Pi
 
 - The server listens on `127.0.0.1` only, checks Host and Origin, rejects cross-site requests and has no login. Anyone who can reach it can change your Pi settings, so do not expose it beyond your machine (see the tailnet note above).
 - Installed extensions are trusted, not sandboxed. Selecting an extension, or opening Tools or Context, loads extensions and connects configured MCP servers through Pi in a separate process. General and Models › Defaults also load enabled extensions in a provider-inspection process to read their model metadata. Extension code can access files and the network. [Extension inspection and side effects](docs/plugin-tools.md#trust-and-side-effects).
+- Inspections can load a selected project's extensions even when Pi's saved trust decision rejects that project. Select only projects whose code you trust; inspection does not change `trust.json`.
 - Secrets stay on the server: `auth.json` values and MCP `env` / `headers` values are never sent to the browser.
 
 ## Test
