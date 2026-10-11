@@ -1,3 +1,18 @@
+# Verification — README installs from npm, 2026-10-11
+
+Scope: `README.md`, `docs/release.md` and this record. No application code, workflow, dependency or AGENTS.md change.
+
+- README: "Not on npm yet." is gone. Run now starts with `bun x pi-settings-studio` (with a note that it runs with your permissions and is not a sandbox, how to name a release, and that releases from 0.1.1 on carry provenance), then the source steps; the options are shared; Run in the background says it needs a clone because the npm package has no service unit; Security says installing from npm runs this package and its dependencies, and that provenance shows origin, not harmlessness. `docs/release.md` records 0.1.1 in the release history.
+- Registry facts the text rests on, checked 2026-10-11: versions 0.0.0-stage, 0.1.0 and 0.1.1; latest is 0.1.1; the publisher of 0.1.1 is GitHub Actions (trusted publisher) with the maintainer's account as approver; the SLSA provenance names repository `Gohans1/pi-settings-studio`, ref `refs/heads/main`, workflow `.github/workflows/release.yml`, commit 23dba5f and run 38160208393 on a GitHub-hosted runner, and sits in the Sigstore log at index 3211671811. The registry tarball's SHA-256 equals the workflow artifact's (`720b2d9a…8479`).
+- `npm audit signatures` (npm 11.21.0) on a consumer installed from the registry in a temporary directory: 125 packages with verified registry signatures and 40 with verified attestations, including pi-settings-studio@0.1.1; none invalid or missing.
+- `bun x pi-settings-studio@0.1.1` from an empty directory with a temporary home and agent directory: `--help` works, the server starts, the page answers 200 with its security headers and `/api/settings/global` answers 200 with an Origin header. It left no files in the directory. The server was stopped and the temporary directories removed.
+- Git tags: `v0.1.0` at 836ddb9 and `v0.1.1` at 23dba5f (annotated, pushed). Each tag's `package.json` has the matching version, and 23dba5f is the commit the provenance names.
+- Docs checks: 18 local links and anchors valid, 4 shell blocks pass `bash -n`, `git diff --check`. Repository checks: bun test (404 passed), typecheck, lint.
+- Not performed: build and test:e2e (no code has changed since the green run 38160208393), a look at the npm package page, other operating systems, `bun x` under systemd, and how `bun x` picks up newer versions (the README makes no claim). The npm page keeps the 0.1.1 README until the next release. `--help` still prints "Usage: bun src/server/cli.ts"; left for a later release.
+- Still open on npm, both needing the maintainer's 2FA: Publishing access set to disallow bypass tokens, and an optional deprecation note on 0.1.0 (the registry shows none).
+
+---
+
 # Verification — release 0.1.1 after the bootstrap version went public, 2026-10-11
 
 Scope: `package.json` version (0.1.0 to 0.1.1) and `docs/release.md`, plus this record. No application code, workflow, dependency or AGENTS.md change.

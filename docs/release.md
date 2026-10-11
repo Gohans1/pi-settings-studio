@@ -32,6 +32,7 @@ Staging, trusted-publisher setup, rejection and approval use npm's documented co
 ## Release history
 
 - **0.1.0** (2026-10-11): the bootstrap stage was approved instead of rejected, so this version went public from the maintainer's machine without provenance. Its bytes are identical to the artifact of workflow run 38158093135 (commit 836ddb9, SHA-256 `dea05719b4b44c0f07dfcb9a58e89ef30f18f66bac4e4388ce6fb76788d6ac83`), which passed the same checks. A published version cannot be replaced, so provenance starts with the next release.
+- **0.1.1** (2026-10-11): the first release staged by the workflow through OIDC and approved by the maintainer. The registry lists GitHub Actions as publisher, with provenance for repository `Gohans1/pi-settings-studio`, workflow `.github/workflows/release.yml`, commit 23dba5f and run 38160208393, recorded in the Sigstore transparency log (index 3211671811). Its SHA-256 equals the workflow artifact's (`720b2d9ac6bbbf377b6acf3eb0d239a8ec0a996421a27e71b552f1da141d8479`).
 
 ## Check a release
 
