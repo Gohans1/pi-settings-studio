@@ -100,6 +100,8 @@ test("the Sounds toggle silences the app, is remembered, and says so when turned
   expect(await settled(page)).toBe(0);
   await page.getByRole("button", { name: "Sounds" }).click();
   await expect.poll(() => sounds(page)).toBeGreaterThan(0);
+  // The click dismisses the toggle's tooltip, which fades out; axe would measure its half-faded text.
+  await expect(page.locator("[data-slot=tooltip-content]")).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 

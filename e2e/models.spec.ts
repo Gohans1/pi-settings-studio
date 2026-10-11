@@ -217,6 +217,8 @@ test("defaults are chosen from Pi's catalog and saved to settings.json", async (
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Defaults saved");
   const settings = JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
   expect(settings).toEqual({ defaultProvider: "anthropic", defaultModel: chosen, defaultThinkingLevel: "high", enabledModels: ["anthropic/*"] });
+  // Moving to Save closed the count's tooltip; axe must not see it while it fades out of its portal.
+  await expect(page.locator("[data-slot=tooltip-content]")).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
