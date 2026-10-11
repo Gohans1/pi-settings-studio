@@ -33,6 +33,10 @@ What a preview of Pi cannot see, checked against the newest recorded session of 
 - A provider can put its own instructions first: `pi-claude-bridge` sends Claude Code's preset, then the portable parts of Pi's prompt (its `src/prompt-capture.ts`).
 - `context` handlers transform each request and are not run.
 
+## Provider inspection
+
+General and Models › Defaults also load enabled extensions in a separate provider-inspection process. It reads the providers and models they register for suggestions, available models and model-scope checks. The provider list and its credential actions remain separate and do not load extensions; configure extension-provider credentials in Pi. This probe has the same trust boundary as tool inspection: a separate process is not a sandbox.
+
 ## Trust and side effects
 
 The owner explicitly trusts installed extensions. Inspection loads enabled extensions plus the selected extension in a disposable Bun subprocess, with the app's environment and OS permissions. It is **not a sandbox**: extension code can access files and the network, and its own side effects are not rolled back. Configured MCP servers connect as they do at Pi startup. The app itself does not prompt a model or execute a model tool to inspect the catalogue.
