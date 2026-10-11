@@ -1,3 +1,15 @@
+# Verification — E2E waits for a closing tooltip before axe, 2026-10-11
+
+Scope: two lines each in `e2e/models.spec.ts` and `e2e/sound.spec.ts`, and this record. No application code, workflow, dependency or AGENTS.md change; nothing has been published.
+
+- The second Actions run (run 38157522029, commit 7042a49) passed bun test (404), typecheck, lint and both builds on the runner. test:e2e: 183 passed, 2 failed, both axe checks. `models.spec.ts:194` reported `region` (a portal outside the landmarks); `sound.spec.ts:86` reported `color-contrast` 1.06 (#f2f0e5 on #ebe9de). In both, the node was a tooltip popup in the middle of its dismissal (`data-closed`, `data-ending-style`). The stage job was skipped, so nothing reached npm.
+- Cause: axe ran while a dismissed tooltip was still fading out of its portal; on the developer machine the fade had always ended first. This was **not reproduced locally**; the diagnosis rests on the failing DOM in the run's log.
+- Fix: both tests wait until no `[data-slot=tooltip-content]` remains before running axe, as `mcp.spec.ts` and `settings.spec.ts` already wait for colour transitions to settle. A tooltip that never closed would still fail the test, after Playwright's expect timeout.
+- Local verification: both tests passed 8 times each (16 of 16, 1.3 minutes), so the wait is reached every time; lint and typecheck pass.
+- Not performed: a full local E2E run (two test files changed; the full suite runs in Actions) and a passing Actions run so far. Other axe checks (56 in 17 files) have the same exposure to a closing popup and were not changed; they passed on the runner.
+
+---
+
 # Verification — CI runs the locked Pi CLI, 2026-10-11
 
 Scope: `.github/workflows/release.yml` and this record. No application code, dependency or AGENTS.md change; nothing has been published.
