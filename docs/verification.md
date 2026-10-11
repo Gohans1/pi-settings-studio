@@ -1,3 +1,19 @@
+# Verification — publish the static demo to Cloudflare, 2026-10-11
+
+Demo: https://pi-settings-studio-demo.khoaphamda.workers.dev
+Cloudflare version: `e4a66aa5-5e91-4844-8a67-296085f65a65` (built from `9370e55`).
+
+- `bun run deploy:demo` rebuilt and uploaded the static assets successfully under the owner's OAuth login. No local settings backend, credentials or account token were uploaded.
+- HTTPS document, CSS, app script and snapshot script return 200. CSP, nosniff, referrer policy and permissions policy match `src/demo/public/_headers`.
+- Live browser verification with agent-browser (isolated session `pss-cf-live-20261011`) and T3 preview: all nine tabs open with sample data and no alerts, console errors or warnings. Only static resources were requested; no `/api/` or localhost request.
+- Clicking "Enable code-review" leaves the switch enabled and shows the read-only toast. Dark mode at 390×844 has no horizontal overflow (scrollWidth 390).
+- Screenshots: `/tmp/pss-live-evidence/general.png`, `context.png`, `refused-write.png`, `mobile-dark.png`; T3 captured a Context screenshot as well. These are local evidence, not shipped assets.
+- README links directly to the deployed demo and distinguishes sample data from local configuration editing. GitHub's website field points to the demo.
+- Application source is unchanged since the preceding verification (395 unit tests, 185 browser tests, typecheck, lint and both builds passed). This follow-up changes documentation only.
+- Not checked: Firefox/Safari or slow-network performance. The existing >500 kB bundle warning remains.
+
+---
+
 # Verification — a static demo build that runs on Cloudflare with sample data, 2026-10-11
 
 Scope: a hosted page cannot read `~/.pi`, and the app's server accepts only its own origin, so a link can show the app but not edit anyone's settings. `vite build --mode demo` now makes `dist/demo`: the same app with every request answered from `src/demo/snapshot.json` (168 answers, 762 kB, 60 kB gzip in its own chunk), served as static assets by a Cloudflare Worker with no script (`wrangler.jsonc`) and the same CSP and headers as the app's server (`src/demo/public/_headers`). It is not deployed yet.
