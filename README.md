@@ -20,7 +20,17 @@ For maintainers: [build, refresh and deploy the demo](docs/demo.md).
 
 ## Run
 
-Requires [Bun](https://bun.sh) 1.4.2 or newer (tested on 1.4.2) and Pi, with `pi` on your `PATH`. Not on npm yet.
+Requires [Bun](https://bun.sh) 1.4.2 or newer (tested on 1.4.2) and Pi, with `pi` on your `PATH`.
+
+### From npm
+
+```sh
+bun x pi-settings-studio            # http://localhost:4369
+```
+
+This downloads the package and its dependencies, then runs them with your permissions; it is not a sandbox. To stay on one release, name it: `bun x pi-settings-studio@<version>`. Releases from 0.1.1 on are built by GitHub Actions and carry provenance: [check a release](docs/release.md#check-a-release).
+
+### From source
 
 ```sh
 git clone https://github.com/Gohans1/pi-settings-studio
@@ -30,7 +40,9 @@ bun run build
 bun run start            # http://localhost:4369
 ```
 
-Options:
+### Options
+
+Both ways accept these:
 - `--port`: HTTP port (default: `4369`).
 - `--agent-dir PATH`: Pi configuration folder (default: `PI_CODING_AGENT_DIR` or `~/.pi/agent`).
 - `--project PATH`: add a project to the picker. Without it, projects are discovered from Pi sessions; the current directory is not added automatically.
@@ -39,7 +51,7 @@ Use a temporary `--agent-dir` while trying changes.
 
 ## Run in the background
 
-Requires Linux with systemd, or WSL with systemd enabled. Before enabling the service, edit the copied unit:
+Requires Linux with systemd, or WSL with systemd enabled, and a clone of the repository: the npm package does not include the service unit. Before enabling the service, edit the copied unit:
 
 - Set `WorkingDirectory` to the repository's absolute path.
 - Replace `/usr/local/bin/bun` in `ExecStart` with the absolute path returned by `command -v bun`.
@@ -97,6 +109,7 @@ The checker uses system `npm` and `git` (not `npmCommand` from settings), and Pi
 ## Security
 
 - The server listens on `127.0.0.1` only, checks Host and Origin, rejects cross-site requests and has no login. Anyone who can reach it can change your Pi settings, so do not expose it beyond your machine (see the tailnet note above).
+- Installing from npm runs this package and its dependencies on your machine. Provenance shows which commit and workflow built a release; it does not show that the code is harmless.
 - Installed extensions are trusted, not sandboxed. Selecting an extension, or opening Tools or Context, loads extensions and connects configured MCP servers through Pi in a separate process. General and Models › Defaults also load enabled extensions in a provider-inspection process to read their model metadata. Extension code can access files and the network. [Extension inspection and side effects](docs/plugin-tools.md#trust-and-side-effects).
 - Inspections can load a selected project's extensions even when Pi's saved trust decision rejects that project. Select only projects whose code you trust; inspection does not change `trust.json`.
 - Secrets stay on the server: `auth.json` values and MCP `env` / `headers` values are never sent to the browser.
