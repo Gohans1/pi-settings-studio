@@ -2,6 +2,8 @@
 
 A local GUI for [Pi](https://pi.dev) core configuration: MCP servers, models, skills, packages, and an inspector that shows what a new session puts in front of the model. Settings only, no chat. Inspired by the settings panel of [pi-web](https://github.com/agegr/pi-web). Unofficial: not affiliated with Earendil Works.
 
+[Try the demo](https://pi-settings-studio-demo.khoaphamda.workers.dev) — no installation, sample data only. To edit your own settings, [run it locally](#run).
+
 ![Context: a new session's system prompt and tool declarations, part by part, with token estimates](docs/screenshots/context.png)
 
 Native Pi files stay authoritative: the app reads and writes `settings.json`, `mcp.json`, `models.json`, skills and `AGENTS.md` in place, and keeps unknown keys. More screens: [Tools](docs/screenshots/tools.png), [MCP](docs/screenshots/mcp.png).
@@ -11,6 +13,8 @@ Scope, decisions and boundaries: [SPEC.md](SPEC.md). Coverage: [docs/parity.md](
 Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Demo
+
+[Open the hosted demo](https://pi-settings-studio-demo.khoaphamda.workers.dev). It is read-only and cannot access your local Pi files.
 
 `bun run build:demo` builds a static copy of the app with sample data and no server (`dist/demo`): every tab opens on a sample Pi home, and changes are refused. It is what the project's hosted demo serves. `bun run record:demo` records its data from the real server; `bun run deploy:demo` publishes it with Wrangler (Cloudflare account needed). Details: [SPEC.md](SPEC.md#demo).
 
