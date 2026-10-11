@@ -1,3 +1,20 @@
+# Verification — resolve delegated README writing blockers, 2026-10-11
+
+Scope: README copy only, plus this verification record; application code, service unit, dependencies and AGENTS.md are unchanged.
+
+- Clarified startup previews in the introduction, screenshot alt text, Tools and Context descriptions. The limitations paragraph names skipped third-party hooks and possible host/provider differences, with a link to the existing explanation.
+- Explicitly warns that inspection can load a selected project's extensions despite Pi's saved rejection, does not change trust.json, and requires selecting only projects whose code you trust.
+- Separates CLI-backed jobs from provider sign-in/key setup and extension inspection through the app's pinned SDK. Models describes the provider catalog separately from extension-provider models and their credential setup in Pi.
+- Adds user-service PATH guidance for Pi, its runtime, npm and MCP commands, with absolute-directory placeholders and the warning that systemd does not expand shell variables or tilde in Environment.
+- Delegated review: two GPT-6.1 Sol reviewers used the complete better-writing skill independently. Round 1 yielded three parent-confirmed blockers and two optional roots; all five were addressed. Both round-2 reviewers approved the current working README, with all prior blockers resolved.
+- Reviewed README blob: `03565f72cfaa1b3747a43ff95667ab00f457d2a5`. Round-2 client request IDs: `readme-writing-a-5868c81d-r2` and `readme-writing-b-5868c81d-r2`.
+- Remaining non-blockers from A: README:91 could describe update-check timing more plainly; README:9 could name the image links "Tools screenshot" and "MCP screenshot". B had no actionable findings. These were left unchanged after both reviewers approved, per the requested no-blocker stopping condition.
+- Direct documentation checks: 15 local links/anchors valid, three shell blocks pass bash -n, git diff --check passes.
+- Repository checks ran once for this correction cycle, alongside the read-only reviews: bun test (395 passed), typecheck, lint, build (client and demo), test:e2e (185 passed, 5.2 minutes). The existing >500 kB bundle warning remains.
+- Not performed: actual systemd configuration, authentication, changing real Pi settings, browser/network verification of documentation destinations, deployment or push.
+
+---
+
 # Verification — correct the public guides and separate demo maintenance, 2026-10-11
 
 Scope: documentation only; no application code, service unit, dependencies or AGENTS.md changed.
