@@ -10,7 +10,7 @@
 - [x] MCP: enable/disable, exposure.
 - [x] MCP: add, edit, remove, undo.
 - [x] MCP: codemode controls.
-- [x] System prompt tab.
+- [x] Context tab (next and recorded sessions).
 - [x] Skills tab (user, package and project skills).
 - [x] General tab, drift test, raw JSON.
 - [x] Models tab: providers, API keys, defaults from the catalog.

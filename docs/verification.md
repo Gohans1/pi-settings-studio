@@ -1,3 +1,18 @@
+# Verification — correct the public guides and separate demo maintenance, 2026-10-11
+
+Scope: documentation only; no application code, service unit, dependencies or AGENTS.md changed.
+
+- README now states the systemd prerequisite and asks you to edit the copied unit's WorkingDirectory and Bun executable path before enabling it, with journalctl as the recovery step.
+- The CLI options no longer claim that --project defaults to the current directory: it adds a project to the picker; Pi sessions supply the other projects (src/server/cli.ts).
+- README, SPEC.md, docs/parity.md and docs/plugin-tools.md distinguish provider credential actions from the trusted provider probe. General and Models › Defaults load enabled extensions for model metadata (GeneralTab.tsx, ModelDefaults.tsx, modelRoutes and extensionProviderSource); a subprocess is not a sandbox.
+- Current task documents use Context consistently. Historical verification entries are unchanged.
+- Demo maintenance commands moved from README to docs/demo.md, which links back to local setup and the demo specification.
+- Source review against the better-writing skill: all five findings addressed, no remaining HIGH in the changed copy. Local checks found 18 valid file/anchor links and six shell blocks passing bash -n.
+- Repository checks: bun test (395 passed), typecheck, lint, build (client and demo), and test:e2e (185 passed, 5.8 minutes). The existing >500 kB bundle warning remains.
+- Not performed: enabling or restarting a systemd service, changing real Pi settings, recording new demo data, deploying or pushing. No additional manual browser check was needed because the interface and application source are unchanged.
+
+---
+
 # Verification — publish the static demo to Cloudflare, 2026-10-11
 
 Demo: https://pi-settings-studio-demo.khoaphamda.workers.dev

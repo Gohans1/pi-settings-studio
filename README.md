@@ -16,7 +16,7 @@ Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 [Open the hosted demo](https://pi-settings-studio-demo.khoaphamda.workers.dev). It is read-only and cannot access your local Pi files.
 
-`bun run build:demo` builds a static copy of the app with sample data and no server (`dist/demo`): every tab opens on a sample Pi home, and changes are refused. It is what the project's hosted demo serves. `bun run record:demo` records its data from the real server; `bun run deploy:demo` publishes it with Wrangler (Cloudflare account needed). Details: [SPEC.md](SPEC.md#demo).
+For maintainers: [build, refresh and deploy the demo](docs/demo.md).
 
 ## Run
 
@@ -30,21 +30,29 @@ bun run build
 bun run start            # http://localhost:4369
 ```
 
-Options: `--port`, `--agent-dir` (default `PI_CODING_AGENT_DIR` or `~/.pi/agent`), `--project` (default: current directory). Use a temporary `--agent-dir` while trying changes.
+Options:
+- `--port`: HTTP port (default: `4369`).
+- `--agent-dir PATH`: Pi configuration folder (default: `PI_CODING_AGENT_DIR` or `~/.pi/agent`).
+- `--project PATH`: add a project to the picker. Without it, projects are discovered from Pi sessions; the current directory is not added automatically.
+
+Use a temporary `--agent-dir` while trying changes.
 
 ## Run in the background
+
+Requires Linux with systemd, or WSL with systemd enabled. Before enabling the service, edit the copied unit: set `WorkingDirectory` to the repository's absolute path and replace `/usr/local/bin/bun` in `ExecStart` with the absolute path returned by `command -v bun`.
 
 ```sh
 bun run build
 mkdir -p ~/.config/systemd/user
-# edit WorkingDirectory in the unit to where you cloned the repository
 cp service/pi-settings-studio.service ~/.config/systemd/user/
+command -v bun
+# Edit ~/.config/systemd/user/pi-settings-studio.service as described above.
 systemctl --user daemon-reload
 systemctl --user enable --now pi-settings-studio
 loginctl enable-linger "$USER"   # start with WSL, without opening a terminal
 ```
 
-Then bookmark `http://localhost:4369`. After pulling changes: `bun run build && systemctl --user restart pi-settings-studio`.
+Then bookmark `http://localhost:4369`. If startup fails, inspect the error with `journalctl --user -u pi-settings-studio -n 50`. After pulling changes: `bun run build && systemctl --user restart pi-settings-studio`.
 
 To open it from a phone on your tailnet, run `tailscale serve --bg --https=4369 http://127.0.0.1:4369`, then start the service with `--allow-origin https://<machine>.<tailnet>.ts.net:4369` (a systemd drop-in keeps that out of the repo). The app has no login, so anyone on that tailnet who reaches it can change settings.
 
@@ -75,7 +83,7 @@ The checker uses system `npm` and `git` (not `npmCommand` from settings), and Pi
 ## Security
 
 - The server listens on `127.0.0.1` only, checks Host and Origin, rejects cross-site requests and has no login. Anyone who can reach it can change your Pi settings, so do not expose it beyond your machine (see the tailnet note above).
-- Installed extensions are trusted. Selecting one, or opening Tools or Context, loads installed extensions and connects configured MCP servers through Pi in a separate process. This is not a sandbox. [Details](docs/plugin-tools.md).
+- Installed extensions are trusted, not sandboxed. Selecting an extension, or opening Tools or Context, loads extensions and connects configured MCP servers through Pi in a separate process. General and Models › Defaults also load enabled extensions in a provider-inspection process to read their model metadata. Extension code can access files and the network. [Extension inspection and side effects](docs/plugin-tools.md#trust-and-side-effects).
 - Secrets stay on the server: `auth.json` values and MCP `env` / `headers` values are never sent to the browser.
 
 ## Test
