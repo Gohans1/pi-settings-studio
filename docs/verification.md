@@ -1,3 +1,14 @@
+# Verification — CI runs the locked Pi CLI, 2026-10-11
+
+Scope: `.github/workflows/release.yml` and this record. No application code, dependency or AGENTS.md change; nothing has been published.
+
+- The first Actions run (run 38157152604, commit 5f06a66) failed in the build job at `bun test`: 397 passed, 6 failed. The six tests drive the real `pi` CLI (credential check, `pi mcp list` status and job, a repeated job, local package install). The runner has no `pi`. The stage job was skipped, so the gate held and nothing reached npm.
+- Reproduced with a clean environment (empty home set when the process starts, PATH without `pi`): the same 397 passed, 6 failed. The earlier simulation had left the real `pi` reachable and was withdrawn.
+- Fix: the build job puts `node_modules/.bin` on PATH after the frozen install, so the tests use the Pi pinned in `bun.lock` and no separate download. In the same clean environment: 404 passed, 0 failed, 0 skipped (the test that compares the SDK pin with the installed Pi now runs).
+- Not performed yet: a passing Actions run, and the E2E suite in this environment.
+
+---
+
 # Verification — tested-tarball npm release pipeline, 2026-10-11
 
 Scope: release tooling and documentation only (`scripts/release.ts`, `tests/release.test.ts`, `.github/workflows/release.yml`, `docs/release.md`, lint/typecheck coverage of `scripts/`, one README link). The app, its dependencies and AGENTS.md are unchanged. Nothing has been published: the npm package is still not on the registry.
@@ -8,7 +19,7 @@ Scope: release tooling and documentation only (`scripts/release.ts`, `tests/rele
 - Browser check of the installed package (agent-browser, own session): the General tab loaded from the tarball's files, the console and page errors were empty. The browser was closed and the server stopped.
 - The full project audit still reports `braces@3.0.3`, GHSA-vfj7-8cjw-p6xm (high, no patched version published), reached only through the development-only shadcn CLI. The maintainer accepted it explicitly; the workflow ignores that one advisory in the development gate and keeps the unfiltered report. `bun audit --audit-level=high --ignore=GHSA-vfj7-8cjw-p6xm` exits 0 (544 packages, 1 ignored). This is an accepted exception, not a fix.
 - `npm stage publish <tarball> --dry-run --access=public --tag=latest --ignore-scripts --json` (npm 11.21.0) accepted the workflow's options and changed nothing.
-- Repository checks: bun test (404 passed), typecheck, lint and `git diff --check`. To mimic a CI runner without Pi, bun test was repeated with `pi` removed from PATH: 403 passed, 1 skipped (the test that compares the SDK pin with the installed Pi), 0 failed; build and test:e2e there: 185 passed (6.1 minutes). The environment `npm` on GitHub requires review by the maintainer and accepts deployments from main only.
+- Repository checks: bun test (404 passed), typecheck, lint and `git diff --check`. A first attempt to mimic a CI runner without Pi was not valid: the real `pi` under the home folder was still reached as a fallback, so its results are withdrawn (see the entry above). The environment `npm` on GitHub requires review by the maintainer and accepts deployments from main only.
 - Not performed: a GitHub Actions run, actionlint (not installed), the OIDC staging step and its provenance with a tarball argument, configuring the npm trusted publisher, and the publication itself.
 
 ---
