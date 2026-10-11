@@ -23,6 +23,9 @@ jobs:
           bun-version: 1.4.2
           no-cache: true
       - run: bun install --frozen-lockfile
+      - name: Put the locked Pi CLI on PATH
+        # Tests drive the real pi CLI. This is the Pi pinned in bun.lock, not a separate download.
+        run: echo "$GITHUB_WORKSPACE/node_modules/.bin" >> "$GITHUB_PATH"
       - name: Unfiltered development audit report
         continue-on-error: true
         run: bun audit --json > development-audit.json
