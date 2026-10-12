@@ -37,7 +37,7 @@
   ],
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "oxlint src tests e2e scripts",
     "build": "vite build && vite build --mode demo",
     "build:demo": "vite build --mode demo",

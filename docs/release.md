@@ -1,6 +1,6 @@
 # npm releases
 
-The release workflow is [.github/workflows/release.yml](../.github/workflows/release.yml). It runs on GitHub-hosted Ubuntu 24.04 with Bun 1.4.2. Node 24.21.0 supplies npm for OIDC publishing; the app still runs with Bun.
+The release workflow is [.github/workflows/release.yml](../.github/workflows/release.yml). It runs on GitHub-hosted Ubuntu 24.04 with Bun 1.4.3. Node 24.21.0 supplies npm for OIDC publishing; the app still runs with Bun.
 
 ## What is tested and published
 
