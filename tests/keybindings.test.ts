@@ -44,3 +44,20 @@ test("bindings are saved per action, defaults removed, unknown ids kept, bad key
   assert.equal((await patch([{ id: "app.session.new", keys: null }, { id: "app.session.tree", keys: ["ctrl+shift+t", "alt+shift+t"] }, { id: "tui.altScreen.pageUp", keys: [] }])).status, 200);
   assert.deepEqual(JSON.parse(await readFile(file, "utf8")), { "extension.custom": "f5", "app.session.tree": ["ctrl+shift+t", "alt+shift+t"], "tui.altScreen.pageUp": [] });
 });
+
+test("the $schema editor hint is no unknown action, and saving keeps it", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "pi-settings-keys-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(join(root, "agent"));
+  const file = join(root, "agent", "keybindings.json");
+  const hint = "https://pi.dev/schemas/keybindings.schema.json";
+  await writeFile(file, JSON.stringify({ $schema: hint, "extension.custom": "f5" }));
+  const app = createApp({ store: new ConfigStore({ global: join(root, "agent") }), agentDir: join(root, "agent"), origins: [origin] });
+  const request = (path: string, init: RequestInit = {}) =>
+    app.request(new Request(origin + path, { ...init, headers: { host: new URL(origin).host, ...init.headers } }));
+  const view = await (await request("/api/keybindings")).json();
+  assert.deepEqual(view.unknown, ["extension.custom"]);
+  const changes = [{ id: "app.session.tree", keys: ["ctrl+shift+t"] }];
+  assert.equal((await request("/api/keybindings", { method: "PATCH", headers: json, body: JSON.stringify({ revision: view.revision, changes }) })).status, 200);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")), { $schema: hint, "extension.custom": "f5", "app.session.tree": "ctrl+shift+t" });
+});
