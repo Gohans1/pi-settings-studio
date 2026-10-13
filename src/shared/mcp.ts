@@ -74,7 +74,7 @@ export type McpImportPreview = { format: string; notes: string[]; servers: { exi
 
 /**
  * How one tool of a server reaches the model: an exact toolExposure rule, else the first `*` pattern
- * that matches, else the server's exposure. Ported from @earendil-works/pi-coding-agent 1.1.0
+ * that matches, else the server's exposure. Ported from @earendil-works/pi-coding-agent 1.1.0, re-checked against 1.2.0
  * dist/core/mcp-servers.js `getMcpToolExposure` (MIT, Copyright Mario Zechner), which Pi does not export.
  */
 export function toolExposure(server: { exposure?: string; toolExposure?: Record<string, string> }, tool: string): string {

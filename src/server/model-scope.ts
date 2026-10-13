@@ -1,5 +1,5 @@
 // Model scope (`enabledModels`, `--models`): which models a list of patterns selects, in order.
-// Ported from @earendil-works/pi-coding-agent 1.1.0 dist/core/model-resolver.js (MIT, Copyright Mario
+// Ported from @earendil-works/pi-coding-agent 1.1.0, re-checked against 1.2.0, dist/core/model-resolver.js (MIT, Copyright Mario
 // Zechner): `resolveModelScopeFromModels` and its helpers. Pi exports only the variant that checks
 // availability, which can run credential commands; this one matches over a given model list.
 // tests/model-scope.test.ts compares it with Pi's own resolver.

@@ -1,4 +1,4 @@
-// Thinking levels as Pi names and orders them. clampLevel is ported from @earendil-works/pi-ai 1.1.0
+// Thinking levels as Pi names and orders them. clampLevel is ported from @earendil-works/pi-ai 1.1.0, re-checked against 1.2.0,
 // dist/models.js clampThinkingLevel (MIT, Copyright Mario Zechner) to work on a model's supported levels,
 // which the browser has; tests/thinking.test.ts compares it with Pi's for every model and level.
 

@@ -1,4 +1,4 @@
-// Resource listing and toggles the way `pi config` does them (Pi 1.0.3, re-checked against 1.1.0;
+// Resource listing and toggles the way `pi config` does them (Pi 1.0.3, re-checked against 1.2.0;
 // dist/modes/interactive/components/config-selector.js, MIT): Pi's DefaultPackageManager resolves
 // the resources; a toggle writes `+pattern`/`-pattern` to the settings array, or to the
 // package's own filter for package resources.
@@ -25,7 +25,7 @@ export const BUILTIN_EXTENSIONS = ["mcp", "llama.cpp", "codemode", "tool-search"
 const BUILTIN_PREFIX = "builtin:";
 
 /**
- * The home folder as Pi takes it when it runs: HOME, else the system's (Pi 1.1.0 dist/core/package-manager.js
+ * The home folder as Pi takes it when it runs: HOME, else the system's (Pi 1.2.0 dist/core/package-manager.js
  * getHomeDir, MIT, Copyright Mario Zechner). Bun's homedir() keeps the HOME the process started with.
  */
 export const piHome = () => process.env.HOME || homedir();

@@ -48,8 +48,8 @@
     "prepack": "bun run build"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "1.1.0",
-    "@earendil-works/pi-coding-agent": "1.1.0",
+    "@earendil-works/pi-ai": "1.2.0",
+    "@earendil-works/pi-coding-agent": "1.2.0",
     "@hono/bun": "1.0.0",
     "hono": "4.13.13",
     "minimatch": "10.2.6",

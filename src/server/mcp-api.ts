@@ -54,7 +54,7 @@ function buildOAuth(input: McpOAuthInput, previous: unknown): Record<string, unk
 type SignedIn = (name: string, url: string) => boolean;
 /**
  * Whether Pi holds OAuth tokens for a server in mcp-auth.json, keyed by namespace and URL or, from
- * older versions, by URL alone (Pi 1.1.0 dist/extensions/mcp/oauth.js, storeKeys). Values are never read out.
+ * older versions, by URL alone (Pi 1.2.0 dist/extensions/mcp/oauth.js, storeKeys). Values are never read out.
  */
 async function signedInReader(agentDir: string): Promise<SignedIn> {
   let states: Record<string, unknown> = {};

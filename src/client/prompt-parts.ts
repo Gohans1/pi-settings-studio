@@ -5,7 +5,7 @@ export type PartTab = "instructions" | "skills" | "mcp" | "tools";
 export const PART_TABS: Record<PartTab, string> = { instructions: "Instructions", skills: "Skills", mcp: "MCP", tools: "Tools" };
 export type PartInfo = { label: string; about: string; tab?: PartTab };
 
-// Pi 1.1.0's section names (dist/core/system-prompt.js buildSystemPromptSections), and its MCP extension's.
+// Pi 1.2.0's section names (dist/core/system-prompt.js buildSystemPromptSections), and its MCP extension's.
 const SECTIONS: Record<string, PartInfo> = {
   preamble: { label: "Base prompt", about: "Pi's opening instructions. A SYSTEM.md takes their place, and then the tool list, rules and docs pointer are left out.", tab: "instructions" },
   tools: { label: "Tool list", about: "The declared tools that have a one-line summary. Tools Pi hides from requests are left out.", tab: "tools" },
@@ -22,7 +22,7 @@ const SECTIONS: Record<string, PartInfo> = {
 export const sectionInfo = (name: string): PartInfo => SECTIONS[name] ?? { label: name, about: "Added by an extension." };
 
 /**
- * The tools whose declarations code mode's description carries, by the name they are called. Pi 1.1.0 heads each
+ * The tools whose declarations code mode's description carries, by the name they are called. Pi 1.2.0 heads each
  * with `### \`id\``, adding `(\`name\`)` when the script identifier differs (dist/extensions/codemode/tool.js).
  */
 export function codemodeListed(description: string): string[] {

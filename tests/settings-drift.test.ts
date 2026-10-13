@@ -5,16 +5,17 @@ import { fields, settingHomes } from "../src/shared/settings.ts";
 
 const SDK = "node_modules/@earendil-works/pi-coding-agent";
 
-/** Leaf keys of Pi's `Settings` interface, nested setting objects flattened to dotted keys. */
+type SchemaNode = { properties?: Record<string, SchemaNode & { deprecated?: boolean }> };
+
+/**
+ * Leaf keys of Pi's published settings schema (schemas/settings.schema.json), nested setting objects flattened
+ * to dotted keys. Deprecated keys are old names Pi migrates when it reads the file, so they need no row.
+ */
 function piSettingKeys(): string[] {
-  const source = readFileSync(`${SDK}/dist/core/settings-manager.d.ts`, "utf8");
-  const interfaces = new Map<string, [string, string][]>();
-  for (const [, name, body] of source.matchAll(/export interface (\w+) \{\n([\s\S]*?)\n\}/g)) {
-    interfaces.set(name!, [...body!.matchAll(/^ {4}(\w+)\??: (.+);$/gm)].map(([, key, type]) => [key!, type!.trim()]));
-  }
-  const flatten = (name: string, prefix: string): string[] => interfaces.get(name)!.flatMap(([key, type]) =>
-    interfaces.has(type) ? flatten(type, `${prefix}${key}.`) : [`${prefix}${key}`]);
-  return flatten("Settings", "");
+  const schema: SchemaNode = JSON.parse(readFileSync(`${SDK}/schemas/settings.schema.json`, "utf8"));
+  const flatten = (node: SchemaNode, prefix: string): string[] => Object.entries(node.properties ?? {}).flatMap(([key, child]) =>
+    child.deprecated ? [] : child.properties ? flatten(child, `${prefix}${key}.`) : [`${prefix}${key}`]);
+  return flatten(schema, "");
 }
 
 test("every Pi setting has a home: a settings row, another tab, raw JSON or internal", () => {

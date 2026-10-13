@@ -1,4 +1,4 @@
-// Startup tools (`defaultTools`). The resolution is ported from @earendil-works/pi-coding-agent 1.1.0
+// Startup tools (`defaultTools`). The resolution is ported from @earendil-works/pi-coding-agent 1.1.0, re-checked against 1.2.0
 // (MIT, Copyright Mario Zechner): dist/core/settings-manager.js `applyToolModifiers`,
 // `resolveDefaultTools` and `mergeDefaultTools`, which Pi does not export. tests/tools.test.ts compares
 // it with Pi's own SettingsManager, so a change in Pi fails the test.

@@ -74,7 +74,7 @@ export const PI_OWN_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "l
 
 /**
  * Which recorded declarations the first request carried. Pi records every declared tool, but code mode only hides
- * the direct ones from requests (Pi 1.1.0 dist/extensions/codemode/tool.js prepareCodemodeLoadout), and the session
+ * the direct ones from requests (Pi 1.2.0 dist/extensions/codemode/tool.js prepareCodemodeLoadout), and the session
  * file does not say so. The prompt's tool list does: it names each declared tool with a snippet that Pi did not hide
  * (dist/core/system-prompt.js). So a declared Pi tool missing from the list means code mode hid declarations, and
  * then every declaration the list does not name was left out.
