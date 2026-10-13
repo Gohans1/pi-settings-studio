@@ -1,3 +1,4 @@
+import { access } from "node:fs/promises";
 import { join } from "node:path";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -27,15 +28,31 @@ class ReadOnlyCredentials implements CredentialStore {
 export const credentialsOf = (value: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(value).filter(([, entry]) => isRecord(entry) && (entry.type === "api_key" || entry.type === "oauth"))) as Record<string, Credential>;
 
-/** Pi's model runtime without network access: no catalog refresh and no availability checks. */
+/**
+ * Pi's model runtime without network access. The catalogs Pi saved in models-store.json (OpenRouter's list for the
+ * key, for one) are read back when that file exists; reading creates it when it does not, so then nothing is read.
+ * Pi's availability checks that come with the read run no key command and reach no network (tests/models-api.test.ts).
+ */
 export async function runtimeFor(agentDir: string, credentials: Record<string, Credential>) {
+  const modelsStorePath = join(agentDir, "models-store.json");
   return ModelRuntime.create({
     credentials: new ReadOnlyCredentials(credentials),
     modelsPath: join(agentDir, "models.json"),
-    modelsStorePath: join(agentDir, "models-store.json"),
+    modelsStorePath,
     allowModelNetwork: false,
-    refreshOnCreate: false,
+    refreshOnCreate: await access(modelsStorePath).then(() => true, () => false),
   });
+}
+
+/**
+ * Whether Pi would send requests for the provider, as this app tells it: a stored credential, then models.json.
+ * Keys in this app's own environment do not count; that is Check credential's job, because the environment of this
+ * server is not the one Pi runs in.
+ */
+export function authStatus(runtime: ModelRuntime, credentials: Record<string, Credential>, providerId: string): { configured: boolean; source?: string; label?: string } {
+  if (credentials[providerId]) return { configured: true, source: "stored" };
+  const status = runtime.getProviderAuthStatus(providerId);
+  return status.source === "environment" ? { configured: false } : status;
 }
 
 function summary(model: Model<Api>): ModelSummary {
@@ -69,11 +86,7 @@ export function modelRoutes(store: ConfigStore, agentDir: string, extensions: Ex
     const providers = runtime.getProviders().map((provider): ProviderView => {
       const others = runtime.getAllModels(provider.id).filter(model => model.type === "image" || model.type === "classifier");
       const count = (type: string) => others.filter(model => model.type === type).length;
-      // Pi's order: a stored credential first, then models.json. Pi fills "stored" during an
-      // availability refresh, which may run credential commands, so it is read from auth.json here.
-      // ponytail: environment variables are not checked (Pi checks them in its own environment).
-      const status: { configured: boolean; source?: string; label?: string } = credentials[provider.id]
-        ? { configured: true, source: "stored" } : runtime.getProviderAuthStatus(provider.id);
+      const status = authStatus(runtime, credentials, provider.id);
       return {
         id: provider.id,
         name: provider.name,
@@ -101,7 +114,7 @@ export function modelRoutes(store: ConfigStore, agentDir: string, extensions: Ex
   async function readyModels(project?: string, signal?: AbortSignal) {
     const auth = credentialsOf((await store.read("global", "auth.json")).value);
     const [runtime, added] = await Promise.all([runtimeFor(agentDir, auth), extensions(project, signal)]);
-    const all = runtime.getProviders(), ready = all.filter(provider => auth[provider.id] || runtime.getProviderAuthStatus(provider.id).configured);
+    const all = runtime.getProviders(), ready = all.filter(provider => authStatus(runtime, auth, provider.id).configured);
     const readyAdded = added.providers.filter(provider => provider.configured);
     return {
       models: [...ready.flatMap(provider => runtime.getModels(provider.id)), ...readyAdded.flatMap(provider => provider.models)],

@@ -7,7 +7,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { PluginToolsView, SessionContext, SessionTools } from "../shared/plugin-tools.ts";
-import { credentialsOf, runtimeFor } from "./models.ts";
+import { authStatus, credentialsOf, runtimeFor } from "./models.ts";
 import { declarationPart, sectionPart, tokensOf } from "./prompt-parts.ts";
 
 export type ToolProbeInput = {
@@ -39,9 +39,9 @@ async function providersOf(queued: ExtensionRuntime, agentDir: string, issues: s
   for (const { name, config, extensionPath } of queued.pendingProviderRegistrations) apply(extensionPath, () => runtime.registerProvider(name, config));
   for (const { provider, extensionPath } of queued.pendingNativeProviderRegistrations) apply(extensionPath, () => runtime.registerNativeProvider(provider));
   for (const { definition, extensionPath } of queued.pendingVirtualModelRegistrations) apply(extensionPath, () => runtime.registerVirtualModel(definition));
-  // As the server reads Pi's status: a stored credential first (Pi fills "stored" only in an availability refresh).
+  // As the server reads Pi's status (authStatus).
   const providers = runtime.getProviders().filter(provider => !known.has(provider.id)).map(provider => ({
-    id: provider.id, name: provider.name, configured: !!credentials[provider.id] || runtime.getProviderAuthStatus(provider.id).configured,
+    id: provider.id, name: provider.name, configured: authStatus(runtime, credentials, provider.id).configured,
     models: runtime.getModels(provider.id).map(({ headers: _headers, ...model }) => model as Model<Api>),
   }));
   return { checkedAt: new Date().toISOString(), issues, providers };
