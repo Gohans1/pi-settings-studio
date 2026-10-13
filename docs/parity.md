@@ -1,8 +1,10 @@
 # Coverage ledger
 
-Reference: [agegr/pi-web](https://github.com/agegr/pi-web) settings panel, re-implemented (not forked). Last reviewed commit: `fdeea87329a291fcebcd54ba41fd2dd0387bfca7` (2026-10-07). On update, review pi-web settings changes after this commit.
+Reference: [agegr/pi-web](https://github.com/agegr/pi-web) settings panel, re-implemented (not forked). Last reviewed commit: `894e1a28dbeeb7b457c7712e495d975fe9927b89` (2026-10-11, v0.12.0). On update, review pi-web settings changes after this commit.
 
-Pi baseline: `@earendil-works/pi-coding-agent` 1.1.0 (installed; updated from 1.0.3 on 2026-10-08, no settings key added). Ported Pi logic records this version; tests fail when the SDK or Pi's documentation moves.
+Pi baseline: `@earendil-works/pi-coding-agent` 1.2.0 (installed; updated from 1.1.0 on 2026-10-13, no settings key added except the `$schema` editor hint, which stays in the file as written). Ported Pi logic records the version it was checked against; tests fail when the SDK or Pi's documentation moves.
+
+pi-web review of 2026-10-13, from commit messages and changed files, not full diffs: its settings-panel changes since the last review are polish (MCP detail pane, skills instructions, fonts), model-list order, capability metadata kept by Fetch models, providers that extensions register at `session_start`, and sub-agent options only pi-web uses. None was added here. Two are candidates if they matter: Fetch models keeping capability metadata (`model-discovery.ts`), and providers registered at `session_start` (the provider probe applies only what extensions queue while loading).
 
 ## Pi configuration (docs/configuration.md)
 

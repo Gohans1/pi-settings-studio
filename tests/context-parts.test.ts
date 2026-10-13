@@ -17,7 +17,7 @@ describe("prompt sections", () => {
 });
 
 describe("code mode's catalog", () => {
-  // Pi 1.1.0 renders each listed tool as a heading (dist/extensions/codemode/tool.js renderToolSection).
+  // Pi 1.2.0 renders each listed tool as a heading (dist/extensions/codemode/tool.js renderToolSection).
   const description = [
     "Run JavaScript that calls other tools.", "Nested tools:",
     "### `write`\nWrite a file.\n```ts\ndeclare const tools: {};\n```",

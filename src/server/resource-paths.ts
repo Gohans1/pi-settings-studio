@@ -1,5 +1,5 @@
 // Extra resource locations: the path entries of the `skills`, `extensions`, `prompts` and `themes`
-// settings (Pi 1.1.0 docs/settings.md, Resources). Entries that start with !, + or - or hold a glob
+// settings (Pi 1.2.0 docs/settings.md, Resources). Entries that start with !, + or - or hold a glob
 // are filters (Pi's isPattern in dist/core/package-manager.js); the switches own those. The server
 // stats only paths already in a settings file, to say whether they exist; it never reads them.
 import { statSync } from "node:fs";

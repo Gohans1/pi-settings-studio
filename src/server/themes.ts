@@ -23,7 +23,7 @@ async function describe(path: string, source: ThemeView["source"]): Promise<Them
 export function themeRoutes(store: ConfigStore, registry: ProjectRegistry, agentDir: string) {
   return new Hono().get("/", async c => {
     const project = c.req.query("project") === undefined ? undefined : await registry.require(c.req.query("project"));
-    const builtins = (await readdir(BUILTIN_DIR)).filter(file => file.endsWith(".json") && file !== "theme-schema.json").sort();
+    const builtins = (await readdir(BUILTIN_DIR)).filter(file => file.endsWith(".json")).sort();
     const global = await store.read("global").then(doc => doc.value, error => { if (error instanceof ConfigError) return {}; throw error; });
     const local = project ? await registry.storeFor(project).read("project").then(doc => doc.value, () => ({})) : undefined;
     const { themes } = await resolveResources(agentDir, global, project ? { dir: project, settings: local! } : undefined);

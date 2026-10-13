@@ -81,7 +81,7 @@ export type CustomProviderInput = {
 };
 
 /**
- * The APIs Pi implements (pi-ai's KnownApi, Pi 1.1.0), as the custom-provider form names them; models.json also
+ * The APIs Pi implements (pi-ai's KnownApi, Pi 1.2.0), as the custom-provider form names them; models.json also
  * accepts APIs that extensions register. listsModels: the form can list the endpoint's models
  * (server/model-discovery.ts). tests/model-discovery.test.ts fails when either list drifts.
  */

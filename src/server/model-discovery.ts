@@ -5,7 +5,7 @@ import { isRecord } from "./mcp-config.ts";
 import { ConfigError } from "./store.ts";
 
 /**
- * `$NAME` and `${NAME}` interpolation as Pi resolves models.json values (Pi 1.1.0,
+ * `$NAME` and `${NAME}` interpolation as Pi resolves models.json values (Pi 1.2.0,
  * dist/core/resolve-config-value.js, MIT, Copyright Mario Zechner): `$$` and `$!` escape, a missing
  * variable resolves to undefined. Commands (`!…`) are refused by the caller, never run.
  * tests/model-discovery.test.ts compares it with Pi's resolver.

@@ -25,7 +25,7 @@ export type ToolProbeInput = {
 export type ExtensionProviders = { checkedAt: string; issues: string[]; providers: { id: string; name: string; configured: boolean; models: Model<Api>[] }[] };
 
 /**
- * The providers that the loaded extensions queued, applied as Pi's runner applies them when it binds (Pi 1.1.0
+ * The providers that the loaded extensions queued, applied as Pi's runner applies them when it binds (Pi 1.2.0
  * dist/core/extensions/runner.js bindCore, MIT, Copyright Mario Zechner), on a runtime over auth.json that cannot write it.
  * No session starts: no model is chosen, so no credential command runs, and no MCP server starts.
  */
@@ -48,14 +48,14 @@ async function providersOf(queued: ExtensionRuntime, agentDir: string, issues: s
 }
 
 /**
- * The system message of the first request, as Pi builds it when a turn starts (Pi 1.1.0 dist/core/agent-session.js
- * prompt and extensions/runner.js emitBeforeAgentStart, MIT, Copyright Mario Zechner): the session's prompt options,
+ * The system message of the first request, as Pi builds it when a turn starts (Pi 1.2.0 dist/core/agent-session.js
+ * _prepareRun and extensions/runner.js emitBeforeAgentStart, MIT, Copyright Mario Zechner): the session's prompt options,
  * changed by before_agent_start handlers, rendered by Pi's own functions, with the declarations Pi does not hide.
  * Only Pi's built-in handlers run (its MCP servers section): an extension's handler belongs to a real turn and may
  * act on it, so it is named instead.
  */
 async function contextOf(session: AgentSession, loader: DefaultResourceLoader, issues: string[]): Promise<SessionContext> {
-  // Pi 1.1.0 renders prompts in dist/core/system-prompt.js, which the package does not export; reuse it rather than copy it.
+  // Pi 1.2.0 renders prompts in dist/core/system-prompt.js, which the package does not export; reuse it rather than copy it.
   const { buildSystemPrompt, buildSystemPromptState } = await import(new URL("./core/system-prompt.js", import.meta.resolve("@earendil-works/pi-coding-agent")).href) as {
     buildSystemPrompt(options: BuildSystemPromptOptions): string;
     buildSystemPromptState(options: BuildSystemPromptOptions): { content: string; sections?: Record<string, string> };
@@ -69,7 +69,7 @@ async function contextOf(session: AgentSession, loader: DefaultResourceLoader, i
     if (!extension.path.startsWith("builtin:")) { unrun.push(extension.path); continue; }
     for (const handler of handlers) {
       try {
-        const event = { type: "before_agent_start", prompt: "", images: undefined, get systemPrompt() { return buildSystemPrompt(options); }, systemPromptOptions: options };
+        const event = { type: "before_agent_start", messageType: "user", prompt: "", images: undefined, get systemPrompt() { return buildSystemPrompt(options); }, systemPromptOptions: options };
         const result = await handler(event, runner.createContext()) as BeforeAgentStartEventResult | undefined;
         if (result?.systemPrompt !== undefined) options.forceSystemPrompt = result.systemPrompt;
       } catch (error) { issues.push(`${extension.path}: ${error instanceof Error ? error.message : String(error)}`); }
@@ -102,7 +102,7 @@ async function inspect(input: ToolProbeInput): Promise<PluginToolsView | Session
       read(JSON.stringify(discovery ? { ...value, packages: [], extensions: [], skills: [], prompts: [], themes: [] } : value));
     } }, { projectTrusted: input.project });
   }
-  // Pi 1.1.0's CLI built-ins (including llama.cpp) have no public aggregate export. Reuse its exact
+  // Pi 1.2.0's CLI built-ins (including llama.cpp) have no public aggregate export. Reuse its exact
   // factories and replaceable flags rather than duplicating their registration logic.
   const { builtInExtensions } = await import(new URL("./extensions/index.js", import.meta.resolve("@earendil-works/pi-coding-agent")).href) as { builtInExtensions: InlineExtension[] };
   const loader = new DefaultResourceLoader({

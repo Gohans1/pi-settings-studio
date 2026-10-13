@@ -1,8 +1,8 @@
 # Third-party notices
 
-## Pi (`@earendil-works/pi-coding-agent` 1.0.3, re-checked against 1.1.0)
+## Pi (`@earendil-works/pi-coding-agent` 1.0.3, re-checked against 1.2.0)
 
-`src/server/mcp-config.ts` ports `mcp.json` validation and edit rules from `dist/core/mcp-servers.js` and `dist/extensions/mcp/config.js`. `src/server/resources.ts` ports the resource toggles and group labels of `pi config` from `dist/modes/interactive/components/config-selector.js`. `src/server/agents.ts` reads profiles the way `examples/extensions/subagent/agents.ts` does. Ported from Pi 1.1.0 and compared with Pi in tests: `src/shared/tools.ts` (`defaultTools` resolution, `dist/core/settings-manager.js`), `src/server/model-scope.ts` (`resolveModelScopeFromModels` and helpers, `dist/core/model-resolver.js`) and `toolExposure` in `src/shared/mcp.ts` (`getMcpToolExposure`, `dist/core/mcp-servers.js`). License: MIT (per the package's `package.json`), author Mario Zechner.
+`src/server/mcp-config.ts` ports `mcp.json` validation and edit rules from `dist/core/mcp-servers.js` and `dist/extensions/mcp/config.js`. `src/server/resources.ts` ports the resource toggles and group labels of `pi config` from `dist/modes/interactive/components/config-selector.js`. `src/server/agents.ts` reads profiles the way `examples/extensions/subagent/agents.ts` does. Ported from Pi 1.1.0 (unchanged in 1.2.0) and compared with Pi in tests: `src/shared/tools.ts` (`defaultTools` resolution, `dist/core/settings-manager.js`), `src/server/model-scope.ts` (`resolveModelScopeFromModels` and helpers, `dist/core/model-resolver.js`) and `toolExposure` in `src/shared/mcp.ts` (`getMcpToolExposure`, `dist/core/mcp-servers.js`). License: MIT (per the package's `package.json`), author Mario Zechner.
 
 ## pi-web
 

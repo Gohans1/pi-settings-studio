@@ -1,4 +1,4 @@
-// Instruction files as Pi 1.0.3-1.1.0 finds them (dist/core/resource-loader.js): in a folder, the first of
+// Instruction files as Pi 1.0.3-1.2.0 finds them (dist/core/resource-loader.js): in a folder, the first of
 // AGENTS.override.md, AGENTS.md, AGENTS.MD, CLAUDE.md, CLAUDE.MD is its context file; SYSTEM.md
 // replaces Pi's prompt and APPEND_SYSTEM.md adds to it, a trusted project's .pi copy taking precedence.
 import { existsSync, statSync } from "node:fs";

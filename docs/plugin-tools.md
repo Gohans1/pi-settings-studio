@@ -50,9 +50,9 @@ The inspector uses in-memory settings/session storage and skips missing packages
 - `docs/extensions.md`: registrations, exposure, dynamic tools, `prepareLoadout`.
 - `docs/sdk.md`, `examples/sdk/14-codemode-mcp.ts`: `DefaultResourceLoader`, `createAgentSession`, `bindExtensions`, in-memory sessions.
 - Public runtime metadata: extension tool maps, `getAllTools`, `getActiveToolNames`, `getCallableToolNames`, and the command context's `getSystemPromptOptions().hiddenTools`.
-- Pi 1.1.0's internal `dist/extensions/index.js` supplies the CLI's exact built-in factories and replacement flags. This aggregate is not publicly exported; re-check it when updating Pi. No source is copied.
+- Pi 1.2.0's internal `dist/extensions/index.js` supplies the CLI's exact built-in factories and replacement flags. This aggregate is not publicly exported; re-check it when updating Pi. No source is copied.
 - The built-in `/mcp` status command in RPC mode awaits pending connections. Only Pi's built-in command is invoked, not a third-party command named `mcp`.
-- Context: the command context's `getSystemPromptOptions()`, `Extension.handlers` and the public `BeforeAgentStartEvent` shape, the loader's `getSystemPromptSource()` and `getAppendSystemPromptSources()`, and `estimateTokens`. Pi 1.1.0's `dist/core/system-prompt.js` (`buildSystemPrompt`, `buildSystemPromptState`) is not exported either and is imported the same way as the built-in factories; re-check it when updating Pi.
+- Context: the command context's `getSystemPromptOptions()`, `Extension.handlers` and the public `BeforeAgentStartEvent` shape, the loader's `getSystemPromptSource()` and `getAppendSystemPromptSources()`, and `estimateTokens`. Pi 1.2.0's `dist/core/system-prompt.js` (`buildSystemPrompt`, `buildSystemPromptState`) is not exported either and is imported the same way as the built-in factories; re-check it when updating Pi.
 
 ## Verification
 

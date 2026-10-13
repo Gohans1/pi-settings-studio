@@ -21,8 +21,9 @@ export function keybindingRoutes(store: ConfigStore) {
         const keys = asList(value[id]);
         return { id, description, defaults: [...defaults], ...(keys ? { keys } : {}) };
       }),
-      // Ids Pi does not document (extension shortcuts, renamed actions) stay in the file untouched.
-      unknown: Object.keys(value).filter(id => !ids.has(id)),
+      // Ids Pi does not document (extension shortcuts, renamed actions) stay in the file untouched. `$schema` is
+      // an editor hint that Pi's loader skips (dist/core/keybindings.js toKeybindingsConfig).
+      unknown: Object.keys(value).filter(id => id !== "$schema" && !ids.has(id)),
     };
   }
   const change = z.object({ id: z.string().max(200), keys: z.array(z.string().max(60)).max(10).nullable() }).strict();

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DEFAULT_TOOLS, effectiveTools } from "./tools";
 
-// Field catalogue for settings.json, from Pi 1.1.0 docs/settings.md: General's groups, and the sections other
+// Field catalogue for settings.json, from Pi 1.2.0 docs/settings.md: General's groups, and the sections other
 // tabs edit (SectionId). tests/settings-drift.test.ts fails when Pi's Settings interface gains or loses a key
 // that has no home here.
 
@@ -131,7 +131,7 @@ export const fields: Field[] = [
   { key: "editorPaddingX", label: "Editor padding", section: "terminal", advanced: true, help: "Horizontal editor padding, 0 to 3 cells.", defaultValue: 0, ...number(0, 3) },
   { key: "outputPad", label: "Transcript padding", section: "terminal", advanced: true, help: "Horizontal padding for messages, tool output, ! command output and summary blocks.", defaultValue: 1, ...select(choices(1, 0)) },
   { key: "autocompleteMaxVisible", label: "Autocomplete entries", section: "terminal", advanced: true, help: "Visible autocomplete entries, 3 to 20.", defaultValue: 5, ...number(3, 20) },
-  { key: "showHardwareCursor", label: "Hardware cursor", section: "terminal", advanced: true, help: "Show the terminal cursor while Pi positions it for input methods.", defaultValue: false, ...bool },
+  { key: "showHardwareCursor", label: "Hardware cursor", section: "terminal", advanced: true, help: "Use the terminal cursor instead of Pi's drawn cursor. Pi still positions it for input methods.", defaultValue: false, ...bool },
   { key: "treeFilterMode", label: "/tree filter", section: "terminal", advanced: true, help: "Initial filter used by /tree.", defaultValue: "default", ...select(choices("default", "no-tools", "user-only", "labeled-only", "all")) },
   { key: "terminal.imageWidthCells", label: "Image width (cells)", section: "terminal", advanced: true, help: "Preferred inline image width.", defaultValue: 60, ...number(1) },
   { key: "terminal.clearOnShrink", label: "Clear on shrink", section: "terminal", advanced: true, help: "Clear empty rows when rendered content shrinks.", defaultValue: false, ...bool },
@@ -152,6 +152,7 @@ export const settingHomes: Record<string, string> = {
   extensions: "Plugins tab (filters and paths: raw JSON)",
   prompts: "Plugins tab (filters and paths: raw JSON)",
   themes: "Plugins tab (filters and paths: raw JSON)",
+  $schema: "Raw JSON (an editor hint, kept as it is)",
   lastChangelogVersion: "Internal, written by Pi",
   trackingId: "Internal, written by Pi",
   deviceId: "Internal, written by Pi",

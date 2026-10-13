@@ -1,3 +1,17 @@
+# Verification — Pi SDK 1.1.0 to 1.2.0, 2026-10-13
+
+Scope: `package.json` and `bun.lock` (both Pi packages pinned to 1.2.0), `tests/settings-drift.test.ts`, `tests/keybindings.test.ts`, `src/server/keybindings.ts`, the version constants and "re-checked against" comments of the ported code, `src/server/plugin-tools-probe.ts`, `src/server/themes.ts`, `src/shared/settings.ts`, `docs/parity.md`, `docs/plugin-tools.md`, `THIRD_PARTY_NOTICES.md`, the demo snapshot and this record. No AGENTS.md change. Nothing was published or deployed.
+
+- Ported logic against 1.2.0. Byte for byte the same as in 1.1.0: `core/mcp-servers.js`, `extensions/mcp/config.js`, `core/model-resolver.js`, `core/resolve-config-value.js`, `extensions/mcp/oauth.js`, `config-selector.js`, `core/system-prompt.js`, `extensions/index.js` and the example subagent files. The same functions: `applyToolModifiers`, `resolveDefaultTools`, `mergeDefaultTools`, `clampThinkingLevel`, `getHomeDir`, `renderToolSection`, `prepareCodemodeLoadout`. The 90 keybinding actions keep their ids, descriptions and defaults, and pi-ai's `KnownApi` is unchanged. Changed, and followed through the SDK: `package-manager.js` (`~` in `!`, `+` and `-` path entries) and `resource-loader.js` (a symlinked AGENTS.md in a worktree). `before_agent_start` events now carry `messageType`; the preview's own event has it too. Pi's built-in handler ignores it, so no test can see that line.
+- Test first. After the bump four tests failed. The two settings drift tests were blind, not red for a new key: Pi moved its `Settings` interface out of `settings-manager.d.ts`, so the regex found nothing. They now read Pi's published `schemas/settings.schema.json`, skipping deprecated keys. With that reader and no home for it the test failed naming `$schema` alone; `settingHomes` now has it. The other two failures were the version checks of the MCP port and the keybinding catalogue, bumped after the comparison above. A new test ("the $schema editor hint is no unknown action, and saving keeps it") failed because keybindings.json listed `$schema` among the unknown ids, and passes with the filter.
+- Local checks: bun test (406 passed), `bun run typecheck`, lint, build and test:e2e (186 passed, 6.7 minutes).
+- Browser check with agent-browser on a throwaway server and an empty home whose settings.json and keybindings.json carry `$schema`: the header reads "Built for Pi 1.2.0", General › Pi shows no "checked against" note, the Hardware cursor row shows Pi 1.2.0's wording, and `$schema` appears neither as a custom setting nor in the shortcuts. Through the API: `$schema` in models.json survives a provider edit, and a theme file with `$schema` is listed.
+- Demo snapshot re-recorded: 54 lines changed (Pi 1.2.0's model catalog, timestamps, a file revision, `/api/pi`). `bun run record:demo` puts `node_modules/.bin` first on PATH, so it records that `pi` instead of `~/.local/bin/pi`; this one ran `bun src/demo/record.ts`. The hosted demo still serves the old snapshot until it is deployed.
+- pi-web review since `fdeea87`: by commit messages and changed files, not full diffs. Two candidates, recorded in `docs/parity.md`: Fetch models keeping capability metadata, and providers registered at `session_start`.
+- Not performed: a session on a real Pi 1.2.0, how Pi 1.2.0 treats a user theme with unsupported metadata, the demo deploy, a release.
+
+---
+
 # Verification — header names the Pi version the app was built for, 2026-10-13
 
 Scope: `src/client/App.tsx`, `src/client/styles.css`, one test in `e2e/shell.spec.ts`, `DESIGN.md`, `README.md` and this record. No server, dependency, lockfile or AGENTS.md change. Nothing was published.
@@ -395,20 +409,5 @@ Scope: General repeated four tabs. Its Tools group held only Startup tools, whil
 
 | Check | Result |
 |---|---|
-| RED/GREEN | 10 new browser tests failed first (missing field, pane or entry; General still listing the group; the link to General; no beforeunload dialog), then passed. Tests that used General's moved groups now use the groups that stay |
-| `bun test` | 352 passed (49 files) |
-| `bun run typecheck` / `bun run lint` | Passed |
-| `bun run build` | Passed; the >500 kB chunk warning remains |
-| `bun run test:e2e` | 150 passed; axe on the Tools, Skills and Plugins pages and the Defaults form passes |
-| Impeccable detector | No findings on the changed components |
 
-Manual (T3 preview, a temporary agent folder; the real `~/.pi` was not written): at 1440×900 General lists its seven groups; Skills › Skill commands, Plugins › Packages with the npm command below a hairline, and Models › Defaults with the rows under the defaults and Save defaults sticky. At 390 px in dark, `#tools/startup` opens the checklist in place of the list with "All views", the save bar sticky and no horizontal scroll. With `defaultTools: "read"` (not a list) the inspection still completes, so Startup tools stays reachable to repair it, as MCP › Code mode's error now says.
-
-Not changed: Startup tools appears once the tool inspection has answered; a single-setting pane repeats its setting's name as its heading.
-
----
-
-# Verification — Code mode in startup tools is a state with a link to MCP › Code mode, 2026-10-10
-
-
-[Showing lines 1-400 of 986 (50.0KB limit). Use offset=401 to continue.]
+[Showing lines 1-397 of 414 (50.0KB limit). Use offset=398 to continue.]
