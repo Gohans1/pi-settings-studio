@@ -134,3 +134,60 @@ test("enabled model patterns are matched as Pi matches them, over providers that
     [[0, "no-credential"], [0, "unknown-provider"], [0, "no-match"]]);
   await assert.rejects(stat(marker));
 });
+
+// Pi saves the list for a key in models-store.json (`pi update --models`, the Refresh model catalogs button).
+// The app shows that list, read offline, and no key command runs to read it.
+test("the catalog Pi saved for a key is what Models shows, read offline, with no key command run and nothing written", async (t) => {
+  const { agent, request } = await fixture(t);
+  const marker = (name: string) => join(agent, "..", name);
+  const entry = (id: string, extra: object) => ({ type: "chat", id, name: id, api: "openai-completions", baseUrl: "https://openrouter.ai/api/v1", provider: "openrouter", reasoning: false, input: ["text"], cost: { input: 7, output: 9, cacheRead: 0, cacheWrite: 0 }, contextWindow: 123456, maxTokens: 4096, ...extra });
+  const store = JSON.stringify({ openrouter: { checkedAt: 1, models: [
+    entry("anthropic/claude-haiku-4.5", {}),
+    entry("acme/only-for-this-key", { contextWindow: 77000 }),
+    { ...entry("acme/pixels", {}), type: "image", api: "openrouter-images", output: ["image"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
+  ] } });
+  await writeFile(join(agent, "models-store.json"), store);
+  await writeFile(join(agent, "auth.json"), JSON.stringify({ openrouter: { type: "api_key", key: `!touch ${marker("ran-auth")}` } }));
+  await writeFile(join(agent, "models.json"), JSON.stringify({ providers: {
+    ollama: { baseUrl: "http://localhost:11434/v1", api: "openai-completions", apiKey: `!touch ${marker("ran-key")}`, models: [{ id: "qwen" }] },
+    groq: { headers: { "x-test": `!touch ${marker("ran-header")}` } },
+  } }));
+  const before = (await readdir(agent)).sort();
+  const asked: string[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = Object.assign(async (input: Request | string | URL): Promise<Response> => { asked.push(String(input)); throw new Error("no network in this test"); }, { preconnect: realFetch.preconnect });
+  t.after(() => { globalThis.fetch = realFetch; });
+
+  const providers = (await (await request("/api/models/providers")).json()) as { providers: Array<Record<string, any>> };
+  const openrouter = providers.providers.find(provider => provider.id === "openrouter")!;
+  assert.equal(openrouter.models, 2);
+  assert.deepEqual(openrouter.otherModels, { image: 1 });
+  const models = (await (await request("/api/models/providers/openrouter/models")).json()) as Array<Record<string, any>>;
+  assert.deepEqual(models.map(model => model.id).sort(), ["acme/only-for-this-key", "anthropic/claude-haiku-4.5"]);
+  assert.deepEqual(models.map(model => [model.contextWindow, model.cost]), [[123456, { input: 7, output: 9 }], [77000, { input: 7, output: 9 }]]);
+  const available = (await (await request("/api/models/available")).json()) as Array<{ provider: string; id: string }>;
+  assert.deepEqual(available.filter(model => model.provider === "openrouter").map(model => model.id).sort(), ["acme/only-for-this-key", "anthropic/claude-haiku-4.5"]);
+
+  for (const name of ["ran-auth", "ran-key", "ran-header"]) await assert.rejects(stat(marker(name)));
+  assert.deepEqual(asked, []);
+  assert.equal(await readFile(join(agent, "models-store.json"), "utf8"), store);
+  assert.deepEqual((await readdir(agent)).sort(), before);
+});
+
+test("without a saved catalog Models shows the list that ships with Pi", async (t) => {
+  const { providers } = await fixture(t);
+  const pi = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
+  const openrouter = (await providers()).providers.find(provider => provider.id === "openrouter")!;
+  assert.equal(openrouter.models, pi.getModels("openrouter").length);
+});
+
+test("a key in the app's own environment does not make a provider ready here; Check credential is where the environment counts", async (t) => {
+  const { providers, request } = await fixture(t);
+  const previous = process.env.OPENAI_API_KEY;
+  process.env.OPENAI_API_KEY = "fixture-env-key";
+  t.after(() => { if (previous === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previous; });
+  const openai = (await providers()).providers.find(provider => provider.id === "openai")!;
+  assert.deepEqual(openai.auth, { configured: false });
+  const available = (await (await request("/api/models/available")).json()) as Array<{ provider: string }>;
+  assert.equal(available.some(model => model.provider === "openai"), false);
+});
