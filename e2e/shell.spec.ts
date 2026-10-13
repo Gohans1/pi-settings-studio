@@ -37,6 +37,16 @@ test("the window title names the open tab", async ({ page }) => {
   await expect(page).toHaveTitle("Skills · Pi Settings");
 });
 
+test("the header names the Pi version the app was built for, on every tab", async ({ page }) => {
+  const { version } = JSON.parse(await readFile("node_modules/@earendil-works/pi-coding-agent/package.json", "utf8"));
+  await page.goto(server.url + "#mcp");
+  const label = page.getByRole("banner").getByText(`Built for Pi ${version}`);
+  await expect(label).toBeVisible();
+  await page.getByRole("tab", { name: "Skills" }).click();
+  await expect(label).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
 test("a saved change is confirmed until dismissed, and dismissing changes no file", async ({ page }) => {
   await page.goto(server.url + "#mcp");
   await page.getByRole("switch", { name: "Enable search" }).click();

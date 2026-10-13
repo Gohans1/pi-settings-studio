@@ -2,7 +2,7 @@
 
 ## Overview
 
-Follows the shape of pi-web's settings panel, which the user already knows: a horizontal tab bar, then the tab's content. The header has two deliberate rows: the π wordmark and the project picker, then the tabs. `main` is the one scroller, so the header never moves.
+Follows the shape of pi-web's settings panel, which the user already knows: a horizontal tab bar, then the tab's content. The header has two deliberate rows: the π wordmark with "Built for Pi X" beside it (the Pi SDK the app pins, from the server; General's Pi page shows the installed Pi), and the project picker, then the tabs. `main` is the one scroller, so the header never moves.
 
 List tabs (General, MCP, Models, Skills, Sub-agents, Plugins, Instructions, Tools, Context) share a workbench (`Workbench.tsx`): the list down the window's left edge, from under the tabs to the bottom, and the page beside it, its header and then the chosen item's details, out to the right edge. The list scrolls on its own in a shadcn ScrollArea, fixed in place as shadcn's Sidebar sits under a site header (block sidebar-16); the page scrolls with `main`, so no scroller sits inside another. Choosing an item shows its details from their top, and a tab opens at its top. Settings that are not list items sit pinned at the top of the list (Code mode, Defaults, Packages, Folders, Skill commands; in Tools, what the model sees and doesn't and Startup tools; in General, Pi above the groups and Keyboard shortcuts and Not editable here below them). Below 56rem the panes take turns: the list, then the chosen item with a way back.
 

@@ -115,6 +115,7 @@
   .topbar { display: flex; align-items: center; gap: --spacing(4); min-height: var(--topbar-height); padding-inline: var(--gutter); background: var(--sidebar); }
   .brand { display: flex; align-items: center; gap: --spacing(2); font-weight: var(--font-weight-semibold); white-space: nowrap; }
   .brand svg { width: --spacing(5); height: --spacing(5); }
+  .built-for { color: var(--muted-foreground); font-size: var(--text-small); white-space: nowrap; }
   .project-picker { margin-inline-start: auto; display: flex; align-items: center; gap: --spacing(2); min-width: 0; color: var(--muted-foreground); font-size: var(--text-small); }
   .project-picker svg { width: --spacing(4); height: --spacing(4); }
   /* The tab list scrolls sideways on a narrow screen; tabs past the edge fade out to say there is more. */
