@@ -1,3 +1,16 @@
+# Verification — type check with bun check on Bun 1.4.3, 2026-10-12
+
+Scope: `package.json` (`packageManager` and the `typecheck` script), both `bun-version` pins in `.github/workflows/release.yml`, one test in `tests/release.test.ts`, one number in `docs/release.md` and this record. No application code, dependency, lockfile or AGENTS.md change. Nothing was published to npm.
+
+- `bun run typecheck` now runs `bun check`, built into Bun 1.4.3, in place of `tsc --noEmit`. Bun's docs say it reports the same errors as `tsc` 7.0.2. `packageManager` and both release jobs pin Bun 1.4.3. `engines.bun` stays `>=1.4.2`, because running the app does not use `bun check`. `typescript` 7.0.2 stays in devDependencies for the editor.
+- Test first: "every job runs the pinned Bun, and that Bun has bun check" failed on the old pin (1.4.2 is older than 1.4.3). With only `packageManager` raised it failed on the workflow's `bun@1.4.2`. It passes with all three pins at 1.4.3.
+- Local checks on Bun 1.4.3 (the release zip, SHA-256 equal to the release's SHASUMS256.txt, first on PATH; the system Bun was still 1.4.2 then): bun test (405 passed), `bun run typecheck` (no errors in 215 files, 1.2 s; `tsc --noEmit` took 2.7 to 3.6 s on this tree), lint, build (client and demo; the existing >500 kB warning remains) and test:e2e (185 passed, 5.7 minutes).
+- Gate: a file with `const n: number = "five"` made `bun run typecheck` exit 1 with TS2322, and removing it made it exit 0. On Bun 1.4.2 the script stops with `Script not found "check"`, so a machine needs Bun 1.4.3 to run it. After the system Bun was upgraded to 1.4.3, `bun run typecheck` (no errors in 215 files), lint and the release and package-metadata tests passed with no PATH change.
+- Parity with `tsc`: on a temporary copy with 18 deliberate errors (wrong types, `noUncheckedIndexedAccess`, implicit any, a missing module, `never` exhaustiveness, private access, wrong argument count, Hono overloads, React prop and handler types), both printed the same 18 diagnostics once sorted. `bun test --check` checks only the files a test imports, so it does not replace `typecheck`.
+- Not performed: a run of the release workflow on GitHub (setup-bun was not exercised with 1.4.3), other operating systems, and code with circular types, where Bun's own PR #45066 lists remaining differences from `tsc`.
+
+---
+
 # Verification — README installs from npm, 2026-10-11
 
 Scope: `README.md`, `docs/release.md` and this record. No application code, workflow, dependency or AGENTS.md change.

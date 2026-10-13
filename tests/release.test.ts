@@ -112,3 +112,15 @@ test("release credentials are confined to a main-only staging job without rebuil
   expect(commands).toContain("--provenance");
   expect(commands).not.toMatch(/bun (install|run build|pm pack)/);
 });
+
+// `bun run typecheck` is `bun check`, which Bun has had since 1.4.3; a job on an older Bun fails at that step.
+test("every job runs the pinned Bun, and that Bun has bun check", () => {
+  const root = resolve(import.meta.dir, "..");
+  const workflow = parse(readFileSync(join(root, ".github/workflows/release.yml"), "utf8"));
+  const pinned = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).packageManager;
+  const used = Object.values<{ steps: { uses?: string; with?: Record<string, unknown> }[] }>(workflow.jobs)
+    .flatMap(job => job.steps.flatMap(step => step.uses?.startsWith("oven-sh/setup-bun@") ? [`bun@${step.with?.["bun-version"]}`] : []));
+  expect(used.length).toBeGreaterThan(0);
+  for (const version of used) expect(version).toBe(pinned);
+  expect(Bun.semver.order(pinned.slice("bun@".length), "1.4.3")).toBeGreaterThanOrEqual(0);
+});
