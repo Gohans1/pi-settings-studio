@@ -1,3 +1,16 @@
+# Verification — a key setup refreshes the provider's model catalog, 2026-10-13
+
+Scope: `src/server/jobs.ts` (`refreshCatalog`, `providerLogin`), `tests/jobs-api.test.ts`, `DESIGN.md`, `README.md` and this record. No AGENTS.md change. Nothing was deployed.
+
+- Why. Pi's /login ends by refreshing that provider's catalog in the background, 15 seconds at most, with `modelRuntime.refresh({ providers: [id], signal })` (Pi 1.2.0 `dist/modes/interactive/interactive-mode.js`, after a login). The app's login job stored the credential and stopped, so an OpenRouter key kept the list that ships with Pi until Refresh model catalogs was clicked. The job now makes the same call, says what happened, and finishes after it, so the Models view that reloads on "done" shows the result.
+- Decisions. The refresh runs at the end of Sign in and Set up, not when Models opens: reads stay offline, and AGENTS.md lets network use that starts on its own run in the background at most once a day. PI_OFFLINE skips it and the job says so. Cancel after the credential is stored only stops the wait, and the job ends as done. A failure ends as done too, with a line that Models keeps the saved list; the key is stored either way. Refresh model catalogs stays for changes made elsewhere.
+- Test first. Four tests failed (the lines the job should say were missing; the cancel test timed out waiting for the first one). They replace the global `fetch`, which Pi's catalog requests use, so no test reaches the network; the existing Cloudflare key setup test now sets PI_OFFLINE=1, or it would ask pi.dev. The first test runs Pi's own code: pi.dev answers 404 and `/models/user` answers two models with a limit and prices. Afterwards Models shows those two with those numbers, the request carried the key as a Bearer header, only those two addresses were asked, and the key is in neither the job nor its output.
+- Local checks: bun test (413 passed), `bun run typecheck`, lint, build and test:e2e (186 passed, 5.7 minutes).
+- Browser check with agent-browser, its own session, on a throwaway server started from a script with update checks off, an empty home, and models.json pointing OpenRouter's baseUrl at a local fake that lists three models. pi.dev was the one real host the refresh asked (a GET of Pi's public catalog). Models › OpenRouter first showed 393 models and not set up. Set up OpenRouter API key, a made-up key typed in: the job panel read "Set up OpenRouter. Pi stored the credential in auth.json.", "Refreshing the model catalog…", "Model catalog refreshed.", and Models showed 3, with 50K context, 2K output and the fake prices, without a click on Refresh model catalogs. The fake saw one request, `/models/user` with a Bearer header. The servers and the browser session were stopped afterwards.
+- Not performed: against the real OpenRouter (no real key in this run), the 15 second limit itself (the stop signal is tested, the clock is not), Sign in through the browser (the same code path), a restart of the real service.
+
+---
+
 # Verification — Models shows the catalog Pi saved, 2026-10-13
 
 Scope: `src/server/models.ts` (`runtimeFor`, new `authStatus`), `src/server/plugin-tools-probe.ts`, `tests/models-api.test.ts`, `DESIGN.md`, `README.md` and this record. No AGENTS.md change. Nothing was published or deployed.

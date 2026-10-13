@@ -19,6 +19,32 @@ type Job = JobView & { cancel: () => void; answer?: (promptId: string, value: st
 const MAX_OUTPUT = 200_000;
 const MAX_JOBS = 30;
 
+const CATALOG_REFRESH_MS = 15_000;
+
+/**
+ * What Pi's /login does once a credential is stored: refresh that provider's model catalog in the background
+ * (OpenRouter: the models the key may use, with its limits and prices), at most 15 s. A failure keeps the list
+ * Pi saved. Never throws, so the stored credential is reported as done either way.
+ */
+async function refreshCatalog(job: Job, runtime: ModelRuntime, providerId: string): Promise<void> {
+  const say = (message: string) => job.events.push({ type: "info", message });
+  // PI_OFFLINE is Pi's switch for network use it starts on its own.
+  if (process.env.PI_OFFLINE !== undefined) return void say("PI_OFFLINE is set, so the model catalog was not refreshed.");
+  say("Refreshing the model catalog…");
+  // The credential is stored, so Cancel only stops this wait.
+  const stop = new AbortController();
+  job.cancel = () => stop.abort();
+  try {
+    const result = await runtime.refresh({ providers: [providerId], signal: AbortSignal.any([stop.signal, AbortSignal.timeout(CATALOG_REFRESH_MS)]) });
+    const failure = result.errors.get(providerId) ?? result.errors.values().next().value;
+    if (result.aborted) say("The model catalog did not refresh in time or was stopped; Models shows the saved list.");
+    else if (failure) say(`The model catalog could not be refreshed (${failure.message}); Models shows the saved list.`);
+    else say("Model catalog refreshed.");
+  } catch (error) {
+    say(`The model catalog could not be refreshed (${error instanceof Error ? error.message : String(error)}); Models shows the saved list.`);
+  }
+}
+
 export function piCommand(): string[] {
   return [Bun.which("pi") ?? join(homedir(), ".local", "bin", "pi")];
 }
@@ -171,7 +197,12 @@ export function jobRoutes(store: ConfigStore, registry: ProjectRegistry, agentDi
       request.signal?.addEventListener("abort", abort, { once: true });
     });
     runtime.login(providerId, type, { signal: controller.signal, notify, prompt }, { getDeviceId: () => deviceId as string })
-      .then(() => { if (job.status === "running") { job.status = "done"; job.events.push({ type: "info", message: `${type === "oauth" ? "Signed in to" : "Set up"} ${provider.name}. Pi stored the credential in auth.json.` }); } })
+      .then(async () => {
+        if (job.status !== "running") return;
+        job.events.push({ type: "info", message: `${type === "oauth" ? "Signed in to" : "Set up"} ${provider.name}. Pi stored the credential in auth.json.` });
+        await refreshCatalog(job, runtime, providerId);
+        if (job.status === "running") job.status = "done";
+      })
       .catch(error => { if (job.status === "running") { job.status = "failed"; job.error = error instanceof Error ? error.message : String(error); } });
   }
 

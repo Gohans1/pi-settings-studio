@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { ConfigStore } from "../src/server/store.ts";
 import { createApp } from "../src/server/app.ts";
+import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
 
 const origin = "http://127.0.0.1:43123";
 const json = { origin, "content-type": "application/json" };
@@ -95,6 +97,7 @@ test("a provider sign-in relays Pi's prompts to the browser and can be cancelled
 
 test("a provider's own key setup asks Pi's questions, stores every field, and never shows the key", async (t) => {
   const { agent, request, start, settle } = await fixture(t);
+  setEnv(t, "PI_OFFLINE", "1");
   assert.equal((await start({ action: "provider-setup", provider: "openai-codex" })).status, 422);
   const { id } = await (await start({ action: "provider-setup", provider: "cloudflare-workers-ai" })).json();
   const answer = async (value: string) => {
@@ -111,4 +114,91 @@ test("a provider's own key setup asks Pi's questions, stores every field, and ne
   assert.deepEqual(JSON.parse(await readFile(join(agent, "auth.json"), "utf8"))["cloudflare-workers-ai"],
     { type: "api_key", key: "fixture-cloudflare-key", env: { CLOUDFLARE_ACCOUNT_ID: "acct-123" } });
   assert.doesNotMatch(JSON.stringify(await (await request(`/api/jobs/${id}`)).json()), /fixture-cloudflare-key/);
+});
+
+/** Env var for one test, put back afterwards (undefined removes it). */
+function setEnv(t: import("node:test").TestContext, name: string, value: string | undefined) {
+  const before = process.env[name];
+  if (value === undefined) delete process.env[name]; else process.env[name] = value;
+  t.after(() => { if (before === undefined) delete process.env[name]; else process.env[name] = before; });
+}
+
+/** Answers what the model catalog asks over the network, and records who was asked and with which key. */
+function catalogServer(t: import("node:test").TestContext, answer: (url: URL, init?: RequestInit) => Response | Promise<Response>) {
+  const asked: { url: string; authorization?: string }[] = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = Object.assign(async (input: Request | string | URL, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    asked.push({ url: url.origin + url.pathname, authorization: new Headers(init?.headers).get("authorization") ?? undefined });
+    return answer(url, init);
+  }, { preconnect: real.preconnect });
+  t.after(() => { globalThis.fetch = real; });
+  return asked;
+}
+
+/** Sets up an OpenRouter key through the job, answering Pi's one question; returns the job id. */
+async function setUpOpenRouterKey(f: Awaited<ReturnType<typeof fixture>>, key: string) {
+  const { id } = await (await f.start({ action: "provider-setup", provider: "openrouter" })).json();
+  const waiting = await f.settle(id, job => !!job.prompt || job.status !== "running");
+  assert.equal(waiting.prompt.type, "secret");
+  assert.equal((await f.request(`/api/jobs/${id}/answer`, { method: "POST", headers: json, body: JSON.stringify({ promptId: waiting.prompt.id, value: key }) })).status, 200);
+  return id as string;
+}
+
+const infoOf = (job: Record<string, any>) => (job.events as Array<{ type: string; message?: string }>).filter(event => event.type === "info").map(event => event.message ?? "");
+
+test("a key set up through Pi's login refreshes that provider's catalog as /login does, so Models shows what the key may use", async (t) => {
+  const f = await fixture(t);
+  setEnv(t, "PI_OFFLINE", undefined);
+  const pi = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
+  const [first, second] = pi.getModels("openrouter").map(model => model.id);
+  const asked = catalogServer(t, url => url.hostname === "pi.dev" ? new Response("", { status: 404 }) : Response.json({ data: [
+    { id: first, context_length: 77777, top_provider: { context_length: 77777, max_completion_tokens: 1234 }, pricing: { prompt: "0.000003", completion: "0.000015" } },
+    { id: second },
+  ] }));
+  const id = await setUpOpenRouterKey(f, "fixture-openrouter-key");
+  const done = await f.settle(id);
+  assert.equal(done.status, "done");
+  assert.ok(infoOf(done).some(message => /model catalog.*refreshed/i.test(message)), infoOf(done).join(" | "));
+  assert.deepEqual(asked.map(entry => entry.url).sort(), ["https://openrouter.ai/api/v1/models/user", "https://pi.dev/api/models/providers/openrouter"]);
+  assert.equal(asked.find(entry => entry.url.endsWith("/models/user"))!.authorization, "Bearer fixture-openrouter-key");
+  const providers = (await (await f.request("/api/models/providers")).json()) as { providers: Array<Record<string, any>> };
+  assert.equal(providers.providers.find(provider => provider.id === "openrouter")!.models, 2);
+  const models = (await (await f.request("/api/models/providers/openrouter/models")).json()) as Array<Record<string, any>>;
+  const limited = models.find(model => model.id === first)!;
+  assert.deepEqual([limited.contextWindow, limited.maxTokens, limited.cost], [77777, 1234, { input: 3, output: 15 }]);
+  assert.doesNotMatch(JSON.stringify(await (await f.request(`/api/jobs/${id}`)).json()), /fixture-openrouter-key/);
+});
+
+test("a catalog that cannot be refreshed leaves the key set up and says Models keeps the saved list", async (t) => {
+  const f = await fixture(t);
+  setEnv(t, "PI_OFFLINE", undefined);
+  catalogServer(t, () => { throw new TypeError("fetch failed"); });
+  const done = await f.settle(await setUpOpenRouterKey(f, "fixture-openrouter-key"));
+  assert.equal(done.status, "done");
+  assert.ok(infoOf(done).some(message => /could not be refreshed.*saved list/i.test(message)), infoOf(done).join(" | "));
+  assert.equal(JSON.parse(await readFile(join(f.agent, "auth.json"), "utf8")).openrouter.key, "fixture-openrouter-key");
+});
+
+test("with PI_OFFLINE set a key setup asks the network for nothing and says so", async (t) => {
+  const f = await fixture(t);
+  setEnv(t, "PI_OFFLINE", "1");
+  const asked = catalogServer(t, () => new Response("", { status: 500 }));
+  const done = await f.settle(await setUpOpenRouterKey(f, "fixture-openrouter-key"));
+  assert.equal(done.status, "done");
+  assert.deepEqual(asked, []);
+  assert.ok(infoOf(done).some(message => /PI_OFFLINE/.test(message)), infoOf(done).join(" | "));
+});
+
+test("cancelling while the catalog refreshes stops the wait, and the key stays set up", async (t) => {
+  const f = await fixture(t);
+  setEnv(t, "PI_OFFLINE", undefined);
+  catalogServer(t, (_url, init) => new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal!.reason))));
+  const id = await setUpOpenRouterKey(f, "fixture-openrouter-key");
+  await f.settle(id, job => infoOf(job).some(message => /refreshing/i.test(message)));
+  assert.equal((await f.request(`/api/jobs/${id}/cancel`, { method: "POST", headers: json, body: "{}" })).status, 200);
+  const done = await f.settle(id);
+  assert.equal(done.status, "done");
+  assert.ok(infoOf(done).some(message => /did not refresh/i.test(message)), infoOf(done).join(" | "));
+  assert.equal(JSON.parse(await readFile(join(f.agent, "auth.json"), "utf8")).openrouter.key, "fixture-openrouter-key");
 });
