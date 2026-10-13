@@ -96,7 +96,7 @@ Startup previews do not run third-party turn-start or request hooks. Host or pro
 
 The project picker includes that project's `.pi` files and shows Pi's saved trust decision. Inspections treat the selected project as trusted without changing `trust.json`, even if Pi's saved decision rejects it. Configuration changes apply to new Pi sessions, or after `/reload`.
 
-CLI-backed jobs use `pi` on `PATH` (or `~/.local/bin/pi`), with `PI_CODING_AGENT_DIR` set to the app's agent directory. Provider sign-in/key setup and extension inspections use the app's pinned Pi SDK, not the installed CLI.
+CLI-backed jobs use `pi` on `PATH` (or `~/.local/bin/pi`), with `PI_CODING_AGENT_DIR` set to the app's agent directory. Provider sign-in/key setup and extension inspections use the app's pinned Pi SDK, not the installed CLI. The header names that version ("Built for Pi X"); General › Pi shows the installed one and warns when they differ.
 
 ## Package update notices
 

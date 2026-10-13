@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { Bot, Boxes, FileText, Layers, Puzzle, ScrollText, Server, SlidersHorizontal, Wrench } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Badge } from "./components/ui/badge";
-import { checkPackageUpdates, loadPlugins } from "./api";
+import { checkPackageUpdates, loadPi, loadPlugins } from "./api";
 import { Toaster } from "./components/ui/toast";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { ProjectPicker, TrustPanel, useProject } from "./ProjectBar";
@@ -48,6 +48,13 @@ function PiMark() {
     <rect width="20" height="20" rx="5" fill="currentColor" />
     <path d="M5.5 7.25h9M8.25 7.25v7M12 7.25v5.25c0 1 .55 1.75 1.75 1.75" fill="none" strokeWidth="1.75" strokeLinecap="round" className="stroke-background" />
   </svg>;
+}
+
+/** The Pi the app was built against, apart from the installed one that General's Pi page shows. */
+function BuiltFor() {
+  const [version, setVersion] = useState<string>();
+  useEffect(() => { loadPi().then(pi => setVersion(pi.builtFor)).catch(() => setVersion(undefined)); }, []);
+  return version ? <span className="built-for">Built for Pi {version}</span> : null;
 }
 
 /**
@@ -105,6 +112,7 @@ export function App() {
     <header>
       <div className="topbar">
         <span className="brand"><PiMark /><span>Pi Settings</span></span>
+        <BuiltFor />
         <ProjectPicker projects={projects} project={project} onChoose={choose} />
         <SoundToggle />
       </div>
