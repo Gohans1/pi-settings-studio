@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Bot, Boxes, FileText, Layers, Puzzle, ScrollText, Server, SlidersHorizontal, Wrench } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Badge } from "./components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { checkPackageUpdates, loadPi, loadPlugins } from "./api";
 import { Toaster } from "./components/ui/toast";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -77,11 +78,31 @@ export function App() {
   const { projects, project, choose, updateTrust } = useProject();
   const current = projects?.find(entry => entry.path === project);
   const updates = useUpdateCount(project, active);
+  const [instructionDraft, setInstructionDraft] = useState<string>();
+  const [pendingNavigation, setPendingNavigation] = useState<{ proceed: () => void }>();
+  const navigationTrigger = useRef<HTMLElement | null>(null);
+  const requestNavigation = useCallback((proceed: () => void, trigger = document.activeElement) => {
+    if (!instructionDraft) { proceed(); return; }
+    navigationTrigger.current = trigger instanceof HTMLElement ? trigger : null;
+    setPendingNavigation({ proceed });
+  }, [instructionDraft]);
   useEffect(() => {
-    const sync = () => setActive(tabFromHash());
+    const sync = (event: HashChangeEvent) => {
+      const next = tabFromHash();
+      if (next === active) return;
+      // A hash change cannot be cancelled; keep the current bookmark until the draft decision.
+      if (instructionDraft) history.replaceState(null, "", event.oldURL);
+      requestNavigation(() => { history.replaceState(null, "", event.newURL); setActive(next); });
+    };
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
-  }, []);
+  }, [active, instructionDraft, requestNavigation]);
+  useEffect(() => {
+    if (!instructionDraft) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = true; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [instructionDraft]);
   useEffect(() => {
     document.title = `${tabs.find(tab => tab.id === active)?.label} · Pi Settings`;
     // On a narrow screen the chosen tab may sit past the edge of the scrolling tab bar.
@@ -104,8 +125,7 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   function select(id: string) {
-    history.replaceState(null, "", "#" + id);
-    setActive(id);
+    if (id !== active) requestNavigation(() => { history.replaceState(null, "", "#" + id); setActive(id); });
   }
   return <TooltipProvider><Tabs value={active} onValueChange={value => select(String(value))}><div className="app">
     <a className="skip-link" href="#main">Skip to content</a>
@@ -113,7 +133,9 @@ export function App() {
       <div className="topbar">
         <span className="brand"><PiMark /><span>Pi Settings</span></span>
         <BuiltFor />
-        <ProjectPicker projects={projects} project={project} onChoose={choose} />
+        <ProjectPicker projects={projects} project={project} onChoose={path => {
+          if (path !== project) requestNavigation(() => choose(path), document.getElementById("project-picker"));
+        }} />
         <SoundToggle />
       </div>
       <div className="tabbar">
@@ -129,8 +151,24 @@ export function App() {
     <main id="main" tabIndex={-1}>
       {import.meta.env.VITE_DEMO && <DemoNotice />}
       {current && <TrustPanel project={current.path} trust={current.trust} onChange={trust => updateTrust(current.path, trust)} />}
-      {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id} className="flex flex-col"><Panel project={project} loadsInProject={current?.trust.loadsWithoutPrompt} /></TabsContent>)}
+      {tabs.map(({ id, Panel }) => <TabsContent key={id} value={id} className="flex flex-col">
+        {id === "instructions"
+          ? <InstructionsTab key={project} project={project} loadsInProject={current?.trust.loadsWithoutPrompt} onDraftChange={setInstructionDraft} onNavigate={requestNavigation} />
+          : <Panel project={project} loadsInProject={current?.trust.loadsWithoutPrompt} />}
+      </TabsContent>)}
     </main>
+    <AlertDialog open={!!pendingNavigation} onOpenChange={open => { if (!open) setPendingNavigation(undefined); }}>
+      <AlertDialogContent finalFocus={() => navigationTrigger.current?.isConnected && navigationTrigger.current.checkVisibility() ? navigationTrigger.current : document.getElementById("main")}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard the unsaved changes?</AlertDialogTitle>
+          <AlertDialogDescription>Your edits to {instructionDraft} are not saved.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={() => { const next = pendingNavigation; setPendingNavigation(undefined); next?.proceed(); }}>Discard</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <Toaster />
   </div></Tabs></TooltipProvider>;
 }
