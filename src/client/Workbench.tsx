@@ -17,20 +17,24 @@ export function Workbench({ list, detail, open, onBack, backLabel }: {
 }) {
   const frame = useRef<HTMLDivElement>(null);
   const back = useRef<HTMLButtonElement>(null);
+  const listFocus = useRef<HTMLElement>(null);
+  const returning = useRef(false);
   useLayoutEffect(() => {
     const element = frame.current;
     if (!element) return;
     // On a narrow screen the pane that had focus may just have been hidden: keep the reader's place.
     if (element.getBoundingClientRect().top < 0) element.scrollIntoView({ block: "start" });
     const active = document.activeElement;
-    if (active instanceof HTMLElement && element.contains(active) && !active.checkVisibility()) {
-      (open ? back.current : element.querySelector<HTMLElement>(".workbench-list :is(button, input)"))?.focus();
+    if (returning.current || (active instanceof HTMLElement && element.contains(active) && !active.checkVisibility())) {
+      const previous = listFocus.current;
+      (open ? back.current : previous?.isConnected && previous.checkVisibility() ? previous : element.querySelector<HTMLElement>(".workbench-list :is(button, input)"))?.focus();
     }
+    returning.current = false;
   }, [open]);
   return <div ref={frame} className="workbench" data-open={open || undefined}>
-    <div className="workbench-list"><ScrollArea className="h-full"><div className="workbench-list-content">{list}</div></ScrollArea></div>
+    <div className="workbench-list" onFocusCapture={event => { listFocus.current = event.target; }}><ScrollArea className="h-full"><div className="workbench-list-content">{list}</div></ScrollArea></div>
     <div className="workbench-detail">
-      {open && <Button ref={back} variant="ghost" size="sm" className="mb-3 -ms-2 min-[56rem]:hidden" onClick={onBack}><ChevronLeft aria-hidden="true" data-icon="inline-start" />{backLabel}</Button>}
+      {open && <Button ref={back} variant="ghost" size="sm" className="mb-3 -ms-2 min-[56rem]:hidden" onClick={() => { returning.current = true; onBack(); }}><ChevronLeft aria-hidden="true" data-icon="inline-start" />{backLabel}</Button>}
       {detail}
     </div>
   </div>;

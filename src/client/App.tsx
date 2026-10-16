@@ -128,7 +128,7 @@ export function App() {
     if (id !== active) requestNavigation(() => { history.replaceState(null, "", "#" + id); setActive(id); });
   }
   return <TooltipProvider><Tabs value={active} onValueChange={value => select(String(value))}><div className="app">
-    <a className="skip-link" href="#main">Skip to content</a>
+    <a className="skip-link" href="#main" onClick={event => { event.preventDefault(); document.getElementById("main")?.focus(); }}>Skip to content</a>
     <header>
       <div className="topbar">
         <span className="brand"><PiMark /><span>Pi Settings</span></span>
