@@ -5,11 +5,9 @@
 @import "./flexoki.css";
 /* Semantic tokens, the only colours components use. light-dark() picks the light or dark Flexoki value
    from the OS colour scheme, the same signal Tailwind's dark: variant reads.
-   Roles follow Flexoki's mapping (bg, bg-2, ui, ui-2, tx) with four measured exceptions, each one step
-   stronger than upstream to reach WCAG AA: muted text (tx-2 is 4.47:1 on bg-2 in light), dark destructive
-   (red-400 is 4.42:1 on black), input borders (3:1 for a control boundary) and the primary blue (700 in
-   light, 300 in dark), whose text must stay 4.5:1 under shadcn's 80% hover. tests/design-tokens.test.ts
-   checks every pair. */
+   Roles follow Flexoki's mapping (bg, bg-2, ui, ui-2, tx). The stronger muted text, input borders,
+   primary blue and destructive red keep contrast on the rendered surfaces, including translucent
+   button fills and the dialog footer. tests/design-tokens.test.ts checks those composite pairs. */
 :root {
   color-scheme: light dark;
   --background: light-dark(var(--flexoki-paper), var(--flexoki-black));
@@ -35,7 +33,7 @@
   --secondary-foreground: light-dark(var(--flexoki-black), var(--flexoki-base-200));
   /* The chosen row of a list: Flexoki's ui-2, one step above the hover (ui). */
   --selected: light-dark(var(--flexoki-base-150), var(--flexoki-base-850));
-  --destructive: light-dark(var(--flexoki-red-600), var(--flexoki-red-300));
+  --destructive: light-dark(var(--flexoki-red-700), var(--flexoki-red-100));
   --warning: light-dark(var(--flexoki-orange-600), var(--flexoki-orange-400));
   /* Ready: the mark beside a provider that has a credential. An icon colour, like --warning. */
   --success: light-dark(var(--flexoki-green-600), var(--flexoki-green-400));
@@ -116,7 +114,7 @@
   .brand { display: flex; align-items: center; gap: --spacing(2); font-weight: var(--font-weight-semibold); white-space: nowrap; }
   .brand svg { width: --spacing(5); height: --spacing(5); }
   .built-for { color: var(--muted-foreground); font-size: var(--text-small); white-space: nowrap; }
-  .project-picker { margin-inline-start: auto; display: flex; align-items: center; gap: --spacing(2); min-width: 0; color: var(--muted-foreground); font-size: var(--text-small); }
+  .project-picker { margin-inline-start: auto; display: flex; align-items: center; gap: --spacing(2); min-width: 0; color: var(--foreground); font-size: var(--text-small); }
   .project-picker svg { width: --spacing(4); height: --spacing(4); }
   /* The tab list scrolls sideways on a narrow screen; tabs past the edge fade out to say there is more. */
   .tabbar { display: flex; align-items: end; min-height: var(--tabbar-height); overflow-x: auto; scrollbar-width: none; padding-inline: calc(var(--gutter) - --spacing(1));

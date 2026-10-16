@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -113,6 +113,55 @@ test("invalid custom-model limits explain the refusal and errors stay with their
   await remaining.fill("16384");
   await expect(remaining).not.toHaveAttribute("aria-invalid", "true");
   await expect(form.locator("[data-slot=field-error]")).toHaveCount(0);
+});
+
+test("destructive decisions and the project value keep AA contrast in their rendered interactive states", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  expect(await page.evaluate(() => matchMedia("(hover: hover)").matches)).toBe(true);
+  const ratio = (control: Locator) => control.evaluate(element => {
+    const canvas = document.createElement("canvas").getContext("2d")!;
+    const chain: Element[] = [];
+    for (let node: Element | null = element; node; node = node.parentElement) chain.unshift(node);
+    for (const node of chain) {
+      canvas.fillStyle = getComputedStyle(node).backgroundColor;
+      canvas.fillRect(0, 0, 1, 1);
+    }
+    const background = [...canvas.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    canvas.fillStyle = getComputedStyle(element).color;
+    canvas.fillRect(0, 0, 1, 1);
+    const foreground = [...canvas.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    const luminance = (rgb: number[]) => rgb.map(value => value / 255)
+      .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+      .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index]!, 0);
+    const [a, b] = [luminance(foreground), luminance(background)];
+    return (Math.max(a!, b!) + 0.05) / (Math.min(a!, b!) + 0.05);
+  });
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    const picker = page.getByRole("combobox", { name: "Project", exact: true });
+    await expect.poll(() => ratio(picker)).toBeGreaterThanOrEqual(4.5);
+    await picker.hover();
+    await expect.poll(() => ratio(picker)).toBeGreaterThanOrEqual(4.5);
+    await picker.focus();
+    await expect.poll(() => ratio(picker)).toBeGreaterThanOrEqual(4.5);
+    await page.getByRole("tab", { name: "Plugins", exact: true }).click();
+    await page.getByRole("button", { name: "review prompt", exact: true }).click();
+    await page.getByRole("button", { name: "Edit review", exact: true }).click();
+    const editor = page.getByRole("form", { name: "Edit review", exact: true });
+    await editor.getByRole("textbox").fill("An unsaved draft for the contrast check.");
+    await editor.getByRole("button", { name: "Close", exact: true }).click();
+    const discard = page.getByRole("alertdialog").getByRole("button", { name: "Discard", exact: true });
+    await expect.poll(() => ratio(discard)).toBeGreaterThanOrEqual(4.5);
+    await page.screenshot({ path: test.info().outputPath(`discard-${colorScheme}-rest.png`) });
+    await discard.hover();
+    await expect.poll(() => ratio(discard)).toBeGreaterThanOrEqual(4.5);
+    await page.screenshot({ path: test.info().outputPath(`discard-${colorScheme}-hover.png`) });
+    await discard.focus();
+    await expect.poll(() => ratio(discard)).toBeGreaterThanOrEqual(4.5);
+    await page.getByRole("button", { name: "Keep editing", exact: true }).click();
+    await editor.getByRole("button", { name: "Discard changes", exact: true }).click();
+    await editor.getByRole("button", { name: "Close", exact: true }).click();
+  }
 });
 
 test("the notice and the first tab pass the accessibility checks", async ({ page }) => {
