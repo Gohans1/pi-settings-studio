@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DEFAULT_TOOLS, effectiveTools } from "./tools";
 
-// Field catalogue for settings.json, from Pi 1.2.0 docs/settings.md: General's groups, and the sections other
+// Field catalogue for settings.json, from Pi 1.3.0 docs/settings.md: General's groups, and the sections other
 // tabs edit (SectionId). tests/settings-drift.test.ts fails when Pi's Settings interface gains or loses a key
 // that has no home here.
 
@@ -83,6 +83,7 @@ export const fields: Field[] = [
   // Sessions & context
   { key: "compaction.enabled", label: "Automatic compaction", section: "context", help: "Summarize older context automatically when it fills up.", defaultValue: true, ...bool },
   { key: "branchSummary.skipPrompt", label: "Skip branch summary prompt", section: "context", help: "Skip the branch-summary prompt and default to no summary.", defaultValue: false, ...bool },
+  { key: "sessionShareDestination", label: "Session share destination", section: "context", help: "Where /share uploads a session. auto uses Radius when you are signed in to it, otherwise a private GitHub gist; radius never falls back to a gist.", defaultValue: "auto", ...select(choices("auto", "gist", "radius")) },
   { key: "sessionDir", label: "Session directory", section: "context", advanced: true, kind: "text", help: "Where sessions are stored. Relative paths resolve from the working directory. PI_CODING_AGENT_SESSION_DIR and --session-dir override it.", schema: text },
   { key: "compaction.reserveTokens", label: "Compaction: reserved tokens", section: "context", advanced: true, help: "Tokens reserved for the model response.", defaultValue: 16384, ...number() },
   { key: "compaction.keepRecentTokens", label: "Compaction: recent tokens kept", section: "context", advanced: true, help: "Recent tokens kept without summarizing.", defaultValue: 20000, ...number() },
