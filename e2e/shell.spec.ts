@@ -18,6 +18,8 @@ test.beforeEach(async () => {
   server = await startServer({ agentDir, projectDir: join(root, "project"), port: 0, staticDir: resolve("dist/client") });
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
+// These fixtures describe remote servers; shell checks must not connect to them.
+test.beforeEach(({ page }) => page.route("**/api/mcp/status*", route => route.fulfill({ json: { checkedAt: new Date().toISOString(), complete: true, servers: [], errors: [] } })));
 
 test("the list's scroll area hides the native scrollbar, and the strict CSP blocks nothing on the page", async ({ page }) => {
   const blocked: string[] = [];

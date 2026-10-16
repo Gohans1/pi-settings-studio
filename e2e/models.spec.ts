@@ -6,6 +6,10 @@ import { join, resolve } from "node:path";
 import { startServer, type RunningServer } from "../src/server/server.ts";
 
 let root: string, agent: string, server: RunningServer;
+const offline = process.env.PI_OFFLINE;
+// Credential setup checks the UI/storage contract here, not the public model-catalog service.
+test.beforeAll(() => { process.env.PI_OFFLINE = "1"; });
+test.afterAll(() => { if (offline === undefined) delete process.env.PI_OFFLINE; else process.env.PI_OFFLINE = offline; });
 const fixtureModel = (id: string, name: string, reasoning: boolean) =>
   `{ id: "${id}", name: "${name}", reasoning: ${reasoning}, input: ["text"], cost: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0 }, contextWindow: 100000, maxTokens: 8000 }`;
 // Providers as an extension such as pi-claude-bridge registers them: one Pi has a key for, one that needs a sign-in.
@@ -78,6 +82,7 @@ test("an API key is set up with Pi's own question, removed and restored without 
   await job.getByLabel("Enter OpenAI API key").fill("fixture-new-key");
   await job.getByRole("button", { name: "Continue" }).click();
   await expect(job).toContainText("Finished");
+  await expect(job).toContainText("PI_OFFLINE is set, so the model catalog was not refreshed.");
   expect((await auth()).openai).toEqual({ type: "api_key", key: "fixture-new-key" });
   await expect(detail.getByRole("button", { name: "Replace OpenAI API key" })).toBeVisible();
   expect(await page.content()).not.toContain("fixture-");
