@@ -280,7 +280,7 @@ test("Skill commands is set in the Skills tab, and General no longer lists it", 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByRole("tab", { name: "General" }).click();
   await page.getByRole("searchbox", { name: "Search settings" }).fill("enableSkillCommands");
-  await expect(page.getByText("No settings match")).toBeVisible();
+  await expect(page.locator('[data-slot="empty"]:visible')).toContainText("No settings match “enableSkillCommands”");
 });
 
 test("an unsaved change to skill commands asks before the page is left, as General does", async ({ page }) => {

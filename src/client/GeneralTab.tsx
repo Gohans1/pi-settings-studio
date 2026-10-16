@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./components/ui/dropdown-menu";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "./components/ui/empty";
 import { ItemGroup } from "./components/ui/item";
 import { Separator } from "./components/ui/separator";
 import { Feedback } from "./Feedback";
@@ -20,7 +21,7 @@ import { RawJsonEditor } from "./RawJsonEditor";
 import { KeybindingsPanel } from "./KeybindingsPanel";
 import { SearchField } from "./SearchField";
 import { ScopeChoice } from "./ScopeChoice";
-import { EmptyDetail, ListItem, Workbench } from "./Workbench";
+import { ListItem, Workbench } from "./Workbench";
 import { Spinner } from "./components/ui/spinner";
 
 // Entries pinned around the groups: the installed Pi above them; shortcuts and what is not editable below.
@@ -38,6 +39,7 @@ export function GeneralTab({ project }: { project?: string }) {
   const loadRaw = useCallback(() => loadRawSettings(scope, target), [scope, target]);
   const saveRaw = useCallback((revision: string, text: string) => saveRawSettings(revision, text, scope, target), [scope, target]);
   const [query, setQuery] = useState("");
+  const search = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<SettingsView>();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -131,8 +133,20 @@ export function GeneralTab({ project }: { project?: string }) {
   const entry = (id: string, icon: LucideIcon | undefined, name: string, state?: ReactNode) => <div key={id} role="listitem" className="list-row">
     <ListItem selected={current === id} onSelect={() => { setPane(id); setOpen(true); }} icon={icon} name={name} state={state} />
   </div>;
+  const noMatches = <Empty className="min-h-full">
+    <EmptyHeader>
+      <EmptyMedia variant="icon"><SearchX aria-hidden="true" /></EmptyMedia>
+      <EmptyTitle>{`No settings match “${query.trim()}”`}</EmptyTitle>
+      <EmptyDescription>Try another label or key, such as “retry”.</EmptyDescription>
+    </EmptyHeader>
+    <Button variant="outline" onClick={() => {
+      flushSync(() => { setQuery(""); setOpen(false); });
+      search.current?.querySelector("input")?.focus();
+    }}>Clear search</Button>
+  </Empty>;
   const list = <section aria-label="Setting groups">
-    <div className="list-search"><SearchField label="Search settings" placeholder="Search settings or keys…" value={query} onChange={setQuery} /></div>
+    <div ref={search} className="list-search"><SearchField label="Search settings" placeholder="Search settings or keys…" value={query} onChange={setQuery} /></div>
+    {!groups.length && <div className="min-[56rem]:hidden">{noMatches}</div>}
     {pinned && <><ItemGroup>{entry(PI, Info, "Pi", pi)}</ItemGroup><Separator className="mt-2" /></>}
     <ItemGroup className="mt-2">{groups.map(group => entry(group.id, icons[group.id], group.title, groupState(group.id)))}</ItemGroup>
     {pinned && <><Separator className="mt-2" /><ItemGroup className="mt-2">
@@ -186,12 +200,12 @@ export function GeneralTab({ project }: { project?: string }) {
     {error && <Alert variant="destructive" className="mb-4"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the operation</AlertTitle><AlertDescription>{error}</AlertDescription>
       <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" disabled={busy} onClick={() => void refresh()}>Reload settings</Button>
         <Button variant="outline" size="sm" disabled={busy || !!changes.length} onClick={openRaw}>Edit as JSON</Button></div></Alert>}
-    {loading ? <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : view && <Workbench open={open} onBack={() => setOpen(false)} backLabel="All groups" list={list}
+    {loading ? <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : view && <Workbench open={open && !!current} onBack={() => setOpen(false)} backLabel="All groups" list={list}
       detail={current ? <div className="detail">
         {detail}
         {changes.length > 0 && <SaveBar count={changes.length} busy={busy} onSave={() => void save()}
           onDiscard={() => { discard(); setError(""); setMessage("Draft discarded. No file was changed."); }} />}
-      </div> : <EmptyDetail icon={SearchX} title="No settings match">Try a label such as “model” or “budget”, or a key.</EmptyDetail>} />}
+      </div> : <div className="hidden min-h-full min-[56rem]:block">{noMatches}</div>} />}
     <AlertDialog open={restore} onOpenChange={setRestore}>
       <AlertDialogContent>
         <AlertDialogHeader>
