@@ -142,12 +142,14 @@ export function modelRoutes(store: ConfigStore, agentDir: string, extensions: Ex
       const { models, providers } = await readyModels(c.req.query("project"), c.req.raw.signal);
       const ref = (model: { provider: string; id: string }) => `${model.provider}/${model.id}`;
       const each = patterns.map(pattern => {
-        const matched = resolveModelScope([pattern], models).scopedModels.map(scoped => ref(scoped.model));
+        const { scopedModels, diagnostics } = resolveModelScope([pattern], models);
+        const matched = scopedModels.map(scoped => ref(scoped.model));
         // A "provider/…" pattern names its provider; say why it selects nothing.
         const named = /^([^/*?[]+)\//.exec(pattern)?.[1];
         const reason = matched.length ? undefined : !named ? "no-match" as const
           : !providers.all.includes(named) ? "unknown-provider" as const : !providers.ready.includes(named) ? "no-credential" as const : "no-match" as const;
-        return { pattern, matches: matched.length, models: matched, ...(reason ? { reason } : {}) };
+        const ambiguous = diagnostics.some(diagnostic => diagnostic.code === "ambiguous");
+        return { pattern, matches: matched.length, models: matched, ...(reason ? { reason } : {}), ...(ambiguous ? { ambiguous: true as const } : {}) };
       });
       const scoped = resolveModelScope(patterns, models).scopedModels.map(scoped => ref(scoped.model));
       const known = chosen !== undefined && models.some(model => ref(model) === chosen);

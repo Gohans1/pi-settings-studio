@@ -21,7 +21,7 @@ describe("model scope", () => {
   const cases: string[][] = [
     ["anthropic/*"], ["*sonnet*"], ["sonnet"], ["anthropic/*:high"], ["nope/*"], ["claude-sonnet:bogus"],
     ["opencode/*", "anthropic/claude*"], ["openai/*", "openai/*"], [available[0]!.id], [`${available[1]!.provider}/${available[1]!.id}`],
-    ["gpt*:xhigh", "*flash*"],
+    ["gpt*:xhigh", "*flash*"], ["claude-sonnet-5-5"], ["claude-sonnet-5-5:high"], ["anthropic/sonnet"], [" "],
   ];
   test.each(cases.map(patterns => [patterns.join(", "), patterns] as const))("matches Pi for %s", async (_, patterns) => {
     const pi = await resolveModelScopeWithDiagnostics([...patterns], runtime);
