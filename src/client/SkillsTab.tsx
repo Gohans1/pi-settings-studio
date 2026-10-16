@@ -57,6 +57,7 @@ export function SkillsTab({ project }: { project?: string }) {
   const [selected, setSelected] = useState<string>();
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<"edit" | "new" | "folders" | "commands">();
@@ -64,11 +65,11 @@ export function SkillsTab({ project }: { project?: string }) {
   const [folders, setFolders] = useState(0);
 
   async function refresh() {
-    setError("");
+    setLoadError("");
     try { setView(await loadSkills(project)); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read the skills."); }
+    catch (cause) { setLoadError(cause instanceof Error ? cause.message : "Could not read the skills."); }
   }
-  useEffect(() => { setSelected(undefined); setMode(undefined); void refresh(); }, [project]);
+  useEffect(() => { setSelected(undefined); setMode(undefined); setError(""); void refresh(); }, [project]);
 
   async function toggle(skills: ResourceView[], enabled: boolean, label = skills[0]?.name) {
     if (!view || !skills.length) return;
@@ -142,9 +143,11 @@ export function SkillsTab({ project }: { project?: string }) {
       actions={<Button variant="outline" onClick={() => { setMode("new"); setSelected(undefined); }}><Plus aria-hidden="true" data-icon="inline-start" />New skill</Button>} />
     <Feedback message={message} onDismiss={() => { setMessage(""); setUndo(undefined); }}
       action={undo && { label: "Undo", disabled: busy, onClick: () => void revert(undo) }} />
+    {loadError && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not load skills</AlertTitle><AlertDescription>{loadError}</AlertDescription>
+      <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Try again</Button></div></Alert>}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not complete the change</AlertTitle><AlertDescription>{error}</AlertDescription>
-      <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Reload</Button></div></Alert>}
-    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading skills…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode(undefined); }} backLabel="All skills" list={<section aria-label="Skills list">
+      <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => { setError(""); void refresh(); }}>Reload</Button></div></Alert>}
+    {!view ? !error && !loadError && <div className="loading" aria-busy="true"><Spinner />Reading skills…</div> : <Workbench open={open} onBack={() => { setSelected(undefined); setMode(undefined); }} backLabel="All skills" list={<section aria-label="Skills list">
       <div className="list-search"><SearchField label="Search skills" placeholder="Search skills…" value={query} onChange={setQuery} /></div>
       <ItemGroup><div role="listitem" className="list-row"><ListItem selected={mode === "folders"} onSelect={() => { setMode("folders"); setSelected(undefined); }} icon={FolderOpen} name="Folders" state="where Pi finds skills" /></div>
         <div role="listitem" className="list-row"><ListItem selected={mode === "commands"} onSelect={() => { setMode("commands"); setSelected(undefined); }} icon={SquareSlash} name="Skill commands" state="/skill:name" /></div></ItemGroup>

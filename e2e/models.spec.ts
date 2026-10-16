@@ -163,6 +163,42 @@ test("the list names its groups and says which providers are ready, and the chos
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
+test("defaults read failures name the load and retry the existing settings read", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProvider: "anthropic", defaultModel: "saved-model" }));
+  let failRead = true;
+  await page.route("**/api/settings/global", route => failRead && route.request().method() === "GET"
+    ? route.fulfill({ status: 503, json: { error: "Fixture defaults read unavailable." } }) : route.continue());
+  await page.goto(server.url + "#models/defaults");
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const error = panel.getByRole("alert");
+  await expect(error).toContainText("Fixture defaults read unavailable.");
+  await expect(error).toContainText("Could not load defaults");
+  await expect(error).not.toContainText("Not saved");
+  failRead = false;
+  await error.getByRole("button", { name: "Try again" }).click();
+  await expect(panel.getByLabel("Default model")).toHaveValue("saved-model");
+  await expect(error).toHaveCount(0);
+});
+
+test("defaults write failures keep their save title and every draft field", async ({ page }) => {
+  const file = join(agent, "settings.json");
+  const original = JSON.stringify({ defaultProvider: "anthropic", defaultModel: "saved-model" });
+  await writeFile(file, original);
+  await page.goto(server.url + "#models/defaults");
+  const panel = page.getByRole("region", { name: "Defaults" });
+  await panel.getByLabel("Default model").fill("draft-model");
+  await panel.getByLabel("Thinking budget: low", { exact: true }).fill("4096");
+  await page.route("**/api/settings/global", route => route.request().method() === "PATCH"
+    ? route.fulfill({ status: 409, json: { error: "Fixture defaults write refused." } }) : route.continue());
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(panel.getByRole("alert")).toContainText("Not saved");
+  await expect(panel.getByRole("alert")).toContainText("Fixture defaults write refused.");
+  await expect(panel.getByRole("alert")).not.toContainText("Could not load defaults");
+  await expect(panel.getByLabel("Default model")).toHaveValue("draft-model");
+  await expect(panel.getByLabel("Thinking budget: low", { exact: true })).toHaveValue("4096");
+  expect(await readFile(file, "utf8")).toBe(original);
+});
+
 test("while the defaults save, Save defaults shows a spinner", async ({ page }) => {
   await page.goto(server.url + "#models");
   await page.getByRole("button", { name: /^Defaults/ }).click();
