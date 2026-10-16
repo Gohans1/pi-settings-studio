@@ -18,6 +18,8 @@ test.beforeEach(async () => {
   server = await startServer({ agentDir, projectDir: join(root, "project"), port: 0, staticDir: resolve("dist/client") });
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
+// These fixtures describe remote servers; shell checks must not connect to them.
+test.beforeEach(({ page }) => page.route("**/api/mcp/status*", route => route.fulfill({ json: { checkedAt: new Date().toISOString(), complete: true, servers: [], errors: [] } })));
 
 test("the list's scroll area hides the native scrollbar, and the strict CSP blocks nothing on the page", async ({ page }) => {
   const blocked: string[] = [];
@@ -28,6 +30,16 @@ test("the list's scroll area hides the native scrollbar, and the strict CSP bloc
   await expect(viewports).toHaveCount(1);
   for (const viewport of await viewports.all()) await expect(viewport).toHaveCSS("scrollbar-width", "none");
   expect(blocked).toEqual([]);
+});
+
+test("the skip link focuses the current tab without replacing its bookmark", async ({ page }) => {
+  await page.goto(server.url + "#skills");
+  await expect(page).toHaveTitle("Skills · Pi Settings");
+  await page.getByRole("link", { name: "Skip to content" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("main")).toBeFocused();
+  await expect(page).toHaveTitle("Skills · Pi Settings");
+  await expect(page).toHaveURL(server.url + "#skills");
 });
 
 test("the window title names the open tab", async ({ page }) => {
@@ -97,6 +109,22 @@ test("on a narrow screen the list and the chosen item take turns, with a way bac
   await page.getByRole("button", { name: "All servers" }).click();
   await expect(page.getByRole("button", { name: /^search/ })).toBeVisible();
   await expect(page.getByRole("region", { name: "docs" })).toBeHidden();
+});
+
+test("returning from a narrow detail restores the row that opened it", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(server.url + "#mcp");
+  const row = page.getByRole("button", { name: /^docs/ });
+  await row.focus();
+  await page.keyboard.press("Enter");
+  const back = page.getByRole("button", { name: "All servers", exact: true });
+  await expect(back).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(row).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(back).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(row).toBeFocused();
 });
 
 test("on a wide screen the list runs down the window's left edge, and the page beside it out to the right", async ({ page }) => {

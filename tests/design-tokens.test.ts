@@ -114,6 +114,17 @@ describe("colour system", () => {
     });
   }
 
+  for (const scheme of ["light", "dark"] as const) {
+    for (const state of ["rest", "hover"] as const) {
+      test.each(["--background", "--card", "--popover", "dialog footer"])(`${scheme}: a destructive button at ${state} on %s keeps 4.5:1`, surface => {
+        const underneath = surface === "dialog footer"
+          ? over(hex("--muted", scheme), hex("--popover", scheme), 0.5) : hex(surface, scheme);
+        const alpha = scheme === "dark" ? state === "hover" ? 0.3 : 0.2 : state === "hover" ? 0.2 : 0.1;
+        expect(contrast(hex("--destructive", scheme), over(hex("--destructive", scheme), underneath, alpha))).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+  }
+
   // shadcn marks the hovered or keyboard-highlighted row of a menu, select or combobox with --accent alone, and a
   // hovered ghost button (a toast's close among them) and an AlertDialog's footer with --muted. Where one matches the
   // surface under it, the pointer and the keyboard leave no trace. Every colour is a Flexoki step, so differing is

@@ -291,7 +291,7 @@ test("Pi's own tools are changed in Startup tools, a link away from their source
   await expect(page.getByRole("group", { name: "Startup tools" })).toBeVisible();
   await page.getByRole("tab", { name: "General" }).click();
   await page.getByRole("searchbox", { name: "Search settings" }).fill("defaultTools");
-  await expect(page.getByText("No settings match")).toBeVisible();
+  await expect(page.locator('[data-slot="empty"]:visible')).toContainText("No settings match “defaultTools”");
 });
 
 test("the overview counts in words: one declared tool is one tool", async ({ page }) => {

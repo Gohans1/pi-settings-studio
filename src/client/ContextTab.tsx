@@ -1,5 +1,6 @@
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { CircleAlert, Copy, RefreshCw, TriangleAlert } from "lucide-react";
+import { cn } from "cn";
 import type { ToolsView } from "../shared/plugin-tools";
 import type { PromptChange, PromptPart, SessionSummary, SystemPromptView } from "../shared/sessions";
 import { loadSessions, loadSystemPrompt, loadTools } from "./api";
@@ -57,7 +58,7 @@ function SectionDetail({ part, from }: { part: PromptPart; from?: ReactNode }) {
   const { label, about, tab } = sectionInfo(part.name);
   return <div className="detail">
     <header className="detail-header"><h2>{label}</h2>
-      {tab && <div className="actions"><a className={buttonVariants({ variant: "outline", size: "sm" })} href={"#" + tab}>Edit in {PART_TABS[tab]}</a></div>}</header>
+      {tab && <div className="actions"><a className={cn(buttonVariants({ variant: "outline", size: "sm" }))} href={"#" + tab}>Edit in {PART_TABS[tab]}</a></div>}</header>
     <p className="tools-note">{about}</p>
     <dl className="detail-list">
       <div><dt>Size</dt><dd>{size(part)}</dd></div>
@@ -76,7 +77,7 @@ function DeclarationDetail({ part, catalog, leftOut = false }: { part: PromptPar
   const scripts = codemode && catalog ? catalog.tools.filter(entry => entry.reach === "demand" && !listed.includes(entry.name)).map(entry => entry.name) : [];
   return <div className="detail">
     <header className="detail-header"><h2 translate="no">{part.name}</h2>
-      {source && <div className="actions"><a className={buttonVariants({ variant: "outline", size: "sm" })} href={"#" + source.tab}>Change in {TAB_NAMES[source.tab]}</a></div>}</header>
+      {source && <div className="actions"><a className={cn(buttonVariants({ variant: "outline", size: "sm" }))} href={"#" + source.tab}>Change in {TAB_NAMES[source.tab]}</a></div>}</header>
     <p className="tools-note">{leftOut
       ? "Recorded, but left out of every request: with code mode set to only, Pi hides direct tools from the model, which reaches them through code mode. The prompt's tool list, which does not name it, says so."
       : "A tool declaration: its name, description and parameters, as the model reads them with every request."}</p>

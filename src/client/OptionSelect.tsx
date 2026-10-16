@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
 
 export type Option<Value> = { value: Value; label: string };
@@ -6,14 +7,14 @@ export type Option<Value> = { value: Value; label: string };
  * A shadcn Select built from labelled options; the trigger shows the chosen option's label. Label it with
  * aria-label, or with a FieldLabel whose htmlFor is this id.
  */
-export function OptionSelect<Value>({ options, value, onChange, placeholder, disabled, id, className, ...aria }: {
+export function OptionSelect<Value>({ options, value, onChange, placeholder, disabled, id, className, valueLabel, ...aria }: {
   options: readonly Option<Value>[]; value: Value | null; onChange: (value: Value) => void; placeholder?: string;
-  disabled?: boolean; id?: string; className?: string;
+  disabled?: boolean; id?: string; className?: string; valueLabel?: ReactNode;
   "aria-label"?: string; "aria-describedby"?: string; "aria-invalid"?: boolean;
 }) {
   return <Select items={options} value={value} onValueChange={next => { if (next !== null) onChange(next); }} disabled={disabled}>
-    <SelectTrigger id={id} className={className} {...aria}><SelectValue placeholder={placeholder} /></SelectTrigger>
+    <SelectTrigger id={id} className={className} {...aria}><SelectValue placeholder={placeholder}>{valueLabel}</SelectValue></SelectTrigger>
     {/* Below the field (above when there is no room), like the app's menus; never over the field. */}
-    <SelectContent alignItemWithTrigger={false}><SelectGroup>{options.map(option => <SelectItem key={JSON.stringify(option.value)} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent>
+    <SelectContent alignItemWithTrigger={false}><SelectGroup>{options.map(option => <SelectItem key={JSON.stringify(option.value)} value={option.value}><span className="min-w-0 whitespace-normal wrap-anywhere">{option.label}</span></SelectItem>)}</SelectGroup></SelectContent>
   </Select>;
 }

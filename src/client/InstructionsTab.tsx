@@ -30,12 +30,16 @@ function role(file: InstructionFile, files: InstructionFile[], loadsInProject: b
   return what;
 }
 
-function Editor({ file, files, project, loadsInProject, busy, onSave, onDelete }: {
+function Editor({ file, files, project, loadsInProject, busy, onSave, onDelete, onDraftChange }: {
   file: InstructionFile; files: InstructionFile[]; project?: string; loadsInProject: boolean; busy: boolean;
-  onSave: (text: string) => void; onDelete: () => void;
+  onSave: (text: string) => void; onDelete: () => void; onDraftChange?: (name?: string) => void;
 }) {
   const [text, setText] = useState(file.text ?? "");
   const changed = text !== (file.text ?? "");
+  useEffect(() => {
+    onDraftChange?.(changed ? baseName(file.path) : undefined);
+    return () => onDraftChange?.(undefined);
+  }, [changed, file.path, onDraftChange]);
   return <section className="detail instruction" aria-labelledby="instruction-title">
     <header><h2 id="instruction-title">{title(file)}</h2>
       <p className="muted">{role(file, files, loadsInProject)}{project && file.scope === "global" && " Applies to every project, not only the one chosen at the top."}</p>
@@ -53,7 +57,9 @@ function Editor({ file, files, project, loadsInProject, busy, onSave, onDelete }
   </section>;
 }
 
-export function InstructionsTab({ project, loadsInProject = true }: { project?: string; loadsInProject?: boolean }) {
+export function InstructionsTab({ project, loadsInProject = true, onDraftChange, onNavigate = proceed => proceed() }: {
+  project?: string; loadsInProject?: boolean; onDraftChange?: (name?: string) => void; onNavigate?: (proceed: () => void) => void;
+}) {
   const [view, setView] = useState<InstructionsView>();
   const [selected, setSelected] = useState<string>("global:context");
   const [error, setError] = useState("");
@@ -73,7 +79,7 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
   async function run(change: () => Promise<InstructionsView>, done: string, undoable?: string) {
     setBusy(true); setError(""); setMessage(""); setUndo(undefined);
     try { setView(await change()); setMessage(`${done} Applies to new Pi sessions, or after /reload.`); setUndo(undoable); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save."); await refresh(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save."); }
     finally { setBusy(false); }
   }
 
@@ -81,7 +87,10 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
   const current = files.find(file => file.id === selected) ?? files[0];
   const extra = (view?.loaded ?? []).filter(path => !files.some(file => file.path === path));
   const list = (scope: "global" | "project") => <ItemGroup>{files.filter(file => file.scope === scope).map(file => <div key={file.id} role="listitem" className="list-row">
-    <ListItem selected={file.id === current?.id} onSelect={() => { setSelected(file.id); setPicked(true); }}
+    <ListItem selected={file.id === current?.id} onSelect={() => {
+      const select = () => { setSelected(file.id); setPicked(true); };
+      if (file.id === current?.id) select(); else onNavigate(select);
+    }}
       name={title(file)} state={file.error ? "unreadable" : file.exists ? "" : "not created"} />
   </div>)}</ItemGroup>;
   return <>
@@ -97,7 +106,7 @@ export function InstructionsTab({ project, loadsInProject = true }: { project?: 
         <ul className="plain-list">{extra.map(path => <li key={path}><code>{home(path)}</code></li>)}</ul>
         <p className="muted list-note">Context files in parent folders. Edit them in their own folder.</p>
       </section>}
-    </>} detail={current && <Editor key={current.id + current.revision} file={current} files={files} project={project} loadsInProject={loadsInProject} busy={busy}
+    </>} detail={current && <Editor key={current.id + current.revision} file={current} files={files} project={project} loadsInProject={loadsInProject} busy={busy} onDraftChange={onDraftChange}
         onSave={text => void run(() => saveInstruction(current.id, current.revision, text, project), `Saved ${baseName(current.path)}.`)}
         onDelete={() => void run(() => deleteInstruction(current.id, current.revision, project), `Deleted ${baseName(current.path)}.`, current.id)} />} />}
   </>;

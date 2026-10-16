@@ -24,6 +24,40 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+test("skills read failures name the load and retry the existing skills read", async ({ page }) => {
+  let failRead = true;
+  await page.route("**/api/skills", route => failRead && route.request().method() === "GET"
+    ? route.fulfill({ status: 503, json: { error: "Fixture skills read unavailable." } }) : route.continue());
+  await page.goto(server.url + "#skills");
+  const error = page.getByRole("alert");
+  await expect(error).toContainText("Fixture skills read unavailable.");
+  await expect(error).toContainText("Could not load skills");
+  await expect(error).not.toContainText("Could not complete the change");
+  failRead = false;
+  await error.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText("3 of 3 skills on")).toBeVisible();
+  await expect(error).toHaveCount(0);
+});
+
+test("skills write failures stay visible after rereading and preserve the open editor draft", async ({ page }) => {
+  await page.goto(server.url + "#skills");
+  await page.getByRole("button", { name: /^alpha/ }).click();
+  await page.getByRole("button", { name: "Edit files of alpha" }).click();
+  const editor = page.getByRole("form", { name: "Edit alpha" });
+  await editor.getByLabel("Content of SKILL.md").fill("Unsaved editor draft.\n");
+  await page.route("**/api/skills", route => route.request().method() === "PATCH"
+    ? route.fulfill({ status: 409, json: { error: "Fixture skill change refused." } }) : route.continue());
+  await page.getByRole("switch", { name: "Enable alpha", exact: true }).click();
+  const error = page.getByRole("alert");
+  await expect(error).toContainText("Could not complete the change");
+  await expect(error).toContainText("Fixture skill change refused.");
+  await expect(error).not.toContainText("Could not load skills");
+  await expect(page.getByRole("switch", { name: "Enable alpha", exact: true })).toBeChecked();
+  await expect(editor.getByLabel("Content of SKILL.md")).toHaveValue("Unsaved editor draft.\n");
+  expect(await readFile(join(agent, "skills/alpha/SKILL.md"), "utf8")).toBe(skill("alpha", "Alpha does things."));
+  expect(JSON.parse(await readFile(join(agent, "settings.json"), "utf8"))).toEqual({ packages: ["./pkgs/my-pack"] });
+});
+
 test("skills can be inspected, searched and switched one by one or by group", async ({ page }) => {
   const settings = async () => JSON.parse(await readFile(join(agent, "settings.json"), "utf8"));
   await page.goto(server.url + "#skills");
@@ -246,7 +280,7 @@ test("Skill commands is set in the Skills tab, and General no longer lists it", 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByRole("tab", { name: "General" }).click();
   await page.getByRole("searchbox", { name: "Search settings" }).fill("enableSkillCommands");
-  await expect(page.getByText("No settings match")).toBeVisible();
+  await expect(page.locator('[data-slot="empty"]:visible')).toContainText("No settings match “enableSkillCommands”");
 });
 
 test("an unsaved change to skill commands asks before the page is left, as General does", async ({ page }) => {

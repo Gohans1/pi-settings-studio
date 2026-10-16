@@ -22,6 +22,34 @@ test.beforeEach(async () => {
 });
 test.afterEach(async () => { await server?.close(); await rm(root, { recursive: true, force: true }); });
 
+test("the narrow header keeps project scope readable and menu text clear of its checkmark", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto(server.url + "#general");
+  const picker = page.getByRole("combobox", { name: "Project", exact: true });
+  await expect(picker.getByText("Global only", { exact: true })).toBeVisible();
+  await picker.click();
+  await page.getByRole("option", { name: project, exact: true }).click();
+  const shortName = picker.getByText("webapp", { exact: true });
+  await expect(shortName).toBeVisible();
+  expect(await shortName.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await expect(page.getByRole("banner").getByText(/^Built for Pi /)).toBeVisible();
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    await picker.click();
+    const option = page.getByRole("option", { name: project, exact: true });
+    const overlap = await option.evaluate(element => {
+      const indicator = element.querySelector(":scope > [aria-hidden=true]")!.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(element.firstElementChild!);
+      return [...range.getClientRects()].some(rect => rect.right > indicator.left && rect.bottom > indicator.top && rect.top < indicator.bottom);
+    });
+    expect(overlap).toBe(false);
+    await page.keyboard.press("Escape");
+    await expect(picker).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
 test("a project is picked, trusted, and its own settings.json edited", async ({ page }) => {
   await page.goto(server.url + "#general");
   await page.getByRole("combobox", { name: "Project", exact: true }).click();

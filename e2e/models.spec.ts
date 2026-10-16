@@ -6,6 +6,10 @@ import { join, resolve } from "node:path";
 import { startServer, type RunningServer } from "../src/server/server.ts";
 
 let root: string, agent: string, server: RunningServer;
+const offline = process.env.PI_OFFLINE;
+// Credential setup checks the UI/storage contract here, not the public model-catalog service.
+test.beforeAll(() => { process.env.PI_OFFLINE = "1"; });
+test.afterAll(() => { if (offline === undefined) delete process.env.PI_OFFLINE; else process.env.PI_OFFLINE = offline; });
 const fixtureModel = (id: string, name: string, reasoning: boolean) =>
   `{ id: "${id}", name: "${name}", reasoning: ${reasoning}, input: ["text"], cost: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0 }, contextWindow: 100000, maxTokens: 8000 }`;
 // Providers as an extension such as pi-claude-bridge registers them: one Pi has a key for, one that needs a sign-in.
@@ -78,6 +82,7 @@ test("an API key is set up with Pi's own question, removed and restored without 
   await job.getByLabel("Enter OpenAI API key").fill("fixture-new-key");
   await job.getByRole("button", { name: "Continue" }).click();
   await expect(job).toContainText("Finished");
+  await expect(job).toContainText("PI_OFFLINE is set, so the model catalog was not refreshed.");
   expect((await auth()).openai).toEqual({ type: "api_key", key: "fixture-new-key" });
   await expect(detail.getByRole("button", { name: "Replace OpenAI API key" })).toBeVisible();
   expect(await page.content()).not.toContain("fixture-");
@@ -156,6 +161,42 @@ test("the list names its groups and says which providers are ready, and the chos
   await page.getByRole("button", { name: /^OpenAI\b/ }).first().click();
   await expect(page.getByRole("region", { name: "OpenAI" })).toHaveAccessibleDescription("not set up");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("defaults read failures name the load and retry the existing settings read", async ({ page }) => {
+  await writeFile(join(agent, "settings.json"), JSON.stringify({ defaultProvider: "anthropic", defaultModel: "saved-model" }));
+  let failRead = true;
+  await page.route("**/api/settings/global", route => failRead && route.request().method() === "GET"
+    ? route.fulfill({ status: 503, json: { error: "Fixture defaults read unavailable." } }) : route.continue());
+  await page.goto(server.url + "#models/defaults");
+  const panel = page.getByRole("region", { name: "Defaults" });
+  const error = panel.getByRole("alert");
+  await expect(error).toContainText("Fixture defaults read unavailable.");
+  await expect(error).toContainText("Could not load defaults");
+  await expect(error).not.toContainText("Not saved");
+  failRead = false;
+  await error.getByRole("button", { name: "Try again" }).click();
+  await expect(panel.getByLabel("Default model")).toHaveValue("saved-model");
+  await expect(error).toHaveCount(0);
+});
+
+test("defaults write failures keep their save title and every draft field", async ({ page }) => {
+  const file = join(agent, "settings.json");
+  const original = JSON.stringify({ defaultProvider: "anthropic", defaultModel: "saved-model" });
+  await writeFile(file, original);
+  await page.goto(server.url + "#models/defaults");
+  const panel = page.getByRole("region", { name: "Defaults" });
+  await panel.getByLabel("Default model").fill("draft-model");
+  await panel.getByLabel("Thinking budget: low", { exact: true }).fill("4096");
+  await page.route("**/api/settings/global", route => route.request().method() === "PATCH"
+    ? route.fulfill({ status: 409, json: { error: "Fixture defaults write refused." } }) : route.continue());
+  await panel.getByRole("button", { name: "Save defaults" }).click();
+  await expect(panel.getByRole("alert")).toContainText("Not saved");
+  await expect(panel.getByRole("alert")).toContainText("Fixture defaults write refused.");
+  await expect(panel.getByRole("alert")).not.toContainText("Could not load defaults");
+  await expect(panel.getByLabel("Default model")).toHaveValue("draft-model");
+  await expect(panel.getByLabel("Thinking budget: low", { exact: true })).toHaveValue("4096");
+  expect(await readFile(file, "utf8")).toBe(original);
 });
 
 test("while the defaults save, Save defaults shows a spinner", async ({ page }) => {
@@ -379,6 +420,24 @@ test("a custom provider the browser would refuse says why under its field and wr
   await expect(providerId).toBeFocused();
   await expect(form).toContainText("Use letters, digits, ., _ and -, starting with a letter or digit.");
   await expect(readFile(join(agent, "models.json"), "utf8")).rejects.toThrow();
+});
+
+test("custom model fields keep visible labels when their column headings no longer fit", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: "Add custom provider" }).click();
+  const form = page.getByRole("form", { name: "Add custom provider" });
+  await form.getByRole("button", { name: "Add model", exact: true }).click();
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const name of ["Model ID 1", "Display name 1", "Context window 1", "Max output tokens 1"]) {
+      const input = form.getByLabel(name, { exact: true });
+      const label = form.locator("label").filter({ hasText: name.replace(/ 1$/, "") }).last();
+      await expect(label).toBeVisible();
+      await label.click();
+      await expect(input).toBeFocused();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
 });
 
 test("a custom provider is added to models.json, edited without seeing its key, removed and restored", async ({ page }) => {

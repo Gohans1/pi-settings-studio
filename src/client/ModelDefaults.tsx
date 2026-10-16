@@ -45,6 +45,7 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
   const [perModel, setPerModel] = useState<unknown>();
   const [modelScope, setModelScope] = useState<ModelScopeView>();
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState(false);
   const tuning = useSettingDraft(view, { project });
 
@@ -58,7 +59,12 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
     setPerModel(next.values.modelThinkingLevels);
     if (preset) { setProvider(preset.provider); setModel(preset.model); onPresetUsed?.(); }
   }
-  useEffect(() => { setView(undefined); loadSettings(scope, target).then(fill).catch(cause => setError(cause instanceof Error ? cause.message : "Could not read settings.json.")); }, [scope, target]);
+  async function refresh() {
+    setLoadError("");
+    try { fill(await loadSettings(scope, target)); }
+    catch (cause) { setLoadError(cause instanceof Error ? cause.message : "Could not read settings.json."); }
+  }
+  useEffect(() => { setView(undefined); setError(""); void refresh(); }, [scope, target]);
   useEffect(() => {
     loadAvailableModels(project).then(setAvailable).catch(() => setAvailable([]));
     loadExtensionProviders(project).then(setExtensions).catch(() => setExtensions({ issues: ["The extensions could not be read."], providers: [] }));
@@ -136,8 +142,10 @@ export function ModelDefaults({ providers, project, preset, onPresetUsed, onSave
     <header><h2 id="defaults-title">Defaults</h2>
       <p className="muted">What new sessions start with. Stored in {scope === "project" ? "this project's .pi/settings.json; empty fields inherit the global defaults" : "settings.json"}.</p></header>
     {project && <ScopeChoice className="mb-5" value={scope} globalLabel="Global defaults" disabled={busy} onChange={setScopeChoice} />}
+    {loadError && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Could not load defaults</AlertTitle><AlertDescription>{loadError}</AlertDescription>
+      <div className="actions col-start-2 mt-2"><Button variant="outline" size="sm" onClick={() => void refresh()}>Try again</Button></div></Alert>}
     {error && <Alert variant="destructive"><CircleAlert aria-hidden="true" /><AlertTitle>Not saved</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-    {!view ? !error && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <form noValidate onSubmit={event => void save(event)} className="server-form">
+    {!view ? !loadError && <div className="loading" aria-busy="true"><Spinner />Reading settings…</div> : <form noValidate onSubmit={event => void save(event)} className="server-form">
       <FieldGroup>
       <Field><FieldLabel htmlFor="default-provider">Default provider</FieldLabel>
         <SuggestInput id="default-provider" value={provider} placeholder={String(inherited("defaultProvider") ?? "Automatic")}

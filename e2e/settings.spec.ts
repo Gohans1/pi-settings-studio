@@ -79,6 +79,46 @@ test("search narrows the settings by label or key", async ({ page }) => {
   await expect(page.getByLabel("Shell command prefix", { exact: true })).toBeHidden();
 });
 
+for (const colorScheme of ["light", "dark"] as const) {
+  for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+    test(`unmatched settings search has one visible recovery in ${colorScheme} at ${viewport.width}px`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
+      const search = page.getByRole("searchbox", { name: "Search settings" });
+      await search.fill("budget");
+      const empty = page.locator('[data-slot="empty"]:visible');
+      await expect(empty).toHaveCount(1);
+      await expect(empty).toContainText("No settings match “budget”");
+      await expect(empty).toContainText("Try another label or key, such as “retry”.");
+      await expect(page.getByRole("button", { name: "Clear search" })).toHaveCount(1);
+      await empty.getByRole("button", { name: "Clear search" }).click();
+      await expect(search).toBeFocused();
+      await expect(search).toHaveValue("");
+      await expect(page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: /^Messages & interaction/ })).toBeVisible();
+      await search.fill("retry");
+      await expect(page.getByRole("region", { name: "Setting groups" }).getByRole("button", { name: /^Network & retries/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Clear search" })).toHaveCount(0);
+    });
+  }
+}
+
+test("not editable here links to Context without promising a conversation browser", async ({ page }) => {
+  for (const keyboard of [false, true]) {
+    await page.goto(server.url + "#general");
+    await open(page, "Not editable here");
+    const detail = page.getByRole("region", { name: "Not editable here" });
+    await expect(detail).toContainText("Sessions and chat history: managed by Pi, not edited here.");
+    await expect(detail).toContainText("Context previews startup prompts and reads recorded prompt snapshots.");
+    await expect(detail).not.toContainText("System prompt tab");
+    const context = detail.getByRole("link", { name: "Context", exact: true });
+    await expect(context).toHaveAttribute("href", "#context");
+    if (keyboard) { await context.focus(); await context.press("Enter"); }
+    else await context.click();
+    await expect(page.getByRole("tab", { name: "Context", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: "Context", exact: true })).toBeVisible();
+  }
+});
+
 test("backup restore is explicit and restores the original native document", async ({ page }) => {
   await open(page, "Shell");
   await page.getByLabel("Shell command prefix", { exact: true }).fill("changed");
