@@ -102,6 +102,23 @@ for (const colorScheme of ["light", "dark"] as const) {
   }
 }
 
+test("not editable here links to Context without promising a conversation browser", async ({ page }) => {
+  for (const keyboard of [false, true]) {
+    await page.goto(server.url + "#general");
+    await open(page, "Not editable here");
+    const detail = page.getByRole("region", { name: "Not editable here" });
+    await expect(detail).toContainText("Sessions and chat history: managed by Pi, not edited here.");
+    await expect(detail).toContainText("Context previews startup prompts and reads recorded prompt snapshots.");
+    await expect(detail).not.toContainText("System prompt tab");
+    const context = detail.getByRole("link", { name: "Context", exact: true });
+    await expect(context).toHaveAttribute("href", "#context");
+    if (keyboard) { await context.focus(); await context.press("Enter"); }
+    else await context.click();
+    await expect(page.getByRole("tab", { name: "Context", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: "Context", exact: true })).toBeVisible();
+  }
+});
+
 test("backup restore is explicit and restores the original native document", async ({ page }) => {
   await open(page, "Shell");
   await page.getByLabel("Shell command prefix", { exact: true }).fill("changed");
