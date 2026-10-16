@@ -402,6 +402,7 @@
 @media (width < 40rem) {
   :root { --gutter: --spacing(4); }
   .brand span { display: none; }
+  .topbar { gap: --spacing(2); }
   .page-actions { width: 100%; flex-wrap: nowrap; }
   .detail-list > div { grid-template-columns: minmax(0, 1fr); gap: --spacing(1); }
   .save-bar .actions { width: 100%; }
