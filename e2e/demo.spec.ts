@@ -75,6 +75,46 @@ test("a change is refused, and the page says the demo is read-only", async ({ pa
   await expect(page.getByText(READ_ONLY).first()).toBeVisible();
 });
 
+test("custom-model fields reflow before their identifiers get squeezed by the detail pane", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 800 });
+  await page.getByRole("tab", { name: "Models", exact: true }).click();
+  await page.getByRole("button", { name: /^ollama/ }).click();
+  const form = page.getByRole("form", { name: "Edit ollama" });
+  const modelId = form.getByLabel("Model ID 1", { exact: true });
+  const context = form.getByLabel("Context window 1", { exact: true });
+  await modelId.scrollIntoViewIfNeeded();
+  expect((await modelId.boundingBox())!.width).toBeGreaterThan(120);
+  expect(await context.evaluate((element: HTMLInputElement) => element.labels![0]!.getBoundingClientRect().height)).toBeGreaterThan(10);
+  expect(await page.locator("main").evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(form.locator(".model-row-head")).toBeVisible();
+});
+
+test("invalid custom-model limits explain the refusal and errors stay with their model after removal", async ({ page }) => {
+  await page.getByRole("tab", { name: "Models", exact: true }).click();
+  await page.getByRole("button", { name: /^ollama/ }).click();
+  const form = page.getByRole("form", { name: "Edit ollama" });
+  const context = form.getByLabel("Context window 1", { exact: true });
+  const output = form.getByLabel("Max output tokens 2", { exact: true });
+  await context.fill("0");
+  await output.fill("-1");
+  await form.getByRole("button", { name: "Save provider", exact: true }).click();
+  await expect(context).toBeFocused();
+  await expect(context).toHaveAttribute("aria-invalid", "true");
+  await expect(context).toHaveAccessibleDescription(/must be at least 1/);
+  await expect(output).toHaveAccessibleDescription(/must be at least 1/);
+  await context.fill("128000");
+  await expect(context).not.toHaveAttribute("aria-invalid", "true");
+  await form.getByRole("button", { name: "Remove model qwen2.5-coder:7b", exact: true }).click();
+  const remaining = form.getByLabel("Max output tokens 1", { exact: true });
+  await expect(remaining).toHaveValue("-1");
+  await expect(remaining).toHaveAttribute("aria-invalid", "true");
+  await expect(remaining).toHaveAccessibleDescription(/must be at least 1/);
+  await remaining.fill("16384");
+  await expect(remaining).not.toHaveAttribute("aria-invalid", "true");
+  await expect(form.locator("[data-slot=field-error]")).toHaveCount(0);
+});
+
 test("the notice and the first tab pass the accessibility checks", async ({ page }) => {
   await expect(page.getByRole("note").filter({ hasText: "Demo with sample data" })).toBeVisible();
   const { violations } = await new AxeBuilder({ page }).analyze();

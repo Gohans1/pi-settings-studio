@@ -18,8 +18,8 @@ const listing = APIS.filter(entry => entry.listsModels).map(entry => entry.name)
 const listingText = `Listing models works for ${listing.slice(0, -1).join(", ")} and ${listing.at(-1)}.`;
 const keyKinds = { literal: "a key", environment: "an environment variable reference", command: "a command" };
 
-type ModelRow = { id: string; name: string; reasoning: boolean; image: boolean; contextWindow: string; maxTokens: string };
-const toRow = (model?: CustomModel): ModelRow => ({ id: model?.id ?? "", name: model?.name ?? "", reasoning: !!model?.reasoning, image: !!model?.image,
+type ModelRow = { key: string; id: string; name: string; reasoning: boolean; image: boolean; contextWindow: string; maxTokens: string };
+const toRow = (model?: CustomModel): ModelRow => ({ key: crypto.randomUUID(), id: model?.id ?? "", name: model?.name ?? "", reasoning: !!model?.reasoning, image: !!model?.image,
   contextWindow: model?.contextWindow ? String(model.contextWindow) : "", maxTokens: model?.maxTokens ? String(model.maxTokens) : "" });
 
 export function CustomProviderForm({ provider, changes, busy, error, onSave, onRemove, onCancel }: {
@@ -36,7 +36,7 @@ export function CustomProviderForm({ provider, changes, busy, error, onSave, onR
   const [clearKey, setClearKey] = useState(false);
   const [headers, setHeaders] = useState((provider?.headers ?? []).map(header => ({ name: header, value: "", stored: true })));
   const [authHeader, setAuthHeader] = useState(!!provider?.authHeader);
-  const [models, setModels] = useState<ModelRow[]>((provider?.models ?? []).map(toRow));
+  const [models, setModels] = useState<ModelRow[]>(() => (provider?.models ?? []).map(toRow));
   const [found, setFound] = useState<CustomModel[]>();
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [listing, setListing] = useState(false);
@@ -92,20 +92,25 @@ export function CustomProviderForm({ provider, changes, busy, error, onSave, onR
     {provider?.apiKey && <Field orientation="horizontal"><Checkbox id={id + "clear"} checked={clearKey} onCheckedChange={setClearKey} /><FieldLabel htmlFor={id + "clear"}>Remove the stored API key</FieldLabel></Field>}
     <Field orientation="horizontal"><Checkbox id={id + "bearer"} checked={authHeader} onCheckedChange={setAuthHeader} /><FieldLabel htmlFor={id + "bearer"}>Also send the key as <code>Authorization: Bearer</code></FieldLabel></Field>
     <FieldSet><FieldLegend variant="label">Headers</FieldLegend><NamedRows kind="header" rows={headers} onChange={setHeaders} /></FieldSet>
-    <FieldSet><FieldLegend variant="label">Models</FieldLegend>
+    <FieldSet className="@container/model-editor"><FieldLegend variant="label">Models</FieldLegend>
       <div className="model-rows">
         {/* Column names for sighted readers; each field has its own accessible name. */}
         {models.length > 0 && <div className="model-row model-row-head" aria-hidden="true"><span>Model ID</span><span>Display name</span><span>Context</span><span>Max output</span></div>}
-        {models.map((row, index) => <div className="model-row" key={index}>
-        <Input aria-label={`Model ID ${index + 1}`} value={row.id} placeholder="qwen2.5-coder:7b" spellCheck={false} onChange={e => update(index, { id: e.target.value })} />
-        <Input aria-label={`Model name ${index + 1}`} value={row.name} placeholder="Optional" onChange={e => update(index, { name: e.target.value })} />
-        <Input aria-label={`Context window ${index + 1}`} type="number" min={1} value={row.contextWindow} placeholder="128000" aria-invalid={!!errors[`Context window ${index + 1}`] || undefined} onChange={e => update(index, { contextWindow: e.target.value })} />
-        <Input aria-label={`Max output tokens ${index + 1}`} type="number" min={1} value={row.maxTokens} placeholder="16384" aria-invalid={!!errors[`Max output tokens ${index + 1}`] || undefined} onChange={e => update(index, { maxTokens: e.target.value })} />
+        {models.map((row, index) => <div className="model-row" key={row.key}>
+        <Field className="min-w-0"><FieldLabel className="@min-[40rem]/model-editor:sr-only" htmlFor={`${id}model-id-${row.key}`}>Model ID</FieldLabel>
+          <Input id={`${id}model-id-${row.key}`} aria-label={`Model ID ${index + 1}`} value={row.id} placeholder="qwen2.5-coder:7b" spellCheck={false} onChange={e => update(index, { id: e.target.value })} /></Field>
+        <Field className="min-w-0"><FieldLabel className="@min-[40rem]/model-editor:sr-only" htmlFor={`${id}model-name-${row.key}`}>Display name</FieldLabel>
+          <Input id={`${id}model-name-${row.key}`} aria-label={`Display name ${index + 1}`} value={row.name} placeholder="Optional" onChange={e => update(index, { name: e.target.value })} /></Field>
+        <Field className="min-w-0" data-invalid={!!errors[`${id}context-${row.key}`] || undefined}><FieldLabel className="@min-[40rem]/model-editor:sr-only" htmlFor={`${id}context-${row.key}`}>Context window</FieldLabel>
+          <Input id={`${id}context-${row.key}`} aria-label={`Context window ${index + 1}`} type="number" min={1} value={row.contextWindow} placeholder="128000" {...describe(`${id}context-${row.key}`)} onChange={e => update(index, { contextWindow: e.target.value })} />
+          <FieldError id={`${id}context-${row.key}-error`}>{errors[`${id}context-${row.key}`]}</FieldError></Field>
+        <Field className="min-w-0" data-invalid={!!errors[`${id}output-${row.key}`] || undefined}><FieldLabel className="@min-[40rem]/model-editor:sr-only" htmlFor={`${id}output-${row.key}`}>Max output tokens</FieldLabel>
+          <Input id={`${id}output-${row.key}`} aria-label={`Max output tokens ${index + 1}`} type="number" min={1} value={row.maxTokens} placeholder="16384" {...describe(`${id}output-${row.key}`)} onChange={e => update(index, { maxTokens: e.target.value })} />
+          <FieldError id={`${id}output-${row.key}-error`}>{errors[`${id}output-${row.key}`]}</FieldError></Field>
         <Field orientation="horizontal" className="w-auto"><Checkbox id={`${id}reasoning-${index}`} checked={row.reasoning} onCheckedChange={reasoning => update(index, { reasoning })} /><FieldLabel htmlFor={`${id}reasoning-${index}`}>Reasoning</FieldLabel></Field>
         <Field orientation="horizontal" className="w-auto"><Checkbox id={`${id}image-${index}`} checked={row.image} onCheckedChange={image => update(index, { image })} /><FieldLabel htmlFor={`${id}image-${index}`}>Images</FieldLabel></Field>
         <Button type="button" variant="ghost" size="icon" aria-label={`Remove model ${row.id || index + 1}`} onClick={() => setModels(rows => rows.filter((_, i) => i !== index))}><X aria-hidden="true" /></Button>
       </div>)}</div>
-      <FieldError errors={models.flatMap((_, index) => [errors[`Context window ${index + 1}`], errors[`Max output tokens ${index + 1}`]]).filter(Boolean).map(message => ({ message }))} />
       <div className="actions">
         <Button type="button" variant="outline" size="sm" onClick={() => setModels(rows => [...rows, toRow()])}>Add model</Button>
         <Button type="button" variant="outline" size="sm" disabled={listing || !baseUrl.trim() || !chosen?.listsModels} onClick={() => void listModels()}>{listing ? "Listing…" : "List models from the endpoint"}</Button>

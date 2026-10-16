@@ -422,6 +422,24 @@ test("a custom provider the browser would refuse says why under its field and wr
   await expect(readFile(join(agent, "models.json"), "utf8")).rejects.toThrow();
 });
 
+test("custom model fields keep visible labels when their column headings no longer fit", async ({ page }) => {
+  await page.goto(server.url + "#models");
+  await page.getByRole("button", { name: "Add custom provider" }).click();
+  const form = page.getByRole("form", { name: "Add custom provider" });
+  await form.getByRole("button", { name: "Add model", exact: true }).click();
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const name of ["Model ID 1", "Display name 1", "Context window 1", "Max output tokens 1"]) {
+      const input = form.getByLabel(name, { exact: true });
+      const label = form.locator("label").filter({ hasText: name.replace(/ 1$/, "") }).last();
+      await expect(label).toBeVisible();
+      await label.click();
+      await expect(input).toBeFocused();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});
+
 test("a custom provider is added to models.json, edited without seeing its key, removed and restored", async ({ page }) => {
   const models = async () => JSON.parse(await readFile(join(agent, "models.json"), "utf8")).providers;
   await page.goto(server.url + "#models");
