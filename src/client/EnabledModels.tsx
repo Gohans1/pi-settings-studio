@@ -86,7 +86,7 @@ export function EnabledModels({ patterns, scope, available, providers, inherited
             <ItemTitle><code translate="no">{pattern}</code></ItemTitle>
             <ItemDescription>{match?.models.length
               ? <Tooltip><TooltipTrigger render={<span />}>{count}</TooltipTrigger><TooltipContent>{match.models.slice(0, 3).join(", ")}</TooltipContent></Tooltip>
-              : count}</ItemDescription>
+              : count}{match?.ambiguous && " · same model on several providers; write provider/id for one"}</ItemDescription>
           </ItemContent>
           <ItemActions><IconButton type="button" label={`Remove ${pattern}`} onClick={() => onChange(patterns.filter(entry => entry !== pattern))}><X aria-hidden="true" /></IconButton></ItemActions>
         </Item></Fragment>;

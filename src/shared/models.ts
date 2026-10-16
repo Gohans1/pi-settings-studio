@@ -44,8 +44,11 @@ export type AvailableModel = ModelSummary & { provider: string };
 
 /** What `enabledModels` selects, matched as Pi matches it over the providers that are set up here. */
 export type ModelScopeView = {
-  /** reason says why a pattern selects nothing: its provider has no credential here, is not in the catalog, or no model matches. */
-  patterns: { pattern: string; matches: number; models: string[]; reason?: "no-credential" | "unknown-provider" | "no-match" }[];
+  /**
+   * reason says why a pattern selects nothing: its provider has no credential here, is not in the catalog, or no model matches.
+   * ambiguous: the model it names is on several providers, which Pi all takes, with a warning.
+   */
+  patterns: { pattern: string; matches: number; models: string[]; reason?: "no-credential" | "unknown-provider" | "no-match"; ambiguous?: true }[];
   /** New sessions start with this model when the default is not in the scope. */
   first?: string;
   /** Whether the default model is in the scope; absent when it is not in the catalog this app reads. */

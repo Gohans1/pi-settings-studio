@@ -135,6 +135,16 @@ test("enabled model patterns are matched as Pi matches them, over providers that
   await assert.rejects(stat(marker));
 });
 
+test("a pattern naming a model that several providers offer selects each of them and says so, as Pi warns", async (t) => {
+  const { agent, request } = await fixture(t);
+  await writeFile(join(agent, "auth.json"), JSON.stringify({ anthropic: { type: "api_key", key: "fixture-a" }, opencode: { type: "api_key", key: "fixture-o" } }));
+  const view = await (await request("/api/models/scope", { method: "POST", headers: json, body: JSON.stringify({ patterns: ["claude-sonnet-5-5", "anthropic/claude-sonnet-5-5"] }) })).json();
+  assert.deepEqual(view.patterns.map((entry: { pattern: string; models: string[]; ambiguous?: boolean }) => [entry.pattern, entry.models, entry.ambiguous]), [
+    ["claude-sonnet-5-5", ["anthropic/claude-sonnet-5-5", "opencode/claude-sonnet-5-5"], true],
+    ["anthropic/claude-sonnet-5-5", ["anthropic/claude-sonnet-5-5"], undefined],
+  ]);
+});
+
 // Pi saves the list for a key in models-store.json (`pi update --models`, the Refresh model catalogs button).
 // The app shows that list, read offline, and no key command runs to read it.
 test("the catalog Pi saved for a key is what Models shows, read offline, with no key command run and nothing written", async (t) => {
