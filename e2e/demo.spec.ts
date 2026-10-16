@@ -115,6 +115,58 @@ test("invalid custom-model limits explain the refusal and errors stay with their
   await expect(form.locator("[data-slot=field-error]")).toHaveCount(0);
 });
 
+test("outline action links keep a visible border before hover", async ({ page }) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const [tab, region, row, name] of [
+      ["Context", "Context parts", /^Base prompt/, "Edit in Instructions"],
+      ["Context", "Context parts", /^read /, "Change in Startup tools"],
+      ["Tools", "Tool views and sources", /^Core tools/, "Change in Startup tools"],
+    ] as const) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      const back = page.getByRole("button", { name: tab === "Tools" ? "All views" : "All parts", exact: true });
+      if (width === 390 && await back.isVisible()) await back.click();
+      await page.getByRole("region", { name: region }).getByRole("button", { name: row }).click();
+      const link = page.locator(".workbench-detail").getByRole("link", { name, exact: true });
+      await expect(link).toBeVisible();
+      const alpha = await link.evaluate(element => {
+        const context = document.createElement("canvas").getContext("2d")!;
+        context.fillStyle = getComputedStyle(element).borderTopColor;
+        context.fillRect(0, 0, 1, 1);
+        return context.getImageData(0, 0, 1, 1).data[3];
+      });
+      expect(alpha).toBe(255);
+    }
+  }
+});
+
+test("file metadata and instruction explanations follow their documented type roles", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("tab", { name: "Instructions", exact: true }).click();
+  const editor = page.getByRole("textbox", { name: "Contents of AGENTS.md", exact: true });
+  await expect(editor).toBeVisible();
+  await expect(page.locator(".instruction .file-path code")).toHaveCSS("font-size", "13px");
+  const helper = page.locator(".instruction > header > p");
+  expect(await helper.evaluate(element => getComputedStyle(element).maxWidth)).not.toBe("none");
+});
+
+test("Tools announces search results without moving focus or replacing its status region", async ({ page }) => {
+  await page.getByRole("tab", { name: "Tools", exact: true }).click();
+  const search = page.getByRole("searchbox", { name: "Search tools", exact: true });
+  const status = page.getByRole("status");
+  await expect(status).toHaveCount(1);
+  const original = await status.elementHandle();
+  await search.fill("zz-no-match");
+  await expect(status).toHaveText("0 tools match “zz-no-match”");
+  await expect(search).toBeFocused();
+  await search.fill("read");
+  await expect(status).toContainText("read");
+  await search.clear();
+  await expect(status).toBeEmpty();
+  expect(await original!.evaluate(element => element.isConnected)).toBe(true);
+  await expect(search).toBeFocused();
+});
+
 test("destructive decisions and the project value keep AA contrast in their rendered interactive states", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   expect(await page.evaluate(() => matchMedia("(hover: hover)").matches)).toBe(true);

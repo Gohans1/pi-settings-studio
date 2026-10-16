@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CircleAlert, CircleCheck, CircleX, Eye, EyeOff, ListChecks, RefreshCw, TriangleAlert } from "lucide-react";
+import { cn } from "cn";
 import type { ToolsView } from "../shared/plugin-tools";
 import { loadTools } from "./api";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
@@ -96,7 +97,7 @@ function ReachView({ view, catalog, tools, query }: { view: View; catalog: Catal
 function SourceDetail({ source, catalog, tools, query }: { source: Source; catalog: Catalog; tools: Tool[]; query: string }) {
   return <div className="detail">
     <header className="detail-header"><h2>{source.title}</h2>
-      <div className="actions"><a className={buttonVariants({ variant: "outline", size: "sm" })} href={"#" + source.tab}>
+      <div className="actions"><a className={cn(buttonVariants({ variant: "outline", size: "sm" }))} href={"#" + source.tab}>
         {source.status === "off" ? "Turn on" : "Change"} in {TAB_NAMES[source.tab]}</a></div></header>
     {source.detail && <p className="tools-note">{source.detail}</p>}
     <Filtered query={query} />
@@ -156,7 +157,7 @@ export function ToolsTab({ project }: { project?: string }) {
         <div role="listitem"><ListItem selected={shown === STARTUP} onSelect={() => choose(STARTUP)} icon={ListChecks} name="Startup tools" state="Pi's tools, on or off" /></div>
       </ItemGroup>
       <Separator className="mt-2" />
-      {words && <p className="list-count">{count(tools.length, "tool matches", "tools match")} “{words}”</p>}
+      <p role="status" className={cn("list-count", !words && "sr-only")}>{words ? `${count(tools.length, "tool matches", "tools match")} “${words}”` : ""}</p>
       {FAMILIES.map(({ family, title }) => {
         const sources = catalog.sources.filter(entry => entry.family === family && (!lower || of(entry).length > 0));
         return sources.length ? <section key={family} className="item-group" aria-labelledby={`tools-${family}`}>
